@@ -1,7 +1,7 @@
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from "react";
-import { Phone, PhoneOff, Mic, MicOff, Volume2, Video as VideoIcon, VideoOff, SwitchCamera } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Video as VideoIcon, VideoOff, SwitchCamera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
@@ -65,7 +65,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
-  const [speakerOn, setSpeakerOn] = useState(false);
   const [cameraOn, setCameraOn] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
@@ -85,7 +84,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const remoteDescSetRef = useRef(false);
   const elapsedTimerRef = useRef<number | null>(null);
   const facingRef = useRef<"user" | "environment">("user");
-  const speakerOnRef = useRef(false);
 
   const releaseLocalAudioProcessing = useCallback(() => {
     rawLocalAudioTracksRef.current.forEach((t) => t.stop());
@@ -116,8 +114,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     elapsedTimerRef.current = null;
     setElapsed(0);
     setMuted(false);
-    setSpeakerOn(false);
-    speakerOnRef.current = false;
     setCameraOn(true);
     setHasRemoteVideo(false);
     facingRef.current = "user";
