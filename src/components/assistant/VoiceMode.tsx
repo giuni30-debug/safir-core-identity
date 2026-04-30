@@ -323,14 +323,26 @@ function VoiceModeInner({
             settled = true;
             reject(new Error("ElevenLabs connection timed out"));
           }, 15000);
-          conversation
-            .startSession({ ...opts, onConnect: onConnectOnce, onError: onErrorOnce })
-            .catch((err) => {
-              if (settled) return;
-              settled = true;
-              window.clearTimeout(timer);
-              reject(err instanceof Error ? err : new Error(String(err)));
-            });
+          try {
+            const ret = conversation.startSession({
+              ...opts,
+              onConnect: onConnectOnce,
+              onError: onErrorOnce,
+            }) as unknown;
+            if (ret && typeof (ret as Promise<unknown>).then === "function") {
+              (ret as Promise<unknown>).catch((err: unknown) => {
+                if (settled) return;
+                settled = true;
+                window.clearTimeout(timer);
+                reject(err instanceof Error ? err : new Error(String(err)));
+              });
+            }
+          } catch (err) {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timer);
+            reject(err instanceof Error ? err : new Error(String(err)));
+          }
         });
 
       try {
