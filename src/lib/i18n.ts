@@ -266,6 +266,20 @@ const en = {
   aiIntentTranslate: "Translation",
   aiIntentCode: "Code",
   aiUnsureNote: "I'm not fully sure, but here's what I found.",
+  aiMemorySaved: "Saved to memory",
+  aiMemoryTitle: "AI Memory",
+  aiMemoryDesc: "Things All Assist remembers about you",
+  aiMemoryEnabled: "Memory enabled",
+  aiMemoryEmpty: "Nothing saved yet. As you chat, useful facts (your name, projects, language) are stored privately.",
+  aiMemoryClearAll: "Clear all",
+  aiMemoryConfirmClear: "Delete ALL memories? This cannot be undone.",
+  aiHistoryTitle: "Chat history",
+  aiHistoryEmpty: "No previous chats",
+  aiNewChatStart: "Start a new chat",
+  aiGreetingMorning: "Good morning",
+  aiGreetingAfternoon: "Good afternoon",
+  aiGreetingEvening: "Good evening",
+  aiHowHelp: "How can I help you today?",
 } as const;
 
 const ro: Record<keyof typeof en, string> = {
@@ -513,6 +527,20 @@ const ro: Record<keyof typeof en, string> = {
   aiIntentTranslate: "Traducere",
   aiIntentCode: "Cod",
   aiUnsureNote: "Nu sunt complet sigur, dar iată ce am găsit.",
+  aiMemorySaved: "Salvat în memorie",
+  aiMemoryTitle: "Memorie AI",
+  aiMemoryDesc: "Lucruri pe care All Assist le ține minte despre tine",
+  aiMemoryEnabled: "Memorie activată",
+  aiMemoryEmpty: "Nimic salvat încă. Pe măsură ce discuți, detaliile utile (nume, proiecte, limbă) sunt stocate privat.",
+  aiMemoryClearAll: "Șterge tot",
+  aiMemoryConfirmClear: "Ștergi TOATE amintirile? Nu se poate reveni.",
+  aiHistoryTitle: "Istoric conversații",
+  aiHistoryEmpty: "Nicio conversație anterioară",
+  aiNewChatStart: "Începe o conversație nouă",
+  aiGreetingMorning: "Bună dimineața",
+  aiGreetingAfternoon: "Bună ziua",
+  aiGreetingEvening: "Bună seara",
+  aiHowHelp: "Cu ce te pot ajuta azi?",
 };
 
 const tr: Record<keyof typeof en, string> = {
@@ -760,6 +788,20 @@ const tr: Record<keyof typeof en, string> = {
   aiIntentTranslate: "Çeviri",
   aiIntentCode: "Kod",
   aiUnsureNote: "Tam emin değilim ama bulduklarım şunlar.",
+  aiMemorySaved: "Hafızaya kaydedildi",
+  aiMemoryTitle: "AI Hafıza",
+  aiMemoryDesc: "All Assist'in seninle ilgili hatırladıkları",
+  aiMemoryEnabled: "Hafıza açık",
+  aiMemoryEmpty: "Henüz kayıt yok. Sohbet ettikçe faydalı bilgiler (isim, projeler, dil) gizli olarak saklanır.",
+  aiMemoryClearAll: "Tümünü sil",
+  aiMemoryConfirmClear: "TÜM hatıraları sil? Geri alınamaz.",
+  aiHistoryTitle: "Sohbet geçmişi",
+  aiHistoryEmpty: "Önceki sohbet yok",
+  aiNewChatStart: "Yeni sohbet başlat",
+  aiGreetingMorning: "Günaydın",
+  aiGreetingAfternoon: "İyi günler",
+  aiGreetingEvening: "İyi akşamlar",
+  aiHowHelp: "Bugün nasıl yardımcı olabilirim?",
 };
 
 const de: Record<keyof typeof en, string> = {
@@ -1007,6 +1049,20 @@ const de: Record<keyof typeof en, string> = {
   aiIntentTranslate: "Übersetzung",
   aiIntentCode: "Code",
   aiUnsureNote: "Ich bin nicht ganz sicher, aber das habe ich gefunden.",
+  aiMemorySaved: "Im Speicher gespeichert",
+  aiMemoryTitle: "KI-Speicher",
+  aiMemoryDesc: "Dinge, die All Assist sich über dich merkt",
+  aiMemoryEnabled: "Speicher aktiviert",
+  aiMemoryEmpty: "Noch nichts gespeichert. Während du chattest, werden nützliche Fakten (Name, Projekte, Sprache) privat gespeichert.",
+  aiMemoryClearAll: "Alles löschen",
+  aiMemoryConfirmClear: "ALLE Erinnerungen löschen? Nicht rückgängig zu machen.",
+  aiHistoryTitle: "Chat-Verlauf",
+  aiHistoryEmpty: "Keine vorherigen Chats",
+  aiNewChatStart: "Neuen Chat starten",
+  aiGreetingMorning: "Guten Morgen",
+  aiGreetingAfternoon: "Guten Tag",
+  aiGreetingEvening: "Guten Abend",
+  aiHowHelp: "Wie kann ich dir heute helfen?",
 };
 
 export const translations = { en, ro, tr, de } as const;
