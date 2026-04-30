@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "@/components/Avatar";
@@ -105,17 +105,18 @@ function ConnectPage() {
             key={p.id}
             className="glass-card flex items-center gap-3 p-3 animate-[scale-in_0.2s_ease-out]"
           >
-            <button onClick={() => navigate({ to: "/contacts" })}>
-              <Avatar url={p.avatar_url} name={p.display_name} size={44} />
-            </button>
+            <Avatar url={p.avatar_url} name={p.display_name} size={44} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{p.display_name}</p>
               <p className="truncate text-xs text-muted-foreground">@{p.username}</p>
             </div>
             {p.alreadyConnected ? (
-              <span className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground">
+              <button
+                onClick={() => navigate({ to: "/chat/$id", params: { id: p.id } })}
+                className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:border-primary hover:text-foreground"
+              >
                 {t("connected")}
-              </span>
+              </button>
             ) : (
               <button
                 onClick={() => connect(p.id)}
@@ -126,6 +127,16 @@ function ConnectPage() {
             )}
           </div>
         ))}
+
+        {results.some((r) => r.alreadyConnected) && (
+          <Link
+            to="/contacts"
+            className="mt-2 flex items-center justify-center gap-2 rounded-2xl border border-border bg-card/30 py-3 text-xs font-medium text-muted-foreground transition hover:border-primary hover:text-foreground"
+          >
+            <Users className="h-4 w-4" />
+            {t("contacts")}
+          </Link>
+        )}
       </div>
     </div>
   );
