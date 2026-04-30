@@ -474,6 +474,16 @@ function ChatPage() {
         >
           <Phone className="h-5 w-5" />
         </button>
+        <button
+          type="button"
+          onClick={() => { if (contact) void startVideoCall(contactId); }}
+          disabled={!contact || inCall}
+          aria-label="Video call"
+          className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card/40 text-primary disabled:opacity-40"
+          style={{ boxShadow: contact && !inCall ? "var(--shadow-glow)" : undefined }}
+        >
+          <VideoIcon className="h-5 w-5" />
+        </button>
       </header>
 
       <div
