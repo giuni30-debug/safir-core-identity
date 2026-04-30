@@ -451,7 +451,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             const pc = pcRef.current;
             if (!pc) return;
             try {
-              await pc.setRemoteDescription(sig.payload as RTCSessionDescriptionInit);
+              await pc.setRemoteDescription(sig.payload as unknown as RTCSessionDescriptionInit);
               remoteDescSetRef.current = true;
               for (const c of pendingIceRef.current) {
                 try { await pc.addIceCandidate(c); } catch (e) { console.warn(e); }
