@@ -29,6 +29,7 @@ import { Route as AppContactsRouteImport } from './routes/_app/contacts'
 import { Route as AppConnectRouteImport } from './routes/_app/connect'
 import { Route as AppComingSoonRouteImport } from './routes/_app/coming-soon'
 import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
+import { Route as AppAssistantRouteImport } from './routes/_app/assistant'
 import { Route as AppAppointmentsRouteImport } from './routes/_app/appointments'
 import { Route as AppAppearanceRouteImport } from './routes/_app/appearance'
 import { Route as AppChatIdRouteImport } from './routes/_app/chat.$id'
@@ -132,6 +133,11 @@ const AppCalendarRoute = AppCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAssistantRoute = AppAssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAppointmentsRoute = AppAppointmentsRouteImport.update({
   id: '/appointments',
   path: '/appointments',
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/appearance': typeof AppAppearanceRoute
   '/appointments': typeof AppAppointmentsRoute
+  '/assistant': typeof AppAssistantRoute
   '/calendar': typeof AppCalendarRoute
   '/coming-soon': typeof AppComingSoonRoute
   '/connect': typeof AppConnectRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/appearance': typeof AppAppearanceRoute
   '/appointments': typeof AppAppointmentsRoute
+  '/assistant': typeof AppAssistantRoute
   '/calendar': typeof AppCalendarRoute
   '/coming-soon': typeof AppComingSoonRoute
   '/connect': typeof AppConnectRoute
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_app/appearance': typeof AppAppearanceRoute
   '/_app/appointments': typeof AppAppointmentsRoute
+  '/_app/assistant': typeof AppAssistantRoute
   '/_app/calendar': typeof AppCalendarRoute
   '/_app/coming-soon': typeof AppComingSoonRoute
   '/_app/connect': typeof AppConnectRoute
@@ -232,6 +241,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/appearance'
     | '/appointments'
+    | '/assistant'
     | '/calendar'
     | '/coming-soon'
     | '/connect'
@@ -256,6 +266,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/appearance'
     | '/appointments'
+    | '/assistant'
     | '/calendar'
     | '/coming-soon'
     | '/connect'
@@ -281,6 +292,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_app/appearance'
     | '/_app/appointments'
+    | '/_app/assistant'
     | '/_app/calendar'
     | '/_app/coming-soon'
     | '/_app/connect'
@@ -449,6 +461,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCalendarRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/assistant': {
+      id: '/_app/assistant'
+      path: '/assistant'
+      fullPath: '/assistant'
+      preLoaderRoute: typeof AppAssistantRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/appointments': {
       id: '/_app/appointments'
       path: '/appointments'
@@ -476,6 +495,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppAppearanceRoute: typeof AppAppearanceRoute
   AppAppointmentsRoute: typeof AppAppointmentsRoute
+  AppAssistantRoute: typeof AppAssistantRoute
   AppCalendarRoute: typeof AppCalendarRoute
   AppComingSoonRoute: typeof AppComingSoonRoute
   AppConnectRoute: typeof AppConnectRoute
@@ -496,6 +516,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAppearanceRoute: AppAppearanceRoute,
   AppAppointmentsRoute: AppAppointmentsRoute,
+  AppAssistantRoute: AppAssistantRoute,
   AppCalendarRoute: AppCalendarRoute,
   AppComingSoonRoute: AppComingSoonRoute,
   AppConnectRoute: AppConnectRoute,
