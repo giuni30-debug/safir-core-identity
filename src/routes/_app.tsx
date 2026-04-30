@@ -1,6 +1,8 @@
 import { createFileRoute, Link, Outlet, redirect, useLocation } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { CallProvider } from "@/contexts/CallContext";
+import { useApp } from "@/contexts/AppContext";
+import { usePresenceHeartbeat } from "@/hooks/usePresence";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async () => {
@@ -12,6 +14,10 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   const location = useLocation();
+  const { user } = useApp();
+  // Broadcast online presence while signed in & inside the app
+  usePresenceHeartbeat(user?.id ?? null);
+
   return (
     <CallProvider>
       <div className="app-shell">

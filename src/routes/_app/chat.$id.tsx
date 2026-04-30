@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
 import {
   ArrowLeft, Send, Mic, Square, Trash2, Play, Pause,
   Plus, Image as ImageIcon, Video as VideoIcon, FileIcon, X, Download, Phone,
-  Gift as GiftIcon,
+  Gift as GiftIcon, Check, CheckCheck, SmilePlus,
 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,9 @@ import { useCall } from "@/contexts/CallContext";
 import { GiftSheet } from "@/components/chat/GiftSheet";
 import { GiftFX } from "@/components/chat/GiftFX";
 import { decodeGiftMessage, encodeGiftMessage, type Gift } from "@/components/chat/gifts";
+import { usePeerPresence, formatLastSeen } from "@/hooks/usePresence";
+import { useTypingIndicator } from "@/hooks/useTyping";
+import { useReactions } from "@/hooks/useReactions";
 
 export const Route = createFileRoute("/_app/chat/$id")({
   component: ChatPage,
@@ -35,6 +38,8 @@ type Message = {
   file_name: string | null;
   file_size: number | null;
   created_at: string;
+  delivered_at: string | null;
+  read_at: string | null;
 };
 
 const MAX_RECORDING_SECONDS = 120;
@@ -157,6 +162,14 @@ function ChatPage() {
   const [activeGift, setActiveGift] = useState<Gift | null>(null);
   const lastSeenGiftId = useRef<string | null>(null);
 
+  // Reaction picker state
+  const [reactionFor, setReactionFor] = useState<string | null>(null);
+
+  // Real-time presence + typing + reactions
+  const presence = usePeerPresence(contactId);
+  const { peerTyping, notifyTyping, stopTyping } = useTypingIndicator(myId, contactId);
+  const { byMessage: reactionsByMsg, toggle: toggleReaction } = useReactions(myId, contactId);
+
   // Load contact profile
   useEffect(() => {
     (async () => {
@@ -169,7 +182,7 @@ function ChatPage() {
     })();
   }, [contactId]);
 
-  // Load messages + subscribe realtime
+  // Load messages + subscribe realtime (INSERT + UPDATE for read receipts)
   useEffect(() => {
     if (!myId || !contactId) return;
     let active = true;
@@ -199,6 +212,18 @@ function ChatPage() {
           setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          const m = payload.new as Message;
+          const inThread =
+            (m.sender_user_id === myId && m.receiver_user_id === contactId) ||
+            (m.sender_user_id === contactId && m.receiver_user_id === myId);
+          if (!inThread) return;
+          setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, ...m } : x)));
+        }
+      )
       .subscribe();
 
     return () => {
@@ -206,6 +231,28 @@ function ChatPage() {
       supabase.removeChannel(channel);
     };
   }, [myId, contactId]);
+
+  // Mark incoming messages as delivered + read whenever the chat is open
+  useEffect(() => {
+    if (!myId || !contactId || messages.length === 0) return;
+    if (document.visibilityState === "hidden") return;
+    const now = new Date().toISOString();
+    const toMark = messages.filter(
+      (m) => m.receiver_user_id === myId && m.sender_user_id === contactId && !m.read_at
+    );
+    if (toMark.length === 0) return;
+    const ids = toMark.map((m) => m.id);
+    // Optimistic local update
+    setMessages((prev) =>
+      prev.map((m) =>
+        ids.includes(m.id) ? { ...m, delivered_at: m.delivered_at ?? now, read_at: now } : m
+      )
+    );
+    void supabase
+      .from("messages")
+      .update({ delivered_at: now, read_at: now })
+      .in("id", ids);
+  }, [messages, myId, contactId]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -243,6 +290,7 @@ function ChatPage() {
     if (!body || !myId || sending) return;
     setSending(true);
     setText("");
+    stopTyping();
     const { error } = await supabase
       .from("messages")
       .insert({
@@ -537,15 +585,15 @@ function ChatPage() {
             }}
           />
           <Avatar url={contact?.avatar_url ?? null} name={contact?.display_name ?? "?"} size={40} />
-          {/* Online dot */}
+          {/* Online dot driven by real presence */}
           <span
             aria-hidden
             className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2"
             style={{
-              background: contact ? "#22c55e" : "#6b7280",
-              boxShadow: contact ? "0 0 8px #22c55e" : "none",
+              background: presence.isOnline ? "#22c55e" : "#6b7280",
+              boxShadow: presence.isOnline ? "0 0 8px #22c55e" : "none",
               ["--tw-ring-color" as any]: "var(--background)",
-              animation: contact ? "neon-pulse 2.4s ease-in-out infinite" : undefined,
+              animation: presence.isOnline ? "neon-pulse 2.4s ease-in-out infinite" : undefined,
             }}
           />
         </div>
@@ -560,7 +608,18 @@ function ChatPage() {
           >
             {contact?.display_name ?? "…"}
           </p>
-          <p className="text-soft truncate text-xs">@{contact?.username ?? "…"}</p>
+          <p className="text-soft flex items-center gap-1 truncate text-xs">
+            {peerTyping ? (
+              <span className="flex items-center gap-1" style={{ color: "var(--theme-accent)" }}>
+                <span>{t("typing")}</span>
+                <TypingDots />
+              </span>
+            ) : presence.isOnline ? (
+              <span style={{ color: "#22c55e" }}>● {t("online")}</span>
+            ) : (
+              <span>{formatLastSeen(presence.lastSeen, t)}</span>
+            )}
+          </p>
         </div>
 
         <FloatingHeaderButton
@@ -631,89 +690,202 @@ function ChatPage() {
                 </div>
               );
             }
+            const msgReactions = reactionsByMsg.get(m.id) ?? [];
+            // group reactions by emoji
+            const grouped: Record<string, { count: number; mine: boolean }> = {};
+            for (const r of msgReactions) {
+              if (!grouped[r.emoji]) grouped[r.emoji] = { count: 0, mine: false };
+              grouped[r.emoji].count += 1;
+              if (r.user_id === myId) grouped[r.emoji].mine = true;
+            }
+            const isPickerOpen = reactionFor === m.id;
             return (
               <div key={m.id} className={`msg-in flex ${mine ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[78%] ${isMedia ? "p-1" : "px-3.5 py-2"} rounded-3xl text-sm backdrop-blur-xl ${
-                    mine ? "rounded-br-md" : "rounded-bl-md bg-white/5"
-                  }`}
-                  style={
-                    mine
-                      ? {
-                          background:
-                            "linear-gradient(135deg, oklch(0.86 0.17 90), color-mix(in oklab, oklch(0.86 0.17 90) 65%, #000))",
-                          border: "2px solid oklch(0.86 0.17 90)",
-                          boxShadow:
-                            "0 0 14px color-mix(in oklab, oklch(0.86 0.17 90) 55%, transparent), 0 6px 18px oklch(0 0 0 / 45%)",
-                          color: "#1a1500",
-                        }
-                      : {
-                          border: "2px solid color-mix(in oklab, oklch(0.82 0.16 200) 70%, transparent)",
-                          boxShadow:
-                            "0 0 14px color-mix(in oklab, oklch(0.82 0.16 200) 45%, transparent), 0 4px 14px oklch(0 0 0 / 40%)",
-                        }
-                  }
-                >
-                  {isVoice ? (
-                    <VoicePlayer url={m.audio_url!} duration={m.duration_seconds} mine={mine} />
-                  ) : isImage ? (
-                    <a href={m.media_url!} target="_blank" rel="noreferrer" className="block">
-                      <img
-                        src={m.media_url!}
-                        alt={m.file_name ?? "image"}
-                        className="max-h-72 w-auto rounded-xl object-cover"
-                        loading="lazy"
-                      />
-                    </a>
-                  ) : isVideo ? (
-                    <video
-                      src={m.media_url!}
-                      controls
-                      preload="metadata"
-                      className="max-h-72 w-full rounded-xl"
-                    />
-                  ) : isFile ? (
-                    <a
-                      href={m.media_url!}
-                      target="_blank"
-                      rel="noreferrer"
-                      download={m.file_name ?? undefined}
-                      className={`flex items-center gap-2 rounded-xl px-2 py-1 ${
-                        mine ? "bg-primary-foreground/15" : "bg-muted/40"
-                      }`}
-                    >
-                      <span
-                        className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
-                          mine ? "bg-primary-foreground/20" : "bg-primary/80 text-primary-foreground"
-                        }`}
-                      >
-                        <FileIcon className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs font-medium">
-                          {m.file_name ?? "File"}
-                        </span>
-                        <span className="block text-[10px] opacity-70">
-                          {m.file_size != null ? formatBytes(m.file_size) : ""}
-                        </span>
-                      </span>
-                      <Download className="h-4 w-4 opacity-80" />
-                    </a>
-                  ) : (
-                    <p className="whitespace-pre-wrap break-words">{m.message_text}</p>
-                  )}
-                  <p
-                    className={`${isMedia ? "px-2 pb-1 pt-1" : "mt-1"} text-[10px] ${
-                      mine ? "text-primary-foreground/70" : "text-muted-foreground"
-                    }`}
+                <div className="group relative max-w-[78%]">
+                  <button
+                    type="button"
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setReactionFor(isPickerOpen ? null : m.id);
+                    }}
+                    onDoubleClick={() => setReactionFor(isPickerOpen ? null : m.id)}
+                    className="block w-full cursor-default text-left"
+                    aria-label="Message"
                   >
-                    {fmtTime(m.created_at)}
-                    {mine ? " · Delivered" : ""}
-                  </p>
+                    <div
+                      className={`${isMedia ? "p-1" : "px-3.5 py-2"} rounded-3xl text-sm backdrop-blur-xl ${
+                        mine ? "rounded-br-md" : "rounded-bl-md bg-white/5"
+                      }`}
+                      style={
+                        mine
+                          ? {
+                              background:
+                                "linear-gradient(135deg, oklch(0.86 0.17 90), color-mix(in oklab, oklch(0.86 0.17 90) 65%, #000))",
+                              border: "2px solid oklch(0.86 0.17 90)",
+                              boxShadow:
+                                "0 0 14px color-mix(in oklab, oklch(0.86 0.17 90) 55%, transparent), 0 6px 18px oklch(0 0 0 / 45%)",
+                              color: "#1a1500",
+                            }
+                          : {
+                              border: "2px solid color-mix(in oklab, oklch(0.82 0.16 200) 70%, transparent)",
+                              boxShadow:
+                                "0 0 14px color-mix(in oklab, oklch(0.82 0.16 200) 45%, transparent), 0 4px 14px oklch(0 0 0 / 40%)",
+                            }
+                      }
+                    >
+                      {isVoice ? (
+                        <VoicePlayer url={m.audio_url!} duration={m.duration_seconds} mine={mine} />
+                      ) : isImage ? (
+                        <a href={m.media_url!} target="_blank" rel="noreferrer" className="block">
+                          <img
+                            src={m.media_url!}
+                            alt={m.file_name ?? "image"}
+                            className="max-h-72 w-auto rounded-xl object-cover"
+                            loading="lazy"
+                          />
+                        </a>
+                      ) : isVideo ? (
+                        <video
+                          src={m.media_url!}
+                          controls
+                          preload="metadata"
+                          className="max-h-72 w-full rounded-xl"
+                        />
+                      ) : isFile ? (
+                        <a
+                          href={m.media_url!}
+                          target="_blank"
+                          rel="noreferrer"
+                          download={m.file_name ?? undefined}
+                          className={`flex items-center gap-2 rounded-xl px-2 py-1 ${
+                            mine ? "bg-primary-foreground/15" : "bg-muted/40"
+                          }`}
+                        >
+                          <span
+                            className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
+                              mine ? "bg-primary-foreground/20" : "bg-primary/80 text-primary-foreground"
+                            }`}
+                          >
+                            <FileIcon className="h-4 w-4" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-medium">
+                              {m.file_name ?? "File"}
+                            </span>
+                            <span className="block text-[10px] opacity-70">
+                              {m.file_size != null ? formatBytes(m.file_size) : ""}
+                            </span>
+                          </span>
+                          <Download className="h-4 w-4 opacity-80" />
+                        </a>
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words">{m.message_text}</p>
+                      )}
+                      <div
+                        className={`${isMedia ? "px-2 pb-1 pt-1" : "mt-1"} flex items-center justify-end gap-1 text-[10px] ${
+                          mine ? "text-primary-foreground/70" : "text-muted-foreground"
+                        }`}
+                        style={mine ? { color: "oklch(0.18 0.05 90 / 75%)" } : undefined}
+                      >
+                        <span>{fmtTime(m.created_at)}</span>
+                        {mine && <MessageStatus message={m} />}
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Add-reaction trigger */}
+                  <button
+                    type="button"
+                    aria-label="Add reaction"
+                    onClick={() => setReactionFor(isPickerOpen ? null : m.id)}
+                    className={`absolute -top-2 ${mine ? "-left-2" : "-right-2"} grid h-6 w-6 place-items-center rounded-full border border-glass-border bg-card/80 opacity-0 backdrop-blur-md transition group-hover:opacity-100 hover:opacity-100`}
+                  >
+                    <SmilePlus className="h-3 w-3" />
+                  </button>
+
+                  {/* Reaction chips */}
+                  {Object.keys(grouped).length > 0 && (
+                    <div
+                      className={`mt-1 flex flex-wrap gap-1 ${mine ? "justify-end" : "justify-start"}`}
+                    >
+                      {Object.entries(grouped).map(([emoji, info]) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => void toggleReaction(m.id, emoji)}
+                          className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] backdrop-blur-md transition active:scale-95 ${
+                            info.mine
+                              ? "border-primary/60 bg-primary/15"
+                              : "border-glass-border bg-card/40"
+                          }`}
+                          style={
+                            info.mine
+                              ? {
+                                  boxShadow:
+                                    "0 0 8px color-mix(in oklab, var(--theme-accent) 40%, transparent)",
+                                }
+                              : undefined
+                          }
+                        >
+                          <span>{emoji}</span>
+                          {info.count > 1 && (
+                            <span className="tabular-nums opacity-80">{info.count}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Reaction picker popover */}
+                  {isPickerOpen && (
+                    <>
+                      <button
+                        type="button"
+                        aria-hidden
+                        onClick={() => setReactionFor(null)}
+                        className="fixed inset-0 z-10 cursor-default bg-transparent"
+                      />
+                      <div
+                        className={`absolute z-20 ${mine ? "right-0" : "left-0"} -top-12 flex items-center gap-1 rounded-full border border-glass-border bg-card/90 px-2 py-1 backdrop-blur-xl animate-[scale-in_0.15s_ease-out]`}
+                        style={{
+                          boxShadow:
+                            "0 0 18px color-mix(in oklab, var(--theme-accent) 40%, transparent), 0 6px 18px oklch(0 0 0 / 45%)",
+                        }}
+                      >
+                        {["❤️", "👍", "🔥", "😂", "😮", "😢"].map((e) => (
+                          <button
+                            key={e}
+                            type="button"
+                            onClick={() => {
+                              void toggleReaction(m.id, e);
+                              setReactionFor(null);
+                            }}
+                            className="grid h-8 w-8 place-items-center rounded-full text-base transition hover:scale-125 active:scale-95"
+                          >
+                            {e}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             );
           })
+        )}
+        {peerTyping && (
+          <div className="msg-in flex justify-start">
+            <div
+              className="flex items-center gap-1 rounded-3xl rounded-bl-md bg-white/5 px-3.5 py-2 backdrop-blur-xl"
+              style={{
+                border: "2px solid color-mix(in oklab, oklch(0.82 0.16 200) 70%, transparent)",
+                boxShadow:
+                  "0 0 14px color-mix(in oklab, oklch(0.82 0.16 200) 35%, transparent)",
+              }}
+            >
+              <TypingDots />
+            </div>
+          </div>
         )}
       </div>
 
@@ -896,7 +1068,12 @@ function ChatPage() {
           <div className="input-pill flex flex-1 items-center px-4">
             <input
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (e.target.value.length > 0) notifyTyping();
+                else stopTyping();
+              }}
+              onBlur={() => stopTyping()}
               placeholder={t("typeMessage")}
               disabled={!!voicePreview || !!attachment}
               className="flex-1 bg-transparent py-3 text-sm placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
@@ -984,3 +1161,31 @@ function FloatingHeaderButton({
     </button>
   );
 }
+
+function TypingDots() {
+  return (
+    <span className="inline-flex items-end gap-0.5">
+      <span className="h-1 w-1 rounded-full bg-current animate-[neon-pulse_1.2s_ease-in-out_infinite]" style={{ animationDelay: "0ms" }} />
+      <span className="h-1 w-1 rounded-full bg-current animate-[neon-pulse_1.2s_ease-in-out_infinite]" style={{ animationDelay: "180ms" }} />
+      <span className="h-1 w-1 rounded-full bg-current animate-[neon-pulse_1.2s_ease-in-out_infinite]" style={{ animationDelay: "360ms" }} />
+    </span>
+  );
+}
+
+function MessageStatus({ message }: { message: Message }) {
+  // 1 check = sent, 2 checks = delivered, 2 blue checks = seen
+  const seen = !!message.read_at;
+  const delivered = !!message.delivered_at || seen;
+  if (seen) {
+    return (
+      <CheckCheck
+        className="h-3 w-3"
+        style={{ color: "oklch(0.65 0.2 230)", filter: "drop-shadow(0 0 4px oklch(0.65 0.2 230 / 70%))" }}
+        aria-label="Seen"
+      />
+    );
+  }
+  if (delivered) return <CheckCheck className="h-3 w-3 opacity-80" aria-label="Delivered" />;
+  return <Check className="h-3 w-3 opacity-70" aria-label="Sent" />;
+}
+
