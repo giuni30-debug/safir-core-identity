@@ -519,18 +519,12 @@ function ChatPage() {
           upsert: false,
         });
       if (upErr) throw upErr;
-      // Bucket is private — sign a long-lived URL (10 years).
-      const { data: signed, error: signErr } = await supabase.storage
-        .from("voice-messages")
-        .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-      if (signErr || !signed) throw signErr ?? new Error("sign failed");
-      const audioUrl = signed.signedUrl;
 
       const { error: insErr } = await supabase.from("messages").insert({
         sender_user_id: myId,
         receiver_user_id: contactId,
         message_type: "voice",
-        audio_url: audioUrl,
+        audio_url: path,
         duration_seconds: voicePreview.duration,
         message_text: null,
       });
