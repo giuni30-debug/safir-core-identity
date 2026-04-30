@@ -158,7 +158,7 @@ type SpatialNodes = {
 
 let audioCtx: AudioContext | null = null;
 const spatialNodes: Partial<Record<SoundId, SpatialNodes>> = {};
-const ringtoneSpatial: { panner: StereoPannerNode; gain: GainNode } | null = null as any;
+
 let ringtoneNodes: { panner: StereoPannerNode; gain: GainNode } | null = null;
 
 function ensureAudioCtx(): AudioContext | null {
