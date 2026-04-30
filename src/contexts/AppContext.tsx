@@ -59,6 +59,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeColor>("cyan");
   const [bg, setBgState] = useState<BgKind>("gradient");
   const [anim, setAnimState] = useState<AnimKind>("stars");
+  const [neon, setNeonState] = useState<NeonColor>("blue");
+  const [neonAnim, setNeonAnimState] = useState<boolean>(true);
 
   // Load preferences
   useEffect(() => {
@@ -67,6 +69,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setThemeState((localStorage.getItem(LS.theme) as ThemeColor) || "cyan");
     setBgState((localStorage.getItem(LS.bg) as BgKind) || "gradient");
     setAnimState((localStorage.getItem(LS.anim) as AnimKind) || "stars");
+    setNeonState((localStorage.getItem(LS.neon) as NeonColor) || "blue");
+    setNeonAnimState(localStorage.getItem(LS.neonAnim) !== "0");
   }, []);
 
   // Apply theme attribute
@@ -80,6 +84,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setTheme = (c: ThemeColor) => { setThemeState(c); localStorage.setItem(LS.theme, c); };
   const setBg = (b: BgKind) => { setBgState(b); localStorage.setItem(LS.bg, b); };
   const setAnim = (a: AnimKind) => { setAnimState(a); localStorage.setItem(LS.anim, a); };
+  const setNeon = (n: NeonColor) => { setNeonState(n); localStorage.setItem(LS.neon, n); };
+  const setNeonAnim = (v: boolean) => { setNeonAnimState(v); localStorage.setItem(LS.neonAnim, v ? "1" : "0"); };
 
   const t = (k: TKey) => translations[lang][k] ?? translations.en[k];
 
