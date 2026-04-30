@@ -80,7 +80,9 @@ if (typeof window !== "undefined") {
 export function onInstallPromptChange(fn: (available: boolean) => void) {
   promptListeners.add(fn);
   fn(!!deferredPrompt);
-  return () => promptListeners.delete(fn);
+  return () => {
+    promptListeners.delete(fn);
+  };
 }
 
 export async function triggerInstall(): Promise<"accepted" | "dismissed" | "unavailable"> {
