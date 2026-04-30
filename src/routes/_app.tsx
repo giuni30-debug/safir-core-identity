@@ -11,8 +11,10 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   return (
-    <div className="mx-auto min-h-screen max-w-md px-5 py-6 sm:max-w-lg">
-      <Outlet />
+    <div className="app-shell">
+      <div className="app-frame">
+        <Outlet />
+      </div>
     </div>
   );
 }
