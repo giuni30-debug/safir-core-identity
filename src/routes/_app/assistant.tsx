@@ -51,22 +51,16 @@ function AssistantPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [autoSpeak, setAutoSpeak] = useState(false);
   const [imageMode, setImageMode] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [conversations, setConversations] = useState<AiConversation[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
-  const recogRef = useRef<unknown>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const memory = useAiMemory();
-  const { prefs: assistantPrefs, update: updateAssistantPrefs } = useAssistantPrefs(user?.id);
-  const [voiceOpen, setVoiceOpen] = useState(false);
-  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
