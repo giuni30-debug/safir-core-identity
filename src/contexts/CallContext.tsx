@@ -673,6 +673,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       {children}
 
       <audio ref={remoteAudioRef} autoPlay playsInline />
+      <audio ref={speakerAudioRef} autoPlay playsInline />
 
       {error && state.kind === "idle" && (
         <div className="fixed left-1/2 top-4 z-[100] -translate-x-1/2 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-2 text-xs text-destructive backdrop-blur">
