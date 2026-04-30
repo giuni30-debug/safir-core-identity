@@ -94,6 +94,7 @@ function AssistantPage() {
         },
         body: JSON.stringify({
           messages: history.map((m) => ({ role: m.role, content: m.content })),
+          memory: memory.memoryPromptBlock(),
         }),
       });
       if (resp.status === 503) { toast.error(t("aiNotConnected")); setLoading(false); return; }
@@ -137,6 +138,10 @@ function AssistantPage() {
         }
       }
       if (autoSpeak && acc) speak(acc);
+      // Persist assistant reply (best effort, don't await)
+      if (user && activeConvId && acc) {
+        void appendMessage(user.id, activeConvId, "assistant", acc);
+      }
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
         console.error(e);
