@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_app/assistant")({
   head: () => ({
     meta: [
       { title: "All Assist AI — Safir" },
-      { name: "description", content: "Premium AI assistant — chat, voice, documents, images." },
+      { name: "description", content: "Premium AI assistant — chat, documents, images." },
     ],
   }),
 });
