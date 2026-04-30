@@ -313,8 +313,18 @@ export function playSound(id: SoundId, opts?: SpatialOpts): void {
   }
   lastPlayedAt[id] = now;
 
+  // Auto-spatialize ambient UI sounds toward last pointer position when no
+  // explicit opts are provided. Keeps non-UI sounds (receive/notification) neutral.
+  let effectiveOpts = opts;
+  if (!effectiveOpts && (id === "tap" || id === "send")) {
+    const x = recentPointerX();
+    if (x != null) {
+      effectiveOpts = { pan: panFromClientX(x) * 0.6 };
+    }
+  }
+
   // Apply spatial settings (pan + depth) if provided.
-  const spatial = opts ? getSpatial(id) : null;
+  const spatial = effectiveOpts ? getSpatial(id) : null;
   if (spatial && opts && audioCtx) {
     const t = audioCtx.currentTime;
     if (typeof opts.pan === "number") {
