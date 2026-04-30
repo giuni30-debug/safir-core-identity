@@ -236,6 +236,10 @@ function AssistantPage() {
   }
 
   // ---------------- Voice: STT push-to-talk (Web Speech API) ----------------
+  // Tap-to-talk: tap once to start; auto-stops on silence and sends.
+  // Tap again while recording = cancel (don't send).
+  const cancelRecRef = useRef(false);
+
   function startRecording() {
     const SR: any =
       (typeof window !== "undefined" &&
@@ -245,13 +249,15 @@ function AssistantPage() {
       toast.error("Voice input not supported on this browser");
       return;
     }
+    if (loading) return;
     // Stop any ongoing TTS so user hears themselves
     stopSpeaking();
     try {
       const rec = new SR();
       rec.lang = "en-US";
-      rec.continuous = false;
+      rec.continuous = false;       // browser auto-ends on silence
       rec.interimResults = true;
+      cancelRecRef.current = false;
       let finalText = "";
       rec.onresult = (e: any) => {
         let interim = "";
@@ -267,12 +273,22 @@ function AssistantPage() {
         console.warn("[stt] error", e?.error);
         if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
           toast.error("Microphone permission denied");
+        } else if (e?.error === "no-speech") {
+          toast.message("Didn't catch that — try again");
         }
+        cancelRecRef.current = true;
         setRecording(false);
       };
       rec.onend = () => {
         setRecording(false);
         recognitionRef.current = null;
+        const text = finalText.trim();
+        if (!cancelRecRef.current && text) {
+          // Auto-send what was heard
+          setInput("");
+          send(text);
+        }
+        cancelRecRef.current = false;
       };
       recognitionRef.current = rec;
       rec.start();
@@ -283,13 +299,21 @@ function AssistantPage() {
     }
   }
 
-  function stopRecording() {
+  // Tap mic again while recording = cancel (don't auto-send)
+  function cancelRecording() {
     const rec = recognitionRef.current;
+    cancelRecRef.current = true;
     if (rec) {
       try { rec.stop(); } catch { /* ignore */ }
     }
     setRecording(false);
   }
+
+  function toggleRecording() {
+    if (recording) cancelRecording();
+    else startRecording();
+  }
+
 
   // Cleanup on unmount: stop any audio + recognition
   useEffect(() => {
@@ -779,23 +803,20 @@ function AssistantPage() {
           <input ref={fileInputRef} type="file" hidden onChange={(e) => onPickFile(e, "file")} />
           <input ref={imgInputRef} type="file" accept="image/*" hidden onChange={(e) => onPickFile(e, "image")} />
 
-          {/* Push-to-talk microphone */}
+          {/* Tap-to-talk microphone: tap once → record; auto-sends on silence. Tap again to cancel. */}
           <button
-            onPointerDown={(e) => { e.preventDefault(); startRecording(); }}
-            onPointerUp={(e) => { e.preventDefault(); stopRecording(); }}
-            onPointerLeave={() => { if (recording) stopRecording(); }}
-            onPointerCancel={() => { if (recording) stopRecording(); }}
-            onContextMenu={(e) => e.preventDefault()}
+            type="button"
+            onClick={toggleRecording}
             className="press-glow grid h-9 w-9 place-items-center rounded-full select-none"
             style={recording ? {
               background: "color-mix(in oklab, var(--theme-accent) 30%, transparent)",
               color: "var(--theme-accent)",
               boxShadow: "0 0 16px color-mix(in oklab, var(--theme-accent) 60%, transparent)",
             } : { color: "var(--theme-accent)" }}
-            aria-label={recording ? "Recording — release to stop" : "Hold to talk"}
-            title="Hold to talk"
+            aria-label={recording ? "Recording — tap to cancel" : "Tap to talk"}
+            title={recording ? "Listening… tap to cancel" : "Tap to talk"}
           >
-            <Mic className="h-4 w-4" />
+            <Mic className={`h-4 w-4 ${recording ? "animate-pulse" : ""}`} />
           </button>
 
           <textarea
