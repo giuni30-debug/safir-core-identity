@@ -258,6 +258,7 @@ function Row({
 }
 
 function InstallRow() {
+  const { t } = useApp();
   const [available, setAvailable] = useState(false);
   const [installed, setInstalled] = useState(false);
 
@@ -278,27 +279,18 @@ function InstallRow() {
         >
           <CheckCircle2 className="h-4 w-4" />
         </div>
-        <span className="flex-1 text-sm font-medium">App installed</span>
+        <span className="flex-1 text-sm font-medium">{t("appInstalled")}</span>
       </div>
     );
   }
 
   const onInstall = async () => {
+    const msg = isIOS() ? t("installIOS") : t("installAndroid");
     if (available) {
       const outcome = await triggerInstall();
-      if (outcome === "unavailable") {
-        toast.message(
-          isIOS()
-            ? "On iPhone: tap Share → Add to Home Screen."
-            : "Open this app in Chrome, tap ⋮, then tap Add to Home screen.",
-        );
-      }
+      if (outcome === "unavailable") toast.message(msg);
     } else {
-      toast.message(
-        isIOS()
-          ? "On iPhone: tap Share → Add to Home Screen."
-          : "Open this app in Chrome, tap ⋮, then tap Add to Home screen.",
-      );
+      toast.message(msg);
     }
   };
 
@@ -317,7 +309,7 @@ function InstallRow() {
       >
         <Download className="h-4 w-4" />
       </div>
-      <span className="flex-1 text-sm font-medium">Install / Add to Home Screen</span>
+      <span className="flex-1 text-sm font-medium">{t("installApp")}</span>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </button>
   );
