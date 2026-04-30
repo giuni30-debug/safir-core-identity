@@ -26,7 +26,6 @@ const PERSONAS: { id: AssistantPersonality; label: string; desc: string }[] = [
 ];
 
 export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) {
-  const [agentId, setAgentId] = useState(prefs.agentId ?? "");
   const [voiceId, setVoiceId] = useState(prefs.voiceId);
   const [personality, setPersonality] = useState<AssistantPersonality>(prefs.personality);
   const [autoMode, setAutoMode] = useState(prefs.autoMode);
@@ -35,34 +34,17 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
   // Re-sync local form whenever the sheet is (re)opened or prefs change.
   useEffect(() => {
     if (!open) return;
-    setAgentId(prefs.agentId ?? "");
     setVoiceId(prefs.voiceId);
     setPersonality(prefs.personality);
     setAutoMode(prefs.autoMode);
-  }, [open, prefs.agentId, prefs.voiceId, prefs.personality, prefs.autoMode]);
+  }, [open, prefs.voiceId, prefs.personality, prefs.autoMode]);
 
   if (!open) return null;
 
-  const trimmedId = agentId.trim();
-  // ElevenLabs agent IDs: usually "agent_" + 20-40 alphanumeric, or legacy alphanumeric (>= 16 chars)
-  const agentIdValid =
-    trimmedId.length === 0 ||
-    /^agent_[A-Za-z0-9]{16,}$/.test(trimmedId) ||
-    /^[A-Za-z0-9]{20,}$/.test(trimmedId);
-  const agentIdError =
-    trimmedId.length > 0 && !agentIdValid
-      ? "Invalid format. Expected something like agent_xxxxxxxxxxxxxxxx"
-      : null;
-
   const submit = async () => {
-    if (agentIdError) {
-      toast.error(agentIdError);
-      return;
-    }
     setSaving(true);
     try {
       await onSave({
-        agentId: trimmedId || null,
         voiceId,
         personality,
         autoMode,
