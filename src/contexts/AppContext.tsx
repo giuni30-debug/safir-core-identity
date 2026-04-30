@@ -138,6 +138,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         theme, setTheme,
         bg, setBg,
         anim, setAnim,
+        neon, setNeon,
+        neonAnim, setNeonAnim,
       }}
     >
       {children}
