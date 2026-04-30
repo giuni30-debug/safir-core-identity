@@ -1161,3 +1161,31 @@ function FloatingHeaderButton({
     </button>
   );
 }
+
+function TypingDots() {
+  return (
+    <span className="inline-flex items-end gap-0.5">
+      <span className="h-1 w-1 rounded-full bg-current animate-[neon-pulse_1.2s_ease-in-out_infinite]" style={{ animationDelay: "0ms" }} />
+      <span className="h-1 w-1 rounded-full bg-current animate-[neon-pulse_1.2s_ease-in-out_infinite]" style={{ animationDelay: "180ms" }} />
+      <span className="h-1 w-1 rounded-full bg-current animate-[neon-pulse_1.2s_ease-in-out_infinite]" style={{ animationDelay: "360ms" }} />
+    </span>
+  );
+}
+
+function MessageStatus({ message }: { message: Message }) {
+  // 1 check = sent, 2 checks = delivered, 2 blue checks = seen
+  const seen = !!message.read_at;
+  const delivered = !!message.delivered_at || seen;
+  if (seen) {
+    return (
+      <CheckCheck
+        className="h-3 w-3"
+        style={{ color: "oklch(0.65 0.2 230)", filter: "drop-shadow(0 0 4px oklch(0.65 0.2 230 / 70%))" }}
+        aria-label="Seen"
+      />
+    );
+  }
+  if (delivered) return <CheckCheck className="h-3 w-3 opacity-80" aria-label="Delivered" />;
+  return <Check className="h-3 w-3 opacity-70" aria-label="Sent" />;
+}
+
