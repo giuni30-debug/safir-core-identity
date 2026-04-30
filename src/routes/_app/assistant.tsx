@@ -21,7 +21,18 @@ type Msg = {
   role: "user" | "assistant";
   content: string;
   imageUrl?: string;
+  intent?: "chat" | "doc" | "image" | "translate" | "code";
+  showSources?: boolean;
 };
+
+function detectIntent(text: string): Msg["intent"] {
+  const t = text.toLowerCase();
+  if (/\[.+\]\s*\(file attached/i.test(text)) return "doc";
+  if (/\[.+\]\s*\(image attached/i.test(text)) return "image";
+  if (/\b(translate|traduce|çevir|übersetze|traducere)\b/.test(t)) return "translate";
+  if (/```|function |const |class |def |import |sql|=>/.test(text)) return "code";
+  return "chat";
+}
 
 const CHAT_URL  = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-image`;
