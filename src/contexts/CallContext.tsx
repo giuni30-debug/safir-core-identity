@@ -398,7 +398,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         media,
       });
     },
-    [myId, state.kind, buildPeer, sendSignal, getLocalMedia, unlockCallAudio],
+    [myId, state.kind, buildPeer, sendSignal, getLocalMedia, unlockCallAudio, setSpeakerphoneOff],
   );
 
   const startCall = useCallback((id: string) => startCallInternal(id, "audio"), [startCallInternal]);
@@ -409,6 +409,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (state.kind !== "incoming" || !myId) return;
     const { callId, peer, offer, media } = state;
     await unlockCallAudio();
+    setSpeakerphoneOff();
 
     const stream = await getLocalMedia(media);
     if (!stream) {
@@ -425,6 +426,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     const pc = buildPeer(callId, peer.id);
     stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+    setSpeakerphoneOff();
 
     await pc.setRemoteDescription(offer);
     remoteDescSetRef.current = true;
@@ -442,7 +444,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     await updateCallStatus(callId, "accepted");
 
     setState({ kind: "active", callId, peer, role: "callee", startedAt: Date.now(), media });
-  }, [state, myId, buildPeer, sendSignal, updateCallStatus, cleanup, getLocalMedia, unlockCallAudio]);
+  }, [state, myId, buildPeer, sendSignal, updateCallStatus, cleanup, getLocalMedia, unlockCallAudio, setSpeakerphoneOff]);
 
   const declineIncoming = useCallback(async () => {
     if (state.kind !== "incoming") return;
