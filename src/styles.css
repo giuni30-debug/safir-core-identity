@@ -164,8 +164,16 @@
   50% { opacity: 0.32; transform: translate(-50%, -50%) scale(1.15); }
 }
 @keyframes message-in {
-  0% { opacity: 0; transform: translateY(6px) scale(0.96); }
+  0% { opacity: 0; transform: translateY(8px) scale(0.96); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--theme-accent) 60%, transparent); }
+  50% { box-shadow: 0 0 0 12px color-mix(in oklab, var(--theme-accent) 0%, transparent); }
+}
+@keyframes tile-glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--theme-accent) 35%, transparent); }
+  50% { box-shadow: 0 0 24px 4px color-mix(in oklab, var(--theme-accent) 25%, transparent); }
 }
 
 @layer base {
