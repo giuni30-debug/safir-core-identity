@@ -505,13 +505,21 @@ function ChatPage() {
             const isFile = type === "file" && m.media_url;
             const isMedia = isImage || isVideo;
             return (
-              <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+              <div key={m.id} className={`msg-in flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[78%] ${isMedia ? "p-1" : "px-3 py-2"} rounded-2xl text-sm shadow ${
+                  className={`max-w-[78%] ${isMedia ? "p-1" : "px-3.5 py-2"} rounded-3xl text-sm backdrop-blur-xl ${
                     mine
-                      ? "bg-primary/90 text-primary-foreground rounded-br-sm"
-                      : "bg-card/60 border border-border rounded-bl-sm"
+                      ? "rounded-br-md text-primary-foreground shadow-[0_6px_20px_-6px_var(--theme-glow)]"
+                      : "rounded-bl-md border border-glass-border bg-white/5 shadow-[0_4px_16px_-8px_rgba(0,0,0,0.5)]"
                   }`}
+                  style={
+                    mine
+                      ? {
+                          background:
+                            "linear-gradient(135deg, var(--theme-accent), color-mix(in oklab, var(--theme-accent) 70%, #000))",
+                        }
+                      : undefined
+                  }
                 >
                   {isVoice ? (
                     <VoicePlayer url={m.audio_url!} duration={m.duration_seconds} mine={mine} />

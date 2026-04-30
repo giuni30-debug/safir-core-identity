@@ -163,6 +163,10 @@
   0%, 100% { opacity: 0.18; transform: translate(-50%, -50%) scale(1); }
   50% { opacity: 0.32; transform: translate(-50%, -50%) scale(1.15); }
 }
+@keyframes message-in {
+  0% { opacity: 0; transform: translateY(6px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
 
 @layer base {
   * {
@@ -204,20 +208,47 @@
 
 @layer components {
   .glass-card {
-    background: var(--glass);
-    backdrop-filter: blur(24px) saturate(140%);
-    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    background: linear-gradient(
+      135deg,
+      oklch(1 0 0 / 6%) 0%,
+      oklch(1 0 0 / 2%) 100%
+    );
+    backdrop-filter: blur(28px) saturate(160%);
+    -webkit-backdrop-filter: blur(28px) saturate(160%);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-2xl);
-    box-shadow: var(--shadow-card);
+    box-shadow:
+      var(--shadow-card),
+      inset 0 1px 0 oklch(1 0 0 / 6%);
   }
   .glass-card-hover {
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    transition:
+      transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.35s ease,
+      border-color 0.35s ease;
   }
   .glass-card-hover:hover {
     transform: translateY(-4px);
-    border-color: var(--theme-accent);
-    box-shadow: var(--shadow-glow);
+    border-color: color-mix(in oklab, var(--theme-accent) 60%, transparent);
+    box-shadow:
+      0 20px 50px oklch(0 0 0 / 55%),
+      0 0 28px color-mix(in oklab, var(--theme-accent) 25%, transparent);
+  }
+  .glass-card-hover:active {
+    transform: translateY(-2px) scale(0.985);
+    transition-duration: 0.12s;
+  }
+  /* Subtle premium press effect on all buttons */
+  button {
+    transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
+  }
+  button:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+  /* Chat message appear animation */
+  .msg-in {
+    animation: message-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .neon-text {
     color: var(--theme-accent);
