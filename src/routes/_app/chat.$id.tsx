@@ -542,7 +542,7 @@ function ChatPage() {
       >
         {grouped.length === 0 ? (
           <div className="flex h-full items-center justify-center">
-            <p className="text-xs text-muted-foreground">No messages yet — say hello 👋</p>
+            <p className="text-xs text-muted-foreground">{t("noMessages")}</p>
           </div>
         ) : (
           grouped.map((m) => {
