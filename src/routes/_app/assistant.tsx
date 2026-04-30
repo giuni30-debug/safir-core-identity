@@ -2,9 +2,9 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useApp } from "@/contexts/AppContext";
 import { useEffect, useRef, useState } from "react";
 import {
-  ArrowLeft, Send, Mic, Paperclip, Image as ImageIcon, Sparkles,
-  Loader2, Plus, Volume2, VolumeX, Wand2, Square, Search, Brain,
-  History, Trash2, Settings as SettingsIcon, MessageSquare, Radio,
+  ArrowLeft, Send, Paperclip, Image as ImageIcon, Sparkles,
+  Plus, Wand2, Square, Search, Brain,
+  History, Trash2, Settings as SettingsIcon, MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -13,9 +13,6 @@ import {
   listConversations, loadMessages, deleteConversation,
   type AiConversation,
 } from "@/hooks/useAiMemory";
-import { useAssistantPrefs } from "@/hooks/useAssistantPrefs";
-import { VoiceMode } from "@/components/assistant/VoiceMode";
-import { AssistantSettingsSheet } from "@/components/assistant/AssistantSettingsSheet";
 
 export const Route = createFileRoute("/_app/assistant")({
   component: AssistantPage,
