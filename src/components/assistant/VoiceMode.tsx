@@ -186,7 +186,8 @@ export function VoiceMode({
   }, [conversation, conversation.status]);
 
   const unlockAudioPlayback = useCallback(async () => {
-    const AudioContextCtor = window.AudioContext || (window as WebkitAudioWindow).webkitAudioContext;
+    const AudioContextCtor =
+      window.AudioContext || (window as WebkitAudioWindow).webkitAudioContext;
     if (!AudioContextCtor) return;
     const ctx = audioContextRef.current ?? new AudioContextCtor();
     audioContextRef.current = ctx;
