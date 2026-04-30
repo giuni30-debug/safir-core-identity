@@ -48,7 +48,7 @@ const CALL_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
 };
 
 type AudioSinkElement = HTMLAudioElement & { setSinkId?: (sinkId: string) => Promise<void> };
-type RemoteAudioGraph = {
+type AudioLevelerGraph = {
   input: MediaStream;
   source: MediaStreamAudioSourceNode;
   leveler: DynamicsCompressorNode;
@@ -77,7 +77,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const remoteAudioGraphRef = useRef<RemoteAudioGraph | null>(null);
+  const localAudioGraphRef = useRef<AudioLevelerGraph | null>(null);
+  const rawLocalAudioTracksRef = useRef<MediaStreamTrack[]>([]);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const callIdRef = useRef<string | null>(null);
   const peerIdRef = useRef<string | null>(null);
@@ -86,17 +87,23 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const facingRef = useRef<"user" | "environment">("user");
   const speakerOnRef = useRef(false);
 
+  const releaseLocalAudioProcessing = useCallback(() => {
+    rawLocalAudioTracksRef.current.forEach((t) => t.stop());
+    rawLocalAudioTracksRef.current = [];
+    localAudioGraphRef.current?.source.disconnect();
+    localAudioGraphRef.current?.leveler.disconnect();
+    localAudioGraphRef.current?.makeupGain.disconnect();
+    localAudioGraphRef.current?.limiter.disconnect();
+    localAudioGraphRef.current = null;
+  }, []);
+
   const cleanup = useCallback(() => {
     pcRef.current?.getSenders().forEach((s) => s.track?.stop());
     pcRef.current?.close();
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
-    remoteAudioGraphRef.current?.source.disconnect();
-    remoteAudioGraphRef.current?.leveler.disconnect();
-    remoteAudioGraphRef.current?.makeupGain.disconnect();
-    remoteAudioGraphRef.current?.limiter.disconnect();
-    remoteAudioGraphRef.current = null;
+    releaseLocalAudioProcessing();
     remoteStreamRef.current = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
@@ -114,7 +121,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setCameraOn(true);
     setHasRemoteVideo(false);
     facingRef.current = "user";
-  }, []);
+  }, [releaseLocalAudioProcessing]);
 
   const sendSignal = useCallback(
     async (
