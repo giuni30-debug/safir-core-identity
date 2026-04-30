@@ -21,7 +21,18 @@ type Msg = {
   role: "user" | "assistant";
   content: string;
   imageUrl?: string;
+  intent?: "chat" | "doc" | "image" | "translate" | "code";
+  showSources?: boolean;
 };
+
+function detectIntent(text: string): Msg["intent"] {
+  const t = text.toLowerCase();
+  if (/\[.+\]\s*\(file attached/i.test(text)) return "doc";
+  if (/\[.+\]\s*\(image attached/i.test(text)) return "image";
+  if (/\b(translate|traduce|çevir|übersetze|traducere)\b/.test(t)) return "translate";
+  if (/```|function |const |class |def |import |sql|=>/.test(text)) return "code";
+  return "chat";
+}
 
 const CHAT_URL  = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-image`;
@@ -158,20 +169,39 @@ function AssistantPage() {
     }
   }
 
-  function send() {
-    const text = input.trim();
+  function send(prefill?: string) {
+    const text = (prefill ?? input).trim();
     if (!text || loading) return;
-    setInput("");
+    if (!prefill) setInput("");
     if (imageMode) {
-      const next: Msg[] = [...messages, { role: "user", content: text }];
+      const next: Msg[] = [...messages, { role: "user", content: text, intent: "image" }];
       setMessages(next);
       setImageMode(false);
       generateImage(text);
       return;
     }
-    const next: Msg[] = [...messages, { role: "user", content: text }];
+    const intent = detectIntent(text);
+    const next: Msg[] = [...messages, { role: "user", content: text, intent }];
     setMessages(next);
     streamReply(next);
+  }
+
+  function followUp(kind: "simpler" | "details" | "translate" | "summarize", anchor: string) {
+    const map = {
+      simpler:   `Explain the previous answer in simpler words. Original topic: """${anchor.slice(0, 400)}"""`,
+      details:   `Give more in-depth details and concrete examples about your previous answer. Topic: """${anchor.slice(0, 400)}"""`,
+      translate: `Translate your previous answer. If it was in English, translate to Romanian; otherwise translate to English. Original: """${anchor.slice(0, 600)}"""`,
+      summarize: `Summarize your previous answer in 5 short bullet points. Original: """${anchor.slice(0, 600)}"""`,
+    } as const;
+    send(map[kind]);
+  }
+
+  function searchDeeper() {
+    toast.message(t("aiLiveUnavailable"));
+  }
+
+  function toggleSources(idx: number) {
+    setMessages((p) => p.map((m, i) => (i === idx ? { ...m, showSources: !m.showSources } : m)));
   }
 
   function stop() {
@@ -322,45 +352,123 @@ function AssistantPage() {
         )}
 
         <ul className="space-y-3">
-          {messages.map((m, i) => (
-            <li key={i} className={`msg-in flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className="max-w-[82%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
-                style={
-                  m.role === "user"
-                    ? {
-                        background: "linear-gradient(135deg, var(--theme-accent), color-mix(in oklab, var(--theme-accent) 60%, #000))",
-                        color: "#fff",
-                        boxShadow: "0 0 18px color-mix(in oklab, var(--theme-accent) 45%, transparent)",
-                      }
-                    : {
-                        background: "linear-gradient(135deg, oklch(1 0 0 / 6%), oklch(1 0 0 / 2%))",
-                        border: "1px solid color-mix(in oklab, var(--theme-accent) 22%, transparent)",
-                        backdropFilter: "blur(20px) saturate(160%)",
-                        color: "#fff",
-                        textShadow: m.role === "assistant" && m.content && loading && i === messages.length - 1
-                          ? "0 0 8px color-mix(in oklab, var(--theme-accent) 40%, transparent)" : undefined,
-                      }
-                }
-              >
-                {m.imageUrl && (
-                  <img
-                    src={m.imageUrl}
-                    alt="generated"
-                    className="mb-2 w-full rounded-xl"
-                    style={{ boxShadow: "0 0 22px color-mix(in oklab, var(--theme-accent) 35%, transparent)" }}
-                  />
-                )}
-                {m.content || (loading && i === messages.length - 1 ? (
-                  <span className="inline-flex gap-1.5 py-1">
-                    <span className="typing-dot inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--theme-accent)" }} />
-                    <span className="typing-dot inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--theme-accent)" }} />
-                    <span className="typing-dot inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--theme-accent)" }} />
+          {messages.map((m, i) => {
+            const isLast = i === messages.length - 1;
+            const isStreamingAssistant = m.role === "assistant" && loading && isLast;
+            const intentLabel =
+              m.intent === "doc" ? t("aiIntentAnalyzeDoc")
+              : m.intent === "image" ? t("aiIntentAnalyzeImage")
+              : m.intent === "translate" ? t("aiIntentTranslate")
+              : m.intent === "code" ? t("aiIntentCode")
+              : null;
+            return (
+              <li key={i} className={`msg-in flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
+                {m.role === "user" && intentLabel && intentLabel !== t("aiIntentChat") && (
+                  <span
+                    className="mb-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                    style={{
+                      border: "1px solid color-mix(in oklab, var(--theme-accent) 40%, transparent)",
+                      color: "var(--theme-accent)",
+                      background: "color-mix(in oklab, var(--theme-accent) 10%, transparent)",
+                    }}
+                  >
+                    <Brain className="h-3 w-3" /> {intentLabel}
                   </span>
-                ) : "")}
-              </div>
-            </li>
-          ))}
+                )}
+                <div
+                  className="max-w-[82%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed"
+                  style={
+                    m.role === "user"
+                      ? {
+                          background: "linear-gradient(135deg, var(--theme-accent), color-mix(in oklab, var(--theme-accent) 60%, #000))",
+                          color: "#fff",
+                          boxShadow: "0 0 18px color-mix(in oklab, var(--theme-accent) 45%, transparent)",
+                        }
+                      : {
+                          background: "linear-gradient(135deg, oklch(1 0 0 / 6%), oklch(1 0 0 / 2%))",
+                          border: "1px solid color-mix(in oklab, var(--theme-accent) 22%, transparent)",
+                          backdropFilter: "blur(20px) saturate(160%)",
+                          color: "#fff",
+                          textShadow: isStreamingAssistant && m.content
+                            ? "0 0 8px color-mix(in oklab, var(--theme-accent) 40%, transparent)" : undefined,
+                        }
+                  }
+                >
+                  {m.imageUrl && (
+                    <img
+                      src={m.imageUrl}
+                      alt="generated"
+                      className="mb-2 w-full rounded-xl"
+                      style={{ boxShadow: "0 0 22px color-mix(in oklab, var(--theme-accent) 35%, transparent)" }}
+                    />
+                  )}
+                  {m.content || (isStreamingAssistant ? (
+                    <span className="inline-flex items-center gap-2 py-0.5 text-xs" style={{ color: "var(--theme-accent)" }}>
+                      <span className="inline-flex gap-1">
+                        <span className="typing-dot inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--theme-accent)" }} />
+                        <span className="typing-dot inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--theme-accent)" }} />
+                        <span className="typing-dot inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--theme-accent)" }} />
+                      </span>
+                      <span className="font-semibold">{t("aiThinking")}</span>
+                    </span>
+                  ) : "")}
+                </div>
+
+                {/* Assistant: follow-ups + sources */}
+                {m.role === "assistant" && m.content && !isStreamingAssistant && (
+                  <div className="mt-2 flex w-full max-w-[82%] flex-col gap-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {([
+                        ["simpler", t("aiFollowExplainSimpler")],
+                        ["details", t("aiFollowMoreDetails")],
+                        ["summarize", t("aiFollowSummarize")],
+                        ["translate", t("aiFollowTranslate")],
+                      ] as const).map(([k, label]) => (
+                        <button
+                          key={k}
+                          onClick={() => followUp(k, m.content)}
+                          className="press-glow rounded-full border border-border/60 bg-card/40 px-2.5 py-1 text-[10px] font-semibold text-white"
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        onClick={() => toggleSources(i)}
+                        className="press-glow inline-flex items-center gap-1 rounded-full border border-border/60 bg-card/40 px-2.5 py-1 text-[10px] font-semibold text-white"
+                      >
+                        <Brain className="h-3 w-3" /> {t("aiSources")}
+                      </button>
+                      <button
+                        onClick={searchDeeper}
+                        className="press-glow inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold"
+                        style={{
+                          border: "1px solid color-mix(in oklab, var(--theme-accent) 45%, transparent)",
+                          color: "var(--theme-accent)",
+                          background: "color-mix(in oklab, var(--theme-accent) 10%, transparent)",
+                        }}
+                      >
+                        <Search className="h-3 w-3" /> {t("aiSearchDeeper")}
+                      </button>
+                    </div>
+                    {m.showSources && (
+                      <div
+                        className="rounded-xl px-3 py-2 text-[11px]"
+                        style={{
+                          border: "1px solid color-mix(in oklab, var(--theme-accent) 25%, transparent)",
+                          background: "oklch(1 0 0 / 4%)",
+                          color: "#fff",
+                        }}
+                      >
+                        {t("aiNoSources")}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
 
@@ -448,7 +556,7 @@ function AssistantPage() {
             </button>
           ) : (
             <button
-              onClick={send}
+              onClick={() => send()}
               disabled={!input.trim()}
               className="neon-circle press-glow grid h-10 w-10 place-items-center rounded-full disabled:opacity-50"
               aria-label="send"

@@ -251,6 +251,21 @@ const en = {
   trAutoSpeak: "Auto speak",
   trYou: "You",
   trPartner: "Partner",
+  // Assistant smart layer
+  aiSources: "Sources",
+  aiNoSources: "Based on AI knowledge — no live web sources used.",
+  aiSearchDeeper: "Search deeper",
+  aiLiveUnavailable: "Live data not available right now",
+  aiFollowExplainSimpler: "Explain simpler",
+  aiFollowMoreDetails: "More details",
+  aiFollowTranslate: "Translate",
+  aiFollowSummarize: "Summarize",
+  aiIntentChat: "Chat",
+  aiIntentAnalyzeDoc: "Analyzing document",
+  aiIntentAnalyzeImage: "Analyzing image",
+  aiIntentTranslate: "Translation",
+  aiIntentCode: "Code",
+  aiUnsureNote: "I'm not fully sure, but here's what I found.",
 } as const;
 
 const ro: Record<keyof typeof en, string> = {
@@ -484,6 +499,20 @@ const ro: Record<keyof typeof en, string> = {
   trAutoSpeak: "Citește traducerea",
   trYou: "Tu",
   trPartner: "Partener",
+  aiSources: "Surse",
+  aiNoSources: "Bazat pe cunoștințe AI — fără surse web în timp real.",
+  aiSearchDeeper: "Caută mai profund",
+  aiLiveUnavailable: "Datele live nu sunt disponibile momentan",
+  aiFollowExplainSimpler: "Explică mai simplu",
+  aiFollowMoreDetails: "Mai multe detalii",
+  aiFollowTranslate: "Traduce",
+  aiFollowSummarize: "Rezumă",
+  aiIntentChat: "Conversație",
+  aiIntentAnalyzeDoc: "Se analizează documentul",
+  aiIntentAnalyzeImage: "Se analizează imaginea",
+  aiIntentTranslate: "Traducere",
+  aiIntentCode: "Cod",
+  aiUnsureNote: "Nu sunt complet sigur, dar iată ce am găsit.",
 };
 
 const tr: Record<keyof typeof en, string> = {
@@ -717,6 +746,20 @@ const tr: Record<keyof typeof en, string> = {
   trAutoSpeak: "Çeviriyi seslendir",
   trYou: "Sen",
   trPartner: "Partner",
+  aiSources: "Kaynaklar",
+  aiNoSources: "AI bilgisine dayanır — canlı web kaynağı kullanılmadı.",
+  aiSearchDeeper: "Daha derin ara",
+  aiLiveUnavailable: "Canlı veri şu anda kullanılamıyor",
+  aiFollowExplainSimpler: "Daha basit açıkla",
+  aiFollowMoreDetails: "Daha fazla detay",
+  aiFollowTranslate: "Çevir",
+  aiFollowSummarize: "Özetle",
+  aiIntentChat: "Sohbet",
+  aiIntentAnalyzeDoc: "Belge analiz ediliyor",
+  aiIntentAnalyzeImage: "Görsel analiz ediliyor",
+  aiIntentTranslate: "Çeviri",
+  aiIntentCode: "Kod",
+  aiUnsureNote: "Tam emin değilim ama bulduklarım şunlar.",
 };
 
 const de: Record<keyof typeof en, string> = {
@@ -950,6 +993,20 @@ const de: Record<keyof typeof en, string> = {
   trAutoSpeak: "Übersetzung vorlesen",
   trYou: "Du",
   trPartner: "Partner",
+  aiSources: "Quellen",
+  aiNoSources: "Basiert auf KI-Wissen — keine Live-Webquellen verwendet.",
+  aiSearchDeeper: "Tiefer suchen",
+  aiLiveUnavailable: "Live-Daten derzeit nicht verfügbar",
+  aiFollowExplainSimpler: "Einfacher erklären",
+  aiFollowMoreDetails: "Mehr Details",
+  aiFollowTranslate: "Übersetzen",
+  aiFollowSummarize: "Zusammenfassen",
+  aiIntentChat: "Chat",
+  aiIntentAnalyzeDoc: "Dokument wird analysiert",
+  aiIntentAnalyzeImage: "Bild wird analysiert",
+  aiIntentTranslate: "Übersetzung",
+  aiIntentCode: "Code",
+  aiUnsureNote: "Ich bin nicht ganz sicher, aber das habe ich gefunden.",
 };
 
 export const translations = { en, ro, tr, de } as const;
