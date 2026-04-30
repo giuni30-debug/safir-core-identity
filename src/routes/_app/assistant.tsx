@@ -3,7 +3,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft, Send, Mic, Paperclip, Image as ImageIcon, Sparkles,
-  Loader2, Plus,
+  Loader2, Plus, Volume2, VolumeX, Wand2, Square, Search, Brain,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,15 +12,20 @@ export const Route = createFileRoute("/_app/assistant")({
   head: () => ({
     meta: [
       { title: "All Assist AI — Safir" },
-      { name: "description", content: "Premium AI assistant — chat, voice, documents." },
+      { name: "description", content: "Premium AI assistant — chat, voice, documents, images." },
     ],
   }),
 });
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = {
+  role: "user" | "assistant";
+  content: string;
+  imageUrl?: string;
+};
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
-const SUPA_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const CHAT_URL  = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-image`;
+const SUPA_KEY  = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 function AssistantPage() {
   const { t } = useApp();
@@ -29,32 +34,46 @@ function AssistantPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(false);
+  const [imageMode, setImageMode] = useState(false);
   const recogRef = useRef<unknown>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
+  function speak(text: string) {
+    if (!text || !("speechSynthesis" in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = navigator.language || "en-US";
+      window.speechSynthesis.speak(u);
+    } catch { /* ignore */ }
+  }
+
   async function streamReply(history: Msg[]) {
     setLoading(true);
     let acc = "";
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     try {
       const resp = await fetch(CHAT_URL, {
         method: "POST",
+        signal: ctrl.signal,
         headers: {
           "Content-Type": "application/json",
           ...(SUPA_KEY ? { Authorization: `Bearer ${SUPA_KEY}` } : {}),
         },
-        body: JSON.stringify({ messages: history }),
+        body: JSON.stringify({
+          messages: history.map((m) => ({ role: m.role, content: m.content })),
+        }),
       });
-      if (resp.status === 503) {
-        toast.error(t("aiNotConnected"));
-        setLoading(false);
-        return;
-      }
+      if (resp.status === 503) { toast.error(t("aiNotConnected")); setLoading(false); return; }
       if (resp.status === 429) { toast.error("Rate limit exceeded"); setLoading(false); return; }
       if (resp.status === 402) { toast.error("AI credits exhausted"); setLoading(false); return; }
       if (!resp.ok || !resp.body) { toast.error(t("aiError")); setLoading(false); return; }
@@ -63,7 +82,6 @@ function AssistantPage() {
       const decoder = new TextDecoder();
       let buf = "";
       let done = false;
-      // Insert empty assistant placeholder
       setMessages((p) => [...p, { role: "assistant", content: "" }]);
 
       while (!done) {
@@ -95,8 +113,45 @@ function AssistantPage() {
           }
         }
       }
+      if (autoSpeak && acc) speak(acc);
     } catch (e) {
-      console.error(e);
+      if ((e as Error).name !== "AbortError") {
+        console.error(e);
+        toast.error(t("aiError"));
+      }
+    } finally {
+      setLoading(false);
+      abortRef.current = null;
+    }
+  }
+
+  async function generateImage(prompt: string) {
+    setLoading(true);
+    setMessages((p) => [...p, { role: "assistant", content: t("aiGenerating") }]);
+    try {
+      const resp = await fetch(IMAGE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(SUPA_KEY ? { Authorization: `Bearer ${SUPA_KEY}` } : {}),
+        },
+        body: JSON.stringify({ prompt }),
+      });
+      if (resp.status === 503) { toast.error(t("aiNotConnected")); return; }
+      if (resp.status === 429) { toast.error("Rate limit exceeded"); return; }
+      if (resp.status === 402) { toast.error("AI credits exhausted"); return; }
+      if (!resp.ok) { toast.error(t("aiError")); return; }
+      const data = await resp.json();
+      setMessages((p) => {
+        const copy = [...p];
+        copy[copy.length - 1] = {
+          role: "assistant",
+          content: data.text || "✨",
+          imageUrl: data.imageUrl,
+        };
+        return copy;
+      });
+    } catch {
       toast.error(t("aiError"));
     } finally {
       setLoading(false);
@@ -106,10 +161,22 @@ function AssistantPage() {
   function send() {
     const text = input.trim();
     if (!text || loading) return;
-    const next = [...messages, { role: "user" as const, content: text }];
-    setMessages(next);
     setInput("");
+    if (imageMode) {
+      const next: Msg[] = [...messages, { role: "user", content: text }];
+      setMessages(next);
+      setImageMode(false);
+      generateImage(text);
+      return;
+    }
+    const next: Msg[] = [...messages, { role: "user", content: text }];
+    setMessages(next);
     streamReply(next);
+  }
+
+  function stop() {
+    abortRef.current?.abort();
+    setLoading(false);
   }
 
   function startVoice() {
@@ -145,12 +212,19 @@ function AssistantPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     const note = kind === "image"
-      ? `[${file.name}] (image attached — image understanding coming soon)`
+      ? `[${file.name}] (image attached — please describe what's in it)`
       : `[${file.name}] (file attached — please summarize / explain its contents)`;
     setInput((p) => (p ? p + "\n" : "") + note);
     e.target.value = "";
     toast.success(file.name);
   }
+
+  const suggestions: { key: string; label: string; prompt: string }[] = [
+    { key: "explain",   label: t("aiSugExplain"),   prompt: "Explain this clearly: " },
+    { key: "summarize", label: t("aiSugSummarize"), prompt: "Summarize this in 5 bullet points: " },
+    { key: "translate", label: t("aiSugTranslate"), prompt: "Translate the following: " },
+    { key: "plan",      label: t("aiSugPlan"),      prompt: "Make a step-by-step plan for: " },
+  ];
 
   return (
     <div className="page-enter relative flex h-[100dvh] flex-col">
@@ -170,7 +244,20 @@ function AssistantPage() {
           <p className="text-soft text-[11px]">{t("aiSubtitle")}</p>
         </div>
         <button
-          onClick={() => setMessages([])}
+          onClick={() => setAutoSpeak((v) => !v)}
+          className="press-glow grid h-10 w-10 place-items-center rounded-full border border-border/60 bg-card/40"
+          aria-label={t("aiAutoSpeak")}
+          title={t("aiAutoSpeak")}
+          style={autoSpeak ? {
+            borderColor: "var(--theme-accent)",
+            boxShadow: "0 0 14px color-mix(in oklab, var(--theme-accent) 50%, transparent)",
+            color: "var(--theme-accent)",
+          } : undefined}
+        >
+          {autoSpeak ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+        </button>
+        <button
+          onClick={() => { setMessages([]); setImageMode(false); window.speechSynthesis?.cancel(); }}
           className="press-glow grid h-10 w-10 place-items-center rounded-full border border-border/60 bg-card/40"
           aria-label={t("aiNewChat")}
         >
@@ -181,25 +268,56 @@ function AssistantPage() {
       {/* Messages */}
       <div ref={scrollRef} className="relative flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 && (
-          <div className="mt-16 flex flex-col items-center text-center">
-            <div className="relative mb-5">
+          <div className="mt-10 flex flex-col items-center text-center ai-fade-up">
+            {/* Animated AI orb */}
+            <div className="relative mb-6 h-32 w-32">
               <div
-                className="absolute inset-0 -z-10 rounded-full blur-3xl"
-                style={{ background: "color-mix(in oklab, var(--theme-accent) 60%, transparent)" }}
+                className="absolute inset-0 rounded-full opacity-70 orb-rays"
+                style={{
+                  background:
+                    "conic-gradient(from 0deg, transparent, color-mix(in oklab, var(--theme-accent) 60%, transparent), transparent 70%)",
+                  filter: "blur(14px)",
+                }}
               />
               <div
-                className="grid h-24 w-24 place-items-center rounded-full"
+                className="absolute inset-3 rounded-full orb-pulse grid place-items-center"
                 style={{
-                  background: "linear-gradient(135deg, var(--theme-accent), color-mix(in oklab, var(--theme-accent) 50%, #000))",
-                  boxShadow: "0 0 50px color-mix(in oklab, var(--theme-accent) 70%, transparent), inset 0 1px 0 oklch(1 0 0 / 30%)",
-                  animation: "logo-breath 4.5s ease-in-out infinite",
+                  background:
+                    "radial-gradient(circle at 35% 30%, oklch(1 0 0 / 70%), color-mix(in oklab, var(--theme-accent) 80%, #000) 55%, #000 100%)",
                 }}
               >
-                <Sparkles className="h-10 w-10 text-white" />
+                <Sparkles className="h-9 w-9 text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.8)]" />
               </div>
             </div>
             <h2 className="text-neon-title text-lg">{t("aiWelcome")}</h2>
             <p className="text-soft mt-1 max-w-xs text-xs">{t("aiSubtitle")}</p>
+
+            {/* Suggestion chips */}
+            <div className="mt-6 grid grid-cols-2 gap-2 w-full max-w-sm">
+              {suggestions.map((s) => (
+                <button
+                  key={s.key}
+                  onClick={() => setInput(s.prompt)}
+                  className="press-glow rounded-2xl px-3 py-3 text-xs font-semibold text-left glass-card"
+                  style={{
+                    border: "1px solid color-mix(in oklab, var(--theme-accent) 30%, transparent)",
+                  }}
+                >
+                  <Wand2 className="h-3.5 w-3.5 mb-1" style={{ color: "var(--theme-accent)" }} />
+                  <div className="text-white">{s.label}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* Advanced placeholders */}
+            <div className="mt-4 flex gap-2 text-[10px] text-soft">
+              <span className="inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-1">
+                <Search className="h-3 w-3" /> {t("aiAdvancedSoon")}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-border/60 px-2 py-1">
+                <Brain className="h-3 w-3" /> {t("aiAdvancedSoon")}
+              </span>
+            </div>
           </div>
         )}
 
@@ -220,10 +338,26 @@ function AssistantPage() {
                         border: "1px solid color-mix(in oklab, var(--theme-accent) 22%, transparent)",
                         backdropFilter: "blur(20px) saturate(160%)",
                         color: "#fff",
+                        textShadow: m.role === "assistant" && m.content && loading && i === messages.length - 1
+                          ? "0 0 8px color-mix(in oklab, var(--theme-accent) 40%, transparent)" : undefined,
                       }
                 }
               >
-                {m.content || (loading && i === messages.length - 1 ? <span className="text-soft">{t("aiThinking")}</span> : "")}
+                {m.imageUrl && (
+                  <img
+                    src={m.imageUrl}
+                    alt="generated"
+                    className="mb-2 w-full rounded-xl"
+                    style={{ boxShadow: "0 0 22px color-mix(in oklab, var(--theme-accent) 35%, transparent)" }}
+                  />
+                )}
+                {m.content || (loading && i === messages.length - 1 ? (
+                  <span className="inline-flex gap-1.5 py-1">
+                    <span className="typing-dot inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--theme-accent)" }} />
+                    <span className="typing-dot inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--theme-accent)" }} />
+                    <span className="typing-dot inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--theme-accent)" }} />
+                  </span>
+                ) : "")}
               </div>
             </li>
           ))}
@@ -231,8 +365,39 @@ function AssistantPage() {
       </div>
 
       {/* Composer */}
-      <div className="relative z-10 border-t border-border/40 bg-background/40 px-3 py-3 backdrop-blur-xl">
-        <div className="input-pill flex items-end gap-1.5 px-2 py-1.5">
+      <div className="relative z-10 border-t border-border/40 bg-background/40 px-3 pb-3 pt-2 backdrop-blur-xl">
+        {/* Action row */}
+        <div className="mb-2 flex items-center gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            onClick={() => setImageMode((v) => !v)}
+            className="press-glow shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold"
+            style={imageMode ? {
+              borderColor: "var(--theme-accent)",
+              color: "var(--theme-accent)",
+              background: "color-mix(in oklab, var(--theme-accent) 14%, transparent)",
+              boxShadow: "0 0 14px color-mix(in oklab, var(--theme-accent) 50%, transparent)",
+            } : { borderColor: "var(--border)", color: "#fff" }}
+          >
+            <Wand2 className="h-3.5 w-3.5" /> {t("aiCreateImage")}
+          </button>
+          {messages.length > 0 && suggestions.slice(0, 2).map((s) => (
+            <button
+              key={s.key}
+              onClick={() => setInput(s.prompt)}
+              className="press-glow shrink-0 inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1.5 text-[11px] font-semibold text-white"
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        <div
+          className="input-pill flex items-end gap-1.5 px-2 py-1.5"
+          style={imageMode ? {
+            borderColor: "color-mix(in oklab, var(--theme-accent) 70%, transparent)",
+            boxShadow: "0 0 18px color-mix(in oklab, var(--theme-accent) 35%, transparent)",
+          } : undefined}
+        >
           <button
             onClick={() => fileInputRef.current?.click()}
             className="press-glow grid h-9 w-9 place-items-center rounded-full text-soft"
@@ -256,7 +421,7 @@ function AssistantPage() {
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
             }}
-            placeholder={t("aiPlaceholder")}
+            placeholder={imageMode ? t("aiImagePrompt") : t("aiPlaceholder")}
             rows={1}
             className="flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none max-h-32"
           />
@@ -272,14 +437,25 @@ function AssistantPage() {
           >
             <Mic className="h-4 w-4" />
           </button>
-          <button
-            onClick={send}
-            disabled={loading || !input.trim()}
-            className="neon-circle press-glow grid h-10 w-10 place-items-center rounded-full disabled:opacity-50"
-            aria-label="send"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </button>
+          {loading ? (
+            <button
+              onClick={stop}
+              className="neon-circle press-glow grid h-10 w-10 place-items-center rounded-full"
+              aria-label={t("aiStop")}
+              style={{ background: "oklch(0.7 0.22 25)" }}
+            >
+              <Square className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              onClick={send}
+              disabled={!input.trim()}
+              className="neon-circle press-glow grid h-10 w-10 place-items-center rounded-full disabled:opacity-50"
+              aria-label="send"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
     </div>
