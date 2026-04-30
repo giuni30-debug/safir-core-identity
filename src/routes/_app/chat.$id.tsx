@@ -873,6 +873,20 @@ function ChatPage() {
             );
           })
         )}
+        {peerTyping && (
+          <div className="msg-in flex justify-start">
+            <div
+              className="flex items-center gap-1 rounded-3xl rounded-bl-md bg-white/5 px-3.5 py-2 backdrop-blur-xl"
+              style={{
+                border: "2px solid color-mix(in oklab, oklch(0.82 0.16 200) 70%, transparent)",
+                boxShadow:
+                  "0 0 14px color-mix(in oklab, oklch(0.82 0.16 200) 35%, transparent)",
+              }}
+            >
+              <TypingDots />
+            </div>
+          </div>
+        )}
       </div>
 
       {permissionError && (
