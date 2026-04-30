@@ -202,6 +202,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       const devices = await navigator.mediaDevices?.enumerateDevices?.();
+      if (!devices) return;
       const outputs = devices.filter((d) => d.kind === "audiooutput");
       const normalize = (v: string) => v.toLowerCase();
       const loudspeakerPattern = /speaker|loudspeaker|difuzor|media|handsfree|external|bluetooth|airplay|hdmi|usb|cast|default/;
