@@ -53,14 +53,6 @@ const CALL_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
 const REMOTE_AUDIO_VOLUME = 0.72;
 
 type AudioSinkElement = HTMLAudioElement & { setSinkId?: (sinkId: string) => Promise<void> };
-type AudioLevelerGraph = {
-  input: MediaStream;
-  source: MediaStreamAudioSourceNode;
-  leveler: DynamicsCompressorNode;
-  makeupGain: GainNode;
-  limiter: DynamicsCompressorNode;
-  destination: MediaStreamAudioDestinationNode;
-};
 
 export function CallProvider({ children }: { children: React.ReactNode }) {
   const { user } = useApp();
@@ -80,8 +72,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const localAudioGraphRef = useRef<AudioLevelerGraph | null>(null);
   const rawLocalAudioTracksRef = useRef<MediaStreamTrack[]>([]);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const callIdRef = useRef<string | null>(null);
@@ -93,11 +83,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const releaseLocalAudioProcessing = useCallback(() => {
     rawLocalAudioTracksRef.current.forEach((t) => t.stop());
     rawLocalAudioTracksRef.current = [];
-    localAudioGraphRef.current?.source.disconnect();
-    localAudioGraphRef.current?.leveler.disconnect();
-    localAudioGraphRef.current?.makeupGain.disconnect();
-    localAudioGraphRef.current?.limiter.disconnect();
-    localAudioGraphRef.current = null;
   }, []);
 
   const cleanup = useCallback(() => {
