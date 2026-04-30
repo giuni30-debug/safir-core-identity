@@ -37,23 +37,32 @@ export type Database = {
       }
       messages: {
         Row: {
+          audio_url: string | null
           created_at: string
+          duration_seconds: number | null
           id: string
-          message_text: string
+          message_text: string | null
+          message_type: string
           receiver_user_id: string
           sender_user_id: string
         }
         Insert: {
+          audio_url?: string | null
           created_at?: string
+          duration_seconds?: number | null
           id?: string
-          message_text: string
+          message_text?: string | null
+          message_type?: string
           receiver_user_id: string
           sender_user_id: string
         }
         Update: {
+          audio_url?: string | null
           created_at?: string
+          duration_seconds?: number | null
           id?: string
-          message_text?: string
+          message_text?: string | null
+          message_type?: string
           receiver_user_id?: string
           sender_user_id?: string
         }
