@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
-import { ArrowLeft, Send, Mic, Square, Trash2, Play, Pause } from "lucide-react";
+import {
+  ArrowLeft, Send, Mic, Square, Trash2, Play, Pause,
+  Plus, Image as ImageIcon, Video as VideoIcon, FileIcon, X, Download,
+} from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "@/components/Avatar";
