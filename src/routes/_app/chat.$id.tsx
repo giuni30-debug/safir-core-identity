@@ -112,7 +112,7 @@ function ChatPage() {
   const { t, user } = useApp();
   const { id: contactId } = Route.useParams();
   const myId = user?.id ?? null;
-  const { startCall, inCall } = useCall();
+  const { startCall, startVideoCall, inCall } = useCall();
 
   const [contact, setContact] = useState<{
     display_name: string; username: string; avatar_url: string | null;
