@@ -47,7 +47,6 @@ const CALL_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
   channelCount: { ideal: 1 },
   sampleRate: { ideal: 48000 },
   sampleSize: { ideal: 16 },
-  latency: { ideal: 0.02 },
 };
 
 const REMOTE_AUDIO_VOLUME = 0.72;
