@@ -51,7 +51,7 @@ export function BackgroundFX() {
         />
         <div
           className={`absolute top-1/2 left-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px] opacity-25 ${
-            neonAnim ? "animate-[neon-pulse_8s_ease-in-out_infinite]" : ""
+            neonAnim ? "animate-[neon-bg-pulse_8s_ease-in-out_infinite]" : ""
           }`}
           style={{ background: color }}
         />
