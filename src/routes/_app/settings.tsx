@@ -129,14 +129,18 @@ function InstallRow() {
     if (available) {
       const outcome = await triggerInstall();
       if (outcome === "unavailable") {
-        toast.message(isIOS()
-          ? "On iPhone: tap Share → Add to Home Screen."
-          : "Open this site in your browser to install.");
+        toast.message(
+          isIOS()
+            ? "On iPhone: tap Share → Add to Home Screen."
+            : "Open this app in Chrome, tap ⋮, then tap Add to Home screen.",
+        );
       }
     } else {
-      toast.message(isIOS()
-        ? "On iPhone: tap Share → Add to Home Screen."
-        : "Install option will appear when your browser is ready.");
+      toast.message(
+        isIOS()
+          ? "On iPhone: tap Share → Add to Home Screen."
+          : "Open this app in Chrome, tap ⋮, then tap Add to Home screen.",
+      );
     }
   };
 
@@ -155,7 +159,7 @@ function InstallRow() {
       >
         <Download className="h-4 w-4" />
       </div>
-      <span className="flex-1 text-sm font-medium">Install App</span>
+      <span className="flex-1 text-sm font-medium">Install / Add to Home Screen</span>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </button>
   );
