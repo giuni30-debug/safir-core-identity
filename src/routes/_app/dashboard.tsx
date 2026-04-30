@@ -31,7 +31,7 @@ function Dashboard() {
     { to: "/notes" as const,        icon: NotebookPen,    label: t("notes"),      color: "oklch(0.78 0.18 150)" },
     { to: "/expenses" as const,     icon: Wallet,         label: t("expenses"),   color: "oklch(0.70 0.22 25)"  },
     { to: "/appointments" as const, icon: CalendarClock,  label: t("appointments"),  color: "oklch(0.82 0.16 200)" },
-    { to: "/coming-soon" as const,  icon: ShoppingBag,    label: t("shopping"),   color: "oklch(0.78 0.18 55)"  },
+    { to: "/shopping" as const,     icon: ShoppingBag,    label: t("shopping"),   color: "oklch(0.78 0.18 55)"  },
   ];
 
   // Translate the whole view as the user swipes right
@@ -108,7 +108,7 @@ function Dashboard() {
                   style={{ filter: "drop-shadow(0 0 6px color-mix(in oklab, var(--theme-accent) 60%, transparent))" }}
                 />
               </div>
-              <span className="text-sm font-semibold tracking-tight">{label}</span>
+              <span className="text-premium text-alive text-sm font-semibold tracking-wide">{label}</span>
             </Link>
           ))}
         </div>
