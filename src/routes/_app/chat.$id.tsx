@@ -553,6 +553,32 @@ function ChatPage() {
             const isVideo = type === "video" && m.media_url;
             const isFile = type === "file" && m.media_url;
             const isMedia = isImage || isVideo;
+            const giftMsg = decodeGiftMessage(m.message_text);
+            if (giftMsg) {
+              return (
+                <div key={m.id} className={`msg-in flex ${mine ? "justify-end" : "justify-start"}`}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveGift(giftMsg)}
+                    className="flex items-center gap-2.5 rounded-3xl px-3.5 py-2 text-sm transition active:scale-95"
+                    style={{
+                      background: `linear-gradient(135deg, color-mix(in oklab, ${giftMsg.color} 22%, transparent), color-mix(in oklab, ${giftMsg.color} 6%, transparent))`,
+                      border: `2px solid ${giftMsg.color}`,
+                      boxShadow: `0 0 18px color-mix(in oklab, ${giftMsg.color} 55%, transparent), 0 6px 18px oklch(0 0 0 / 45%)`,
+                      color: giftMsg.color,
+                    }}
+                  >
+                    <span style={{ fontSize: 28, filter: `drop-shadow(0 0 6px ${giftMsg.color})` }}>
+                      {giftMsg.emoji}
+                    </span>
+                    <span className="flex flex-col items-start leading-tight">
+                      <span className="font-semibold">{mine ? "You sent" : "Received"} {giftMsg.name}</span>
+                      <span className="text-[10px] opacity-80 tabular-nums">€{giftMsg.price.toFixed(2)} · tap to replay</span>
+                    </span>
+                  </button>
+                </div>
+              );
+            }
             return (
               <div key={m.id} className={`msg-in flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div
