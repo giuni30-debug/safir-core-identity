@@ -145,6 +145,85 @@ let initialized = false;
 let ringtoneEl: HTMLAudioElement | null = null;
 let vibrationLoopId: number | null = null;
 
+// ---------------- Spatial audio (WebAudio) ----------------
+// We route HTMLAudio through a MediaElementSource → Panner → Gain → destination.
+// This gives us cheap stereo panning + a "depth" gain so callers can imply
+// distance (incoming call sweeping from far → near, UI element pan L/R, etc.).
+
+type SpatialNodes = {
+  source: MediaElementAudioSourceNode;
+  panner: StereoPannerNode;
+  gain: GainNode;
+};
+
+let audioCtx: AudioContext | null = null;
+const spatialNodes: Partial<Record<SoundId, SpatialNodes>> = {};
+const ringtoneSpatial: { panner: StereoPannerNode; gain: GainNode } | null = null as any;
+let ringtoneNodes: { panner: StereoPannerNode; gain: GainNode } | null = null;
+
+function ensureAudioCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (audioCtx) return audioCtx;
+  const Ctor: typeof AudioContext | undefined =
+    (window as any).AudioContext || (window as any).webkitAudioContext;
+  if (!Ctor) return null;
+  try {
+    audioCtx = new Ctor();
+  } catch {
+    audioCtx = null;
+  }
+  return audioCtx;
+}
+
+function getSpatial(id: SoundId): SpatialNodes | null {
+  const ctx = ensureAudioCtx();
+  const el = buffers[id];
+  if (!ctx || !el) return null;
+  if (spatialNodes[id]) return spatialNodes[id]!;
+  try {
+    const source = ctx.createMediaElementSource(el);
+    const panner = ctx.createStereoPanner();
+    const gain = ctx.createGain();
+    gain.gain.value = 1;
+    panner.pan.value = 0;
+    source.connect(panner);
+    panner.connect(gain);
+    gain.connect(ctx.destination);
+    spatialNodes[id] = { source, panner, gain };
+    return spatialNodes[id]!;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Spatial options for any one-shot playback.
+ * - `pan`: -1 (full left) … 0 (center) … 1 (full right).
+ *   Pass a screen X ratio (clientX / window.innerWidth) for "click here" cues.
+ * - `depth`: 0 (far) … 1 (near). Scales gain to feel closer/further.
+ */
+export type SpatialOpts = { pan?: number; depth?: number };
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+/** Convert a viewport X coordinate to a stereo pan value in [-0.85, 0.85]. */
+export function panFromClientX(clientX: number): number {
+  if (typeof window === "undefined") return 0;
+  const w = window.innerWidth || 1;
+  const norm = clientX / w; // 0..1
+  return clamp((norm - 0.5) * 1.7, -0.85, 0.85);
+}
+
+/** Convert any HTMLElement to a pan value based on its on-screen center. */
+export function panFromElement(el: Element | null): number {
+  if (!el) return 0;
+  const r = (el as HTMLElement).getBoundingClientRect?.();
+  if (!r) return 0;
+  return panFromClientX(r.left + r.width / 2);
+}
+
 /**
  * Preload all sounds. Call once at app start.
  * Audio element instances are lazy-created and kept warm.
