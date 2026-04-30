@@ -275,6 +275,23 @@ export function initSoundEngine() {
   window.addEventListener("pointerdown", tryUnlock, { once: true });
   window.addEventListener("keydown", tryUnlock, { once: true });
   window.addEventListener("touchstart", tryUnlock, { once: true });
+
+  // Track pointer position so ambient UI sounds can be subtly spatialized
+  // toward where the user just interacted.
+  const trackPointer = (e: PointerEvent | MouseEvent | TouchEvent) => {
+    let x: number | undefined;
+    if ("clientX" in e && typeof (e as MouseEvent).clientX === "number") {
+      x = (e as MouseEvent).clientX;
+    } else if ("touches" in e && (e as TouchEvent).touches[0]) {
+      x = (e as TouchEvent).touches[0].clientX;
+    }
+    if (typeof x === "number") {
+      lastPointerX = x;
+      lastPointerAt = performance.now();
+    }
+  };
+  window.addEventListener("pointerdown", trackPointer as EventListener, { capture: true });
+  window.addEventListener("touchstart", trackPointer as EventListener, { capture: true, passive: true });
 }
 
 /**
