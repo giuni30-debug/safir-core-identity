@@ -172,42 +172,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     source.start(0);
   }, []);
 
-  const getRemotePlaybackStream = useCallback((stream: MediaStream) => {
-    const audioTracks = stream.getAudioTracks();
-    if (audioTracks.length === 0) return stream;
-    const graph = remoteAudioGraphRef.current;
-    if (graph?.input === stream) return graph.destination.stream;
-    graph?.source.disconnect();
-    graph?.leveler.disconnect();
-    graph?.makeupGain.disconnect();
-    graph?.limiter.disconnect();
-    const AudioContextCtor =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextCtor) return stream;
-    const ctx = audioContextRef.current ?? new AudioContextCtor();
-    audioContextRef.current = ctx;
-    const source = ctx.createMediaStreamSource(new MediaStream(audioTracks));
-    const leveler = ctx.createDynamicsCompressor();
-    leveler.threshold.value = -34;
-    leveler.knee.value = 18;
-    leveler.ratio.value = 7;
-    leveler.attack.value = 0.006;
-    leveler.release.value = 0.28;
-    const makeupGain = ctx.createGain();
-    makeupGain.gain.value = 0.92;
-    const limiter = ctx.createDynamicsCompressor();
-    limiter.threshold.value = -10;
-    limiter.knee.value = 0;
-    limiter.ratio.value = 20;
-    limiter.attack.value = 0.001;
-    limiter.release.value = 0.08;
-    const destination = ctx.createMediaStreamDestination();
-    source.connect(leveler).connect(makeupGain).connect(limiter).connect(destination);
-    remoteAudioGraphRef.current = { input: stream, source, leveler, makeupGain, limiter, destination };
-    return destination.stream;
-  }, []);
-
   const normalizeLocalMicrophone = useCallback((stream: MediaStream) => {
     const audioTracks = stream.getAudioTracks();
     if (audioTracks.length === 0) return stream;
