@@ -799,8 +799,8 @@ function ChatPage() {
             return (
               <div key={m.id} className={`msg-in flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div className="group relative max-w-[78%]">
-                  <button
-                    type="button"
+                  <div
+                    role="group"
                     onContextMenu={(e) => {
                       e.preventDefault();
                       setReactionFor(isPickerOpen ? null : m.id);
@@ -888,7 +888,7 @@ function ChatPage() {
                         {mine && <MessageStatus message={m} />}
                       </div>
                     </div>
-                  </button>
+                  </div>
 
                   {/* Add-reaction trigger */}
                   <button
