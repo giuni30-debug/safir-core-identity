@@ -518,6 +518,21 @@ function ChatPage() {
         >
           <VideoIcon className="h-5 w-5" />
         </button>
+        <button
+          type="button"
+          onClick={() => setGiftOpen(true)}
+          disabled={!contact}
+          aria-label="Send gift"
+          className="press-glow grid h-11 w-11 place-items-center rounded-2xl border bg-card/40 disabled:opacity-40"
+          style={{
+            color: "var(--theme-accent)",
+            borderColor: "color-mix(in oklab, var(--theme-accent) 60%, transparent)",
+            boxShadow:
+              "0 0 16px color-mix(in oklab, var(--theme-accent) 45%, transparent), inset 0 0 8px color-mix(in oklab, var(--theme-accent) 18%, transparent)",
+          }}
+        >
+          <GiftIcon className="h-5 w-5" />
+        </button>
       </header>
 
       <div
