@@ -18,11 +18,14 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
+import { Route as AppNotesRouteImport } from './routes/_app/notes'
 import { Route as AppLanguageRouteImport } from './routes/_app/language'
 import { Route as AppHomeRouteImport } from './routes/_app/home'
+import { Route as AppExpensesRouteImport } from './routes/_app/expenses'
 import { Route as AppContactsRouteImport } from './routes/_app/contacts'
 import { Route as AppConnectRouteImport } from './routes/_app/connect'
 import { Route as AppComingSoonRouteImport } from './routes/_app/coming-soon'
+import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
 import { Route as AppAppearanceRouteImport } from './routes/_app/appearance'
 import { Route as AppChatIdRouteImport } from './routes/_app/chat.$id'
 
@@ -70,6 +73,11 @@ const AppNotificationsRoute = AppNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => AppRoute,
 } as any)
+const AppNotesRoute = AppNotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLanguageRoute = AppLanguageRouteImport.update({
   id: '/language',
   path: '/language',
@@ -78,6 +86,11 @@ const AppLanguageRoute = AppLanguageRouteImport.update({
 const AppHomeRoute = AppHomeRouteImport.update({
   id: '/home',
   path: '/home',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppExpensesRoute = AppExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
   getParentRoute: () => AppRoute,
 } as any)
 const AppContactsRoute = AppContactsRouteImport.update({
@@ -93,6 +106,11 @@ const AppConnectRoute = AppConnectRouteImport.update({
 const AppComingSoonRoute = AppComingSoonRouteImport.update({
   id: '/coming-soon',
   path: '/coming-soon',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCalendarRoute = AppCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAppearanceRoute = AppAppearanceRouteImport.update({
@@ -113,11 +131,14 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/appearance': typeof AppAppearanceRoute
+  '/calendar': typeof AppCalendarRoute
   '/coming-soon': typeof AppComingSoonRoute
   '/connect': typeof AppConnectRoute
   '/contacts': typeof AppContactsRoute
+  '/expenses': typeof AppExpensesRoute
   '/home': typeof AppHomeRoute
   '/language': typeof AppLanguageRoute
+  '/notes': typeof AppNotesRoute
   '/notifications': typeof AppNotificationsRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
@@ -130,11 +151,14 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/appearance': typeof AppAppearanceRoute
+  '/calendar': typeof AppCalendarRoute
   '/coming-soon': typeof AppComingSoonRoute
   '/connect': typeof AppConnectRoute
   '/contacts': typeof AppContactsRoute
+  '/expenses': typeof AppExpensesRoute
   '/home': typeof AppHomeRoute
   '/language': typeof AppLanguageRoute
+  '/notes': typeof AppNotesRoute
   '/notifications': typeof AppNotificationsRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
@@ -149,11 +173,14 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_app/appearance': typeof AppAppearanceRoute
+  '/_app/calendar': typeof AppCalendarRoute
   '/_app/coming-soon': typeof AppComingSoonRoute
   '/_app/connect': typeof AppConnectRoute
   '/_app/contacts': typeof AppContactsRoute
+  '/_app/expenses': typeof AppExpensesRoute
   '/_app/home': typeof AppHomeRoute
   '/_app/language': typeof AppLanguageRoute
+  '/_app/notes': typeof AppNotesRoute
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -168,11 +195,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/appearance'
+    | '/calendar'
     | '/coming-soon'
     | '/connect'
     | '/contacts'
+    | '/expenses'
     | '/home'
     | '/language'
+    | '/notes'
     | '/notifications'
     | '/profile'
     | '/settings'
@@ -185,11 +215,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/appearance'
+    | '/calendar'
     | '/coming-soon'
     | '/connect'
     | '/contacts'
+    | '/expenses'
     | '/home'
     | '/language'
+    | '/notes'
     | '/notifications'
     | '/profile'
     | '/settings'
@@ -203,11 +236,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_app/appearance'
+    | '/_app/calendar'
     | '/_app/coming-soon'
     | '/_app/connect'
     | '/_app/contacts'
+    | '/_app/expenses'
     | '/_app/home'
     | '/_app/language'
+    | '/_app/notes'
     | '/_app/notifications'
     | '/_app/profile'
     | '/_app/settings'
@@ -288,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppNotificationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/notes': {
+      id: '/_app/notes'
+      path: '/notes'
+      fullPath: '/notes'
+      preLoaderRoute: typeof AppNotesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/language': {
       id: '/_app/language'
       path: '/language'
@@ -300,6 +343,13 @@ declare module '@tanstack/react-router' {
       path: '/home'
       fullPath: '/home'
       preLoaderRoute: typeof AppHomeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/expenses': {
+      id: '/_app/expenses'
+      path: '/expenses'
+      fullPath: '/expenses'
+      preLoaderRoute: typeof AppExpensesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/contacts': {
@@ -323,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppComingSoonRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/calendar': {
+      id: '/_app/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof AppCalendarRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/appearance': {
       id: '/_app/appearance'
       path: '/appearance'
@@ -342,11 +399,14 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppAppearanceRoute: typeof AppAppearanceRoute
+  AppCalendarRoute: typeof AppCalendarRoute
   AppComingSoonRoute: typeof AppComingSoonRoute
   AppConnectRoute: typeof AppConnectRoute
   AppContactsRoute: typeof AppContactsRoute
+  AppExpensesRoute: typeof AppExpensesRoute
   AppHomeRoute: typeof AppHomeRoute
   AppLanguageRoute: typeof AppLanguageRoute
+  AppNotesRoute: typeof AppNotesRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -355,11 +415,14 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAppearanceRoute: AppAppearanceRoute,
+  AppCalendarRoute: AppCalendarRoute,
   AppComingSoonRoute: AppComingSoonRoute,
   AppConnectRoute: AppConnectRoute,
   AppContactsRoute: AppContactsRoute,
+  AppExpensesRoute: AppExpensesRoute,
   AppHomeRoute: AppHomeRoute,
   AppLanguageRoute: AppLanguageRoute,
+  AppNotesRoute: AppNotesRoute,
   AppNotificationsRoute: AppNotificationsRoute,
   AppProfileRoute: AppProfileRoute,
   AppSettingsRoute: AppSettingsRoute,

@@ -22,9 +22,9 @@ function Home() {
     { to: "/connect" as const, icon: Search, label: t("connect") },
     { to: "/contacts" as const, icon: Users, label: t("contacts") },
     { to: "/contacts" as const, icon: MessagesSquare, label: t("chat") },
-    { to: "/coming-soon" as const, icon: Calendar, label: t("calendar") },
-    { to: "/coming-soon" as const, icon: NotebookPen, label: t("notes") },
-    { to: "/coming-soon" as const, icon: Wallet, label: t("expenses") },
+    { to: "/calendar" as const, icon: Calendar, label: t("calendar") },
+    { to: "/notes" as const, icon: NotebookPen, label: t("notes") },
+    { to: "/expenses" as const, icon: Wallet, label: t("expenses") },
     { to: "/coming-soon" as const, icon: ShoppingBag, label: t("shopping") },
   ];
 
