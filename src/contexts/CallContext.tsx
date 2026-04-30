@@ -66,7 +66,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const remoteDescSetRef = useRef(false);
   const elapsedTimerRef = useRef<number | null>(null);
   const facingRef = useRef<"user" | "environment">("user");
-  const speakerOnRef = useRef(true);
+  const speakerOnRef = useRef(false);
 
   const cleanup = useCallback(() => {
     pcRef.current?.getSenders().forEach((s) => s.track?.stop());
