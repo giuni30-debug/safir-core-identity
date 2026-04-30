@@ -6,11 +6,7 @@ import { AssistantOrb, type OrbState } from "./AssistantOrb";
 import { getElevenLabsAgentToken } from "@/server/elevenlabs.functions";
 import { feedback, playSound } from "@/lib/sound";
 import { useApp } from "@/contexts/AppContext";
-import {
-  appendMessage,
-  createConversation,
-  type AiConversation,
-} from "@/hooks/useAiMemory";
+import { appendMessage, createConversation, type AiConversation } from "@/hooks/useAiMemory";
 import { supabase } from "@/integrations/supabase/client";
 import type { AssistantPersonality } from "@/hooks/useAssistantPrefs";
 
@@ -28,8 +24,7 @@ type Props = {
 };
 
 const personalityPrompts: Record<AssistantPersonality, string> = {
-  calm:
-    "You are All Assist AI. Speak calmly, warmly, and concisely. Use short natural sentences with light pauses. Be empathetic.",
+  calm: "You are All Assist AI. Speak calmly, warmly, and concisely. Use short natural sentences with light pauses. Be empathetic.",
   friendly:
     "You are All Assist AI. Be playful, upbeat, and friendly. Light humor is welcome. Keep replies short and natural.",
   professional:
@@ -51,7 +46,9 @@ export function VoiceMode({
   const [orbState, setOrbState] = useState<OrbState>("idle");
   const [inputLevel, setInputLevel] = useState(0);
   const [outputLevel, setOutputLevel] = useState(0);
-  const [transcript, setTranscript] = useState<{ role: "user" | "assistant"; text: string; id: string }[]>([]);
+  const [transcript, setTranscript] = useState<
+    { role: "user" | "assistant"; text: string; id: string }[]
+  >([]);
   const [partial, setPartial] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [pttHeld, setPttHeld] = useState(false);
@@ -111,7 +108,10 @@ export function VoiceMode({
             const next = [...prev];
             // replace last assistant
             for (let i = next.length - 1; i >= 0; i--) {
-              if (next[i].role === "assistant") { next[i] = { ...next[i], text }; break; }
+              if (next[i].role === "assistant") {
+                next[i] = { ...next[i], text };
+                break;
+              }
             }
             return next;
           });
@@ -154,11 +154,15 @@ export function VoiceMode({
         const outV = (conversation as any).getOutputVolume?.() ?? 0;
         setInputLevel(typeof inV === "number" ? inV : 0);
         setOutputLevel(typeof outV === "number" ? outV : 0);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   }, [conversation, conversation.status]);
 
   const unlockAudioPlayback = useCallback(async () => {
@@ -203,8 +207,7 @@ export function VoiceMode({
         conversationToken: res.token,
         connectionType: "webrtc" as const,
       };
-      const language =
-        lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en";
+      const language = lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en";
 
       if (!withOverrides) {
         await conversation.startSession(baseOpts as any);
@@ -273,7 +276,11 @@ export function VoiceMode({
   const stop = useCallback(async () => {
     feedback("tap", "tap");
     playSound("voice-stop");
-    try { await conversation.endSession(); } catch { /* ignore */ }
+    try {
+      await conversation.endSession();
+    } catch {
+      /* ignore */
+    }
     setTranscript([]);
     setPartial("");
     convoIdRef.current = null;
@@ -313,7 +320,11 @@ export function VoiceMode({
   // Cleanup on close
   useEffect(() => {
     if (!open) {
-      try { conversation.endSession(); } catch { /* ignore */ }
+      try {
+        conversation.endSession();
+      } catch {
+        /* ignore */
+      }
       setTranscript([]);
       convoIdRef.current = null;
     }
@@ -323,24 +334,29 @@ export function VoiceMode({
   if (!open) return null;
 
   const isConnected = conversation.status === "connected";
-  const statusLabel = orbState === "thinking"
-    ? "Thinking…"
-    : orbState === "listening"
-    ? "Listening…"
-    : orbState === "speaking"
-    ? "Speaking"
-    : isConnected
-    ? (autoMode ? "Auto · ready" : "Hold mic to talk")
-    : "Tap to start";
+  const statusLabel =
+    orbState === "thinking"
+      ? "Thinking…"
+      : orbState === "listening"
+        ? "Listening…"
+        : orbState === "speaking"
+          ? "Speaking"
+          : isConnected
+            ? autoMode
+              ? "Auto · ready"
+              : "Hold mic to talk"
+            : "Tap to start";
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col bg-gradient-to-b from-[#05060c] via-[#0a0e22] to-[#05060c] text-foreground">
       {/* Background ambient */}
-      <div className="pointer-events-none absolute inset-0 opacity-60"
-           style={{
-             background:
-               "radial-gradient(60% 50% at 50% 35%, rgba(99,102,241,0.18), transparent 70%), radial-gradient(40% 40% at 50% 70%, rgba(34,211,238,0.12), transparent 70%)",
-           }} />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-60"
+        style={{
+          background:
+            "radial-gradient(60% 50% at 50% 35%, rgba(99,102,241,0.18), transparent 70%), radial-gradient(40% 40% at 50% 70%, rgba(34,211,238,0.12), transparent 70%)",
+        }}
+      />
       {/* Top bar */}
       <header className="relative z-10 flex items-center justify-between px-4 pt-5 pb-3">
         <button
@@ -369,7 +385,10 @@ export function VoiceMode({
           state={orbState}
           inputLevel={inputLevel}
           outputLevel={outputLevel}
-          size={Math.min(320, Math.floor((typeof window !== "undefined" ? window.innerWidth : 320) * 0.78))}
+          size={Math.min(
+            320,
+            Math.floor((typeof window !== "undefined" ? window.innerWidth : 320) * 0.78),
+          )}
         />
       </div>
 
@@ -394,9 +413,7 @@ export function VoiceMode({
               {t.text}
             </div>
           ))}
-          {partial && (
-            <div className="text-sm italic text-white/60">{partial}…</div>
-          )}
+          {partial && <div className="text-sm italic text-white/60">{partial}…</div>}
         </div>
 
         {/* Suggestion chips */}
@@ -437,17 +454,21 @@ export function VoiceMode({
             conversation.isSpeaking
               ? "animate-bounce bg-gradient-to-br from-cyan-300 to-sky-500 shadow-[0_0_70px_rgba(34,211,238,0.75)]"
               : pttHeld || (isConnected && autoMode)
-              ? "animate-pulse bg-gradient-to-br from-emerald-400 to-cyan-500 shadow-[0_0_65px_rgba(45,212,191,0.65)]"
-              : isConnected
-              ? "bg-gradient-to-br from-cyan-400 to-indigo-500 shadow-[0_0_60px_rgba(99,102,241,0.6)]"
-              : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-[0_0_50px_rgba(124,58,237,0.55)]"
+                ? "animate-pulse bg-gradient-to-br from-emerald-400 to-cyan-500 shadow-[0_0_65px_rgba(45,212,191,0.65)]"
+                : isConnected
+                  ? "bg-gradient-to-br from-cyan-400 to-indigo-500 shadow-[0_0_60px_rgba(99,102,241,0.6)]"
+                  : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-[0_0_50px_rgba(124,58,237,0.55)]"
           }`}
           aria-label="Microphone"
         >
           {connecting ? (
             <Loader2 className="h-7 w-7 animate-spin text-white" />
           ) : isConnected ? (
-            pttHeld || autoMode ? <Mic className="h-8 w-8 text-white" /> : <MicOff className="h-8 w-8 text-white/90" />
+            pttHeld || autoMode ? (
+              <Mic className="h-8 w-8 text-white" />
+            ) : (
+              <MicOff className="h-8 w-8 text-white/90" />
+            )
           ) : (
             <Mic className="h-8 w-8 text-white" />
           )}
