@@ -326,6 +326,14 @@ function AssistantPage() {
           <p className="text-soft text-[11px]">{t("aiSubtitle")}</p>
         </div>
         <button
+          onClick={() => setVoiceOpen(true)}
+          className="press-glow flex h-10 items-center gap-1.5 rounded-full border border-cyan-400/40 bg-gradient-to-r from-cyan-400/15 to-indigo-500/15 px-3 text-xs font-medium text-cyan-200"
+          aria-label="Open voice mode"
+        >
+          <Radio className="h-4 w-4" />
+          Talk
+        </button>
+        <button
           onClick={() => setAutoSpeak((v) => !v)}
           className="press-glow grid h-10 w-10 place-items-center rounded-full border border-border/60 bg-card/40"
           aria-label={t("aiAutoSpeak")}
