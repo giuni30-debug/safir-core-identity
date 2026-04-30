@@ -161,8 +161,19 @@ export function VoiceMode({
 
   // Start session
   const start = useCallback(async () => {
-    if (!agentId) {
-      toast.error("Set your ElevenLabs Agent ID in settings");
+    const id = agentId?.trim();
+    if (!id) {
+      toast.error("Missing Agent ID — open Settings and paste your ElevenLabs Agent ID to start.", {
+        duration: 5000,
+      });
+      onOpenSettings();
+      return;
+    }
+    const isValid = /^agent_[A-Za-z0-9]{16,}$/.test(id) || /^[A-Za-z0-9]{20,}$/.test(id);
+    if (!isValid) {
+      toast.error("Invalid Agent ID format. Expected something like agent_xxxxxxxxxxxxxxxx", {
+        duration: 5000,
+      });
       onOpenSettings();
       return;
     }
