@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Plus, Search, Pin, Trash2, X } from "lucide-react";
+import { useApp } from "@/contexts/AppContext";
 
 export const Route = createFileRoute("/_app/notes")({
   component: Notes,
@@ -23,6 +24,7 @@ type Note = {
 const LS = "spl_notes_v1";
 
 function Notes() {
+  const { t } = useApp();
   const [notes, setNotes] = useState<Note[]>([]);
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Note | null>(null);
@@ -67,7 +69,7 @@ function Notes() {
     setNotes((p) => p.map((x) => (x.id === id ? { ...x, pinned: !x.pinned } : x)));
   }
 
-  if (editing) return <Editor note={editing} onChange={save} onClose={() => setEditing(null)} onDelete={() => remove(editing.id)} />;
+  if (editing) return <Editor note={editing} t={t} onChange={save} onClose={() => setEditing(null)} onDelete={() => remove(editing.id)} />;
 
   return (
     <div className="flex min-h-full flex-col animate-[fade-in_0.4s_ease-out] pb-24">
@@ -75,7 +77,7 @@ function Notes() {
         <Link to="/home" aria-label="Back" className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card/40">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-lg font-semibold">Notes</h1>
+        <h1 className="text-lg font-semibold">{t("notes")}</h1>
       </header>
 
       <div className="input-pill mt-4 flex items-center gap-2 px-4 py-2.5">
@@ -83,14 +85,14 @@ function Notes() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search notes"
+          placeholder={t("searchNotes")}
           className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         {filtered.length === 0 && (
-          <p className="col-span-2 py-10 text-center text-sm text-muted-foreground">No notes yet</p>
+          <p className="col-span-2 py-10 text-center text-sm text-muted-foreground">{t("noNotes")}</p>
         )}
         {filtered.map((n, i) => (
           <button
@@ -100,10 +102,10 @@ function Notes() {
             style={{ borderRadius: 18, animation: `scale-in 0.25s ease-out ${i * 35}ms both` }}
           >
             <div className="flex w-full items-center justify-between">
-              <p className="line-clamp-1 text-sm font-semibold">{n.title || "Untitled"}</p>
+              <p className="line-clamp-1 text-sm font-semibold">{n.title || t("untitled")}</p>
               {n.pinned && <Pin className="h-3.5 w-3.5" style={{ color: "var(--theme-accent)" }} />}
             </div>
-            <p className="line-clamp-4 flex-1 text-xs text-muted-foreground">{n.body || "Empty note"}</p>
+            <p className="line-clamp-4 flex-1 text-xs text-muted-foreground">{n.body || t("emptyNote")}</p>
             <p className="text-[10px] text-muted-foreground/70">{new Date(n.updated).toLocaleDateString()}</p>
           </button>
         ))}
@@ -120,7 +122,7 @@ function Notes() {
   );
 }
 
-function Editor({ note, onChange, onClose, onDelete }: { note: Note; onChange: (n: Note) => void; onClose: () => void; onDelete: () => void }) {
+function Editor({ note, t, onChange, onClose, onDelete }: { note: Note; t: (k: any) => string; onChange: (n: Note) => void; onClose: () => void; onDelete: () => void }) {
   const [local, setLocal] = useState(note);
 
   // Auto-save (debounced)
@@ -149,7 +151,7 @@ function Editor({ note, onChange, onClose, onDelete }: { note: Note; onChange: (
         autoFocus
         value={local.title}
         onChange={(e) => setLocal({ ...local, title: e.target.value })}
-        placeholder="Title"
+        placeholder={t("title")}
         className="mt-4 w-full bg-transparent text-2xl font-bold outline-none placeholder:text-muted-foreground/60"
       />
       <p className="mt-1 text-xs text-muted-foreground">{new Date(local.updated).toLocaleString()}</p>
@@ -157,7 +159,7 @@ function Editor({ note, onChange, onClose, onDelete }: { note: Note; onChange: (
       <textarea
         value={local.body}
         onChange={(e) => setLocal({ ...local, body: e.target.value })}
-        placeholder="Start writing…"
+        placeholder={t("startWriting")}
         className="mt-4 w-full flex-1 resize-none bg-transparent text-base leading-relaxed outline-none placeholder:text-muted-foreground/60"
         style={{ minHeight: "60vh" }}
       />
