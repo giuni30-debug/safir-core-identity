@@ -508,17 +508,23 @@ function ChatPage() {
               <div key={m.id} className={`msg-in flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div
                   className={`max-w-[78%] ${isMedia ? "p-1" : "px-3.5 py-2"} rounded-3xl text-sm backdrop-blur-xl ${
-                    mine
-                      ? "rounded-br-md text-primary-foreground shadow-[0_6px_20px_-6px_var(--theme-glow)]"
-                      : "rounded-bl-md border border-glass-border bg-white/5 shadow-[0_4px_16px_-8px_rgba(0,0,0,0.5)]"
+                    mine ? "rounded-br-md" : "rounded-bl-md bg-white/5"
                   }`}
                   style={
                     mine
                       ? {
                           background:
-                            "linear-gradient(135deg, var(--theme-accent), color-mix(in oklab, var(--theme-accent) 70%, #000))",
+                            "linear-gradient(135deg, oklch(0.86 0.17 90), color-mix(in oklab, oklch(0.86 0.17 90) 65%, #000))",
+                          border: "2px solid oklch(0.86 0.17 90)",
+                          boxShadow:
+                            "0 0 14px color-mix(in oklab, oklch(0.86 0.17 90) 55%, transparent), 0 6px 18px oklch(0 0 0 / 45%)",
+                          color: "#1a1500",
                         }
-                      : undefined
+                      : {
+                          border: "2px solid color-mix(in oklab, oklch(0.82 0.16 200) 70%, transparent)",
+                          boxShadow:
+                            "0 0 14px color-mix(in oklab, oklch(0.82 0.16 200) 45%, transparent), 0 4px 14px oklch(0 0 0 / 40%)",
+                        }
                   }
                 >
                   {isVoice ? (
