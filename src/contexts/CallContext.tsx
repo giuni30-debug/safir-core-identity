@@ -48,7 +48,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
-  const [speakerOn, setSpeakerOn] = useState(true);
+  const [speakerOn, setSpeakerOn] = useState(false);
   const [cameraOn, setCameraOn] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
@@ -66,7 +66,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const remoteDescSetRef = useRef(false);
   const elapsedTimerRef = useRef<number | null>(null);
   const facingRef = useRef<"user" | "environment">("user");
-  const speakerOnRef = useRef(true);
+  const speakerOnRef = useRef(false);
 
   const cleanup = useCallback(() => {
     pcRef.current?.getSenders().forEach((s) => s.track?.stop());
@@ -86,8 +86,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     elapsedTimerRef.current = null;
     setElapsed(0);
     setMuted(false);
-    setSpeakerOn(true);
-    speakerOnRef.current = true;
+    setSpeakerOn(false);
+    speakerOnRef.current = false;
     setCameraOn(true);
     setHasRemoteVideo(false);
     facingRef.current = "user";
