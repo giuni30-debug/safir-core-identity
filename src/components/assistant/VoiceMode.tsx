@@ -10,6 +10,16 @@ import { appendMessage, createConversation, type AiConversation } from "@/hooks/
 import { supabase } from "@/integrations/supabase/client";
 import type { AssistantPersonality } from "@/hooks/useAssistantPrefs";
 
+type ConversationExtras = {
+  getInputVolume?: () => number;
+  getOutputVolume?: () => number;
+  sendUserMessage?: (message: string) => void;
+};
+
+type WebkitAudioWindow = Window & {
+  webkitAudioContext?: typeof AudioContext;
+};
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -76,11 +86,11 @@ export function VoiceMode({
       toast.error("Voice not connected. Retrying...");
       setTimeout(() => setOrbState("idle"), 1200);
     },
-    onMessage: async (msg: any) => {
+    onMessage: async (msg: unknown) => {
       // Surface user transcript & agent response
-      const type = msg?.type ?? msg?.event_type;
+      const type = getString(msg, ["type"]) ?? getString(msg, ["event_type"]);
       if (type === "user_transcript") {
-        const text = msg?.user_transcription_event?.user_transcript ?? "";
+        const text = getString(msg, ["user_transcription_event", "user_transcript"]) ?? "";
         if (text) {
           lastUserRef.current = text;
           setTranscript((prev) => [...prev, { role: "user", text, id: cryptoId() }]);
@@ -93,7 +103,7 @@ export function VoiceMode({
           }
         }
       } else if (type === "agent_response") {
-        const text = msg?.agent_response_event?.agent_response ?? "";
+        const text = getString(msg, ["agent_response_event", "agent_response"]) ?? "";
         if (text) {
           setTranscript((prev) => [...prev, { role: "assistant", text, id: cryptoId() }]);
           if (user?.id) {
@@ -102,7 +112,8 @@ export function VoiceMode({
           }
         }
       } else if (type === "agent_response_correction") {
-        const text = msg?.agent_response_correction_event?.corrected_agent_response ?? "";
+        const text =
+          getString(msg, ["agent_response_correction_event", "corrected_agent_response"]) ?? "";
         if (text) {
           setTranscript((prev) => {
             const next = [...prev];
