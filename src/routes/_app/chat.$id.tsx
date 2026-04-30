@@ -3,11 +3,15 @@ import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
 import {
   ArrowLeft, Send, Mic, Square, Trash2, Play, Pause,
   Plus, Image as ImageIcon, Video as VideoIcon, FileIcon, X, Download, Phone,
+  Gift as GiftIcon,
 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "@/components/Avatar";
 import { useCall } from "@/contexts/CallContext";
+import { GiftSheet } from "@/components/chat/GiftSheet";
+import { GiftFX } from "@/components/chat/GiftFX";
+import { decodeGiftMessage, encodeGiftMessage, type Gift } from "@/components/chat/gifts";
 
 export const Route = createFileRoute("/_app/chat/$id")({
   component: ChatPage,
@@ -148,6 +152,11 @@ function ChatPage() {
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Gift state
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [activeGift, setActiveGift] = useState<Gift | null>(null);
+  const lastSeenGiftId = useRef<string | null>(null);
+
   // Load contact profile
   useEffect(() => {
     (async () => {
@@ -203,6 +212,16 @@ function ChatPage() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages.length]);
 
+  // Auto-play cinematic FX when a new gift message arrives (incoming or my own)
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const last = messages[messages.length - 1];
+    if (lastSeenGiftId.current === last.id) return;
+    lastSeenGiftId.current = last.id;
+    const g = decodeGiftMessage(last.message_text);
+    if (g) setActiveGift(g);
+  }, [messages]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -236,6 +255,21 @@ function ChatPage() {
       console.error("send error", error);
       setText(body);
     }
+    setSending(false);
+  };
+
+  const sendGift = async (g: Gift) => {
+    if (!myId || sending) return;
+    setSending(true);
+    // Optimistic local FX so sender sees it immediately
+    setActiveGift(g);
+    const { error } = await supabase.from("messages").insert({
+      sender_user_id: myId,
+      receiver_user_id: contactId,
+      message_text: encodeGiftMessage(g),
+      message_type: "text",
+    });
+    if (error) console.error("gift send error", error);
     setSending(false);
   };
 
@@ -484,6 +518,21 @@ function ChatPage() {
         >
           <VideoIcon className="h-5 w-5" />
         </button>
+        <button
+          type="button"
+          onClick={() => setGiftOpen(true)}
+          disabled={!contact}
+          aria-label="Send gift"
+          className="press-glow grid h-11 w-11 place-items-center rounded-2xl border bg-card/40 disabled:opacity-40"
+          style={{
+            color: "var(--theme-accent)",
+            borderColor: "color-mix(in oklab, var(--theme-accent) 60%, transparent)",
+            boxShadow:
+              "0 0 16px color-mix(in oklab, var(--theme-accent) 45%, transparent), inset 0 0 8px color-mix(in oklab, var(--theme-accent) 18%, transparent)",
+          }}
+        >
+          <GiftIcon className="h-5 w-5" />
+        </button>
       </header>
 
       <div
@@ -504,6 +553,32 @@ function ChatPage() {
             const isVideo = type === "video" && m.media_url;
             const isFile = type === "file" && m.media_url;
             const isMedia = isImage || isVideo;
+            const giftMsg = decodeGiftMessage(m.message_text);
+            if (giftMsg) {
+              return (
+                <div key={m.id} className={`msg-in flex ${mine ? "justify-end" : "justify-start"}`}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveGift(giftMsg)}
+                    className="flex items-center gap-2.5 rounded-3xl px-3.5 py-2 text-sm transition active:scale-95"
+                    style={{
+                      background: `linear-gradient(135deg, color-mix(in oklab, ${giftMsg.color} 22%, transparent), color-mix(in oklab, ${giftMsg.color} 6%, transparent))`,
+                      border: `2px solid ${giftMsg.color}`,
+                      boxShadow: `0 0 18px color-mix(in oklab, ${giftMsg.color} 55%, transparent), 0 6px 18px oklch(0 0 0 / 45%)`,
+                      color: giftMsg.color,
+                    }}
+                  >
+                    <span style={{ fontSize: 28, filter: `drop-shadow(0 0 6px ${giftMsg.color})` }}>
+                      {giftMsg.emoji}
+                    </span>
+                    <span className="flex flex-col items-start leading-tight">
+                      <span className="font-semibold">{mine ? "You sent" : "Received"} {giftMsg.name}</span>
+                      <span className="text-[10px] opacity-80 tabular-nums">€{giftMsg.price.toFixed(2)} · tap to replay</span>
+                    </span>
+                  </button>
+                </div>
+              );
+            }
             return (
               <div key={m.id} className={`msg-in flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div
@@ -819,6 +894,9 @@ function ChatPage() {
         className="hidden"
         onChange={(e) => onAttachChange("file", e)}
       />
+
+      <GiftSheet open={giftOpen} onClose={() => setGiftOpen(false)} onSend={(g) => void sendGift(g)} />
+      {activeGift && <GiftFX gift={activeGift} onDone={() => setActiveGift(null)} />}
     </div>
   );
 }
