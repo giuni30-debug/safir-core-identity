@@ -3,11 +3,14 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft, ChevronRight, User, Languages, Bell, LogOut, Trash2,
   Download, CheckCircle2, Palette, Image as ImageIcon, Sparkles, Sun, Zap, CircleOff, Brain,
+  Volume2, VolumeX, Vibrate, Play,
 } from "lucide-react";
 import { useApp, type ThemeColor, type BgKind, type AnimKind } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { onInstallPromptChange, triggerInstall, isStandalone, isIOS } from "@/lib/pwa";
 import { toast } from "sonner";
+import { useSoundPrefs } from "@/hooks/useSoundPrefs";
+import { playSound, vibrate } from "@/lib/sound";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
