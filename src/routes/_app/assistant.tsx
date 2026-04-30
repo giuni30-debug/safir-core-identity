@@ -186,6 +186,24 @@ function AssistantPage() {
     }
   }
 
+  async function ensureConversation(firstUserText: string): Promise<string | null> {
+    if (!user) return null;
+    if (activeConvId) return activeConvId;
+    const title = firstUserText.slice(0, 50).replace(/\s+/g, " ").trim() || "New chat";
+    const id = await createConversation(user.id, title);
+    if (id) setActiveConvId(id);
+    return id;
+  }
+
+  async function autoSaveMemory(text: string) {
+    if (!memory.enabled || !user) return;
+    const cands = detectMemoryCandidates(text);
+    for (const c of cands) {
+      const saved = await memory.addMemory(c.category, c.content);
+      if (saved) toast.success(t("aiMemorySaved"), { description: c.content });
+    }
+  }
+
   function send(prefill?: string) {
     const text = (prefill ?? input).trim();
     if (!text || loading) return;
@@ -195,11 +213,22 @@ function AssistantPage() {
       setMessages(next);
       setImageMode(false);
       generateImage(text);
+      // persist user msg
+      void (async () => {
+        const cid = await ensureConversation(text);
+        if (cid && user) await appendMessage(user.id, cid, "user", text);
+      })();
       return;
     }
     const intent = detectIntent(text);
     const next: Msg[] = [...messages, { role: "user", content: text, intent }];
     setMessages(next);
+    // persist + memory side-effects (don't block UI)
+    void (async () => {
+      const cid = await ensureConversation(text);
+      if (cid && user) await appendMessage(user.id, cid, "user", text);
+      void autoSaveMemory(text);
+    })();
     streamReply(next);
   }
 
