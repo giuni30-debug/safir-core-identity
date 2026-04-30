@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, ChevronRight, User, Palette, Languages, Bell, LogOut, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, ChevronRight, User, Palette, Languages, Bell, LogOut, Trash2, Download, CheckCircle2 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
+import { onInstallPromptChange, triggerInstall, isStandalone, isIOS } from "@/lib/pwa";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/settings")({
@@ -50,6 +52,8 @@ function SettingsPage() {
         <Row to="/language" icon={Languages} label={t("language")} />
         <Row to="/notifications" icon={Bell} label={t("notifications")} />
       </div>
+
+      <InstallRow />
 
       <div className="mt-8 space-y-3">
         <button
