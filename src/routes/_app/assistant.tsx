@@ -5,6 +5,7 @@ import {
   ArrowLeft, Send, Paperclip, Image as ImageIcon, Sparkles,
   Plus, Wand2, Square, Search, Brain,
   History, Trash2, Settings as SettingsIcon, MessageSquare,
+  Mic, Volume2, VolumeX,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -43,7 +44,9 @@ function detectIntent(text: string): Msg["intent"] {
 
 const CHAT_URL  = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-image`;
+const TTS_URL   = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 const SUPA_KEY  = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const AUTOSPEAK_KEY = "safir.assistant.autospeak.v1";
 
 function AssistantPage() {
   const { t, user } = useApp();
@@ -59,6 +62,24 @@ function AssistantPage() {
   const imgInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Voice: push-to-talk (browser STT) + auto-speak reply (ElevenLabs TTS)
+  const [recording, setRecording] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState<boolean>(() => {
+    if (typeof localStorage === "undefined") return true;
+    const v = localStorage.getItem(AUTOSPEAK_KEY);
+    return v === null ? true : v === "1";
+  });
+  const [speaking, setSpeaking] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(AUTOSPEAK_KEY, autoSpeak ? "1" : "0");
+    }
+  }, [autoSpeak]);
 
   const memory = useAiMemory();
 
@@ -130,6 +151,10 @@ function AssistantPage() {
       if (user && activeConvId && acc) {
         void appendMessage(user.id, activeConvId, "assistant", acc);
       }
+      // Auto-speak final reply via ElevenLabs TTS (only if enabled & we got text)
+      if (autoSpeak && acc.trim()) {
+        void speakText(acc);
+      }
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
         console.error(e);
@@ -140,6 +165,141 @@ function AssistantPage() {
       abortRef.current = null;
     }
   }
+
+  // ---------------- Voice: TTS (ElevenLabs) ----------------
+  function stopSpeaking() {
+    try { ttsAbortRef.current?.abort(); } catch { /* ignore */ }
+    ttsAbortRef.current = null;
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      } catch { /* ignore */ }
+      audioRef.current = null;
+    }
+    setSpeaking(false);
+  }
+
+  async function speakText(text: string) {
+    // Strip markdown-ish noise so TTS sounds natural
+    const clean = text
+      .replace(/```[\s\S]*?```/g, " ")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/[*_~>#]+/g, " ")
+      .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!clean) return;
+    stopSpeaking();
+    const ctrl = new AbortController();
+    ttsAbortRef.current = ctrl;
+    setSpeaking(true);
+    try {
+      const resp = await fetch(TTS_URL, {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: {
+          "Content-Type": "application/json",
+          ...(SUPA_KEY ? { Authorization: `Bearer ${SUPA_KEY}` } : {}),
+        },
+        body: JSON.stringify({ text: clean }),
+      });
+      if (!resp.ok) {
+        console.error("[tts] failed", resp.status, await resp.text().catch(() => ""));
+        setSpeaking(false);
+        return;
+      }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => {
+        setSpeaking(false);
+        URL.revokeObjectURL(url);
+        if (audioRef.current === audio) audioRef.current = null;
+      };
+      audio.onerror = () => {
+        setSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+      await audio.play().catch((err) => {
+        console.warn("[tts] play blocked", err);
+        setSpeaking(false);
+      });
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") {
+        console.error("[tts] error", e);
+      }
+      setSpeaking(false);
+    }
+  }
+
+  // ---------------- Voice: STT push-to-talk (Web Speech API) ----------------
+  function startRecording() {
+    const SR: any =
+      (typeof window !== "undefined" &&
+        ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)) ||
+      null;
+    if (!SR) {
+      toast.error("Voice input not supported on this browser");
+      return;
+    }
+    // Stop any ongoing TTS so user hears themselves
+    stopSpeaking();
+    try {
+      const rec = new SR();
+      rec.lang = "en-US";
+      rec.continuous = false;
+      rec.interimResults = true;
+      let finalText = "";
+      rec.onresult = (e: any) => {
+        let interim = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const r = e.results[i];
+          if (r.isFinal) finalText += r[0].transcript;
+          else interim += r[0].transcript;
+        }
+        const combined = (finalText + " " + interim).trim();
+        if (combined) setInput(combined);
+      };
+      rec.onerror = (e: any) => {
+        console.warn("[stt] error", e?.error);
+        if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
+          toast.error("Microphone permission denied");
+        }
+        setRecording(false);
+      };
+      rec.onend = () => {
+        setRecording(false);
+        recognitionRef.current = null;
+      };
+      recognitionRef.current = rec;
+      rec.start();
+      setRecording(true);
+    } catch (e) {
+      console.error("[stt] start failed", e);
+      setRecording(false);
+    }
+  }
+
+  function stopRecording() {
+    const rec = recognitionRef.current;
+    if (rec) {
+      try { rec.stop(); } catch { /* ignore */ }
+    }
+    setRecording(false);
+  }
+
+  // Cleanup on unmount: stop any audio + recognition
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+      const rec = recognitionRef.current;
+      if (rec) { try { rec.stop(); } catch { /* ignore */ } }
+    };
+  }, []);
+
 
   async function generateImage(prompt: string) {
     setLoading(true);
@@ -567,6 +727,23 @@ function AssistantPage() {
           >
             <Wand2 className="h-3.5 w-3.5" /> {t("aiCreateImage")}
           </button>
+          <button
+            onClick={() => {
+              if (speaking) stopSpeaking();
+              setAutoSpeak((v) => !v);
+            }}
+            className="press-glow shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold"
+            style={autoSpeak ? {
+              borderColor: "var(--theme-accent)",
+              color: "var(--theme-accent)",
+              background: "color-mix(in oklab, var(--theme-accent) 14%, transparent)",
+            } : { borderColor: "var(--border)", color: "#fff" }}
+            aria-label="Toggle voice reply"
+            title={autoSpeak ? "Voice reply: ON" : "Voice reply: OFF"}
+          >
+            {autoSpeak ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            {speaking ? "Speaking…" : autoSpeak ? "Voice on" : "Voice off"}
+          </button>
           {messages.length > 0 && suggestions.slice(0, 2).map((s) => (
             <button
               key={s.key}
@@ -601,6 +778,25 @@ function AssistantPage() {
           </button>
           <input ref={fileInputRef} type="file" hidden onChange={(e) => onPickFile(e, "file")} />
           <input ref={imgInputRef} type="file" accept="image/*" hidden onChange={(e) => onPickFile(e, "image")} />
+
+          {/* Push-to-talk microphone */}
+          <button
+            onPointerDown={(e) => { e.preventDefault(); startRecording(); }}
+            onPointerUp={(e) => { e.preventDefault(); stopRecording(); }}
+            onPointerLeave={() => { if (recording) stopRecording(); }}
+            onPointerCancel={() => { if (recording) stopRecording(); }}
+            onContextMenu={(e) => e.preventDefault()}
+            className="press-glow grid h-9 w-9 place-items-center rounded-full select-none"
+            style={recording ? {
+              background: "color-mix(in oklab, var(--theme-accent) 30%, transparent)",
+              color: "var(--theme-accent)",
+              boxShadow: "0 0 16px color-mix(in oklab, var(--theme-accent) 60%, transparent)",
+            } : { color: "var(--theme-accent)" }}
+            aria-label={recording ? "Recording — release to stop" : "Hold to talk"}
+            title="Hold to talk"
+          >
+            <Mic className="h-4 w-4" />
+          </button>
 
           <textarea
             value={input}
