@@ -63,6 +63,24 @@ function AssistantPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Voice: push-to-talk (browser STT) + auto-speak reply (ElevenLabs TTS)
+  const [recording, setRecording] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState<boolean>(() => {
+    if (typeof localStorage === "undefined") return true;
+    const v = localStorage.getItem(AUTOSPEAK_KEY);
+    return v === null ? true : v === "1";
+  });
+  const [speaking, setSpeaking] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(AUTOSPEAK_KEY, autoSpeak ? "1" : "0");
+    }
+  }, [autoSpeak]);
+
   const memory = useAiMemory();
 
   useEffect(() => {
