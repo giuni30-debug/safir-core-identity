@@ -214,6 +214,38 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     return destination.stream;
   }, []);
 
+  const normalizeLocalMicrophone = useCallback((stream: MediaStream) => {
+    const audioTracks = stream.getAudioTracks();
+    if (audioTracks.length === 0) return stream;
+    releaseLocalAudioProcessing();
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) return stream;
+    const ctx = audioContextRef.current ?? new AudioContextCtor();
+    audioContextRef.current = ctx;
+    const source = ctx.createMediaStreamSource(new MediaStream(audioTracks));
+    const leveler = ctx.createDynamicsCompressor();
+    leveler.threshold.value = -36;
+    leveler.knee.value = 16;
+    leveler.ratio.value = 8;
+    leveler.attack.value = 0.005;
+    leveler.release.value = 0.25;
+    const makeupGain = ctx.createGain();
+    makeupGain.gain.value = 0.88;
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -11;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.07;
+    const destination = ctx.createMediaStreamDestination();
+    source.connect(leveler).connect(makeupGain).connect(limiter).connect(destination);
+    rawLocalAudioTracksRef.current = audioTracks;
+    localAudioGraphRef.current = { input: stream, source, leveler, makeupGain, limiter, destination };
+    return new MediaStream([...destination.stream.getAudioTracks(), ...stream.getVideoTracks()]);
+  }, [releaseLocalAudioProcessing]);
+
   const applyAudioRouting = useCallback(async () => {
     const audio = remoteAudioRef.current as AudioSinkElement | null;
     if (!audio) return;
