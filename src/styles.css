@@ -159,9 +159,35 @@
   0%, 100% { transform: translate(0, 0) scale(1); }
   50% { transform: translate(-30px, -20px) scale(1.08); }
 }
-@keyframes neon-pulse {
+@keyframes neon-bg-pulse {
   0%, 100% { opacity: 0.18; transform: translate(-50%, -50%) scale(1); }
   50% { opacity: 0.32; transform: translate(-50%, -50%) scale(1.15); }
+}
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--theme-accent) 18%, transparent),
+      0 0 16px color-mix(in oklab, var(--theme-accent) 22%, transparent),
+      0 10px 32px oklch(0 0 0 / 50%),
+      inset 0 0 12px color-mix(in oklab, var(--theme-accent) 8%, transparent),
+      inset 0 1px 0 oklch(1 0 0 / 8%);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--theme-accent) 28%, transparent),
+      0 0 26px color-mix(in oklab, var(--theme-accent) 38%, transparent),
+      0 10px 36px oklch(0 0 0 / 55%),
+      inset 0 0 16px color-mix(in oklab, var(--theme-accent) 14%, transparent),
+      inset 0 1px 0 oklch(1 0 0 / 8%);
+  }
+}
+@property --neon-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes neon-rotate {
+  to { --neon-angle: 360deg; }
 }
 @keyframes message-in {
   0% { opacity: 0; transform: translateY(8px) scale(0.96); }
