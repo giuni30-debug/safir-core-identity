@@ -585,15 +585,15 @@ function ChatPage() {
             }}
           />
           <Avatar url={contact?.avatar_url ?? null} name={contact?.display_name ?? "?"} size={40} />
-          {/* Online dot */}
+          {/* Online dot driven by real presence */}
           <span
             aria-hidden
             className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2"
             style={{
-              background: contact ? "#22c55e" : "#6b7280",
-              boxShadow: contact ? "0 0 8px #22c55e" : "none",
+              background: presence.isOnline ? "#22c55e" : "#6b7280",
+              boxShadow: presence.isOnline ? "0 0 8px #22c55e" : "none",
               ["--tw-ring-color" as any]: "var(--background)",
-              animation: contact ? "neon-pulse 2.4s ease-in-out infinite" : undefined,
+              animation: presence.isOnline ? "neon-pulse 2.4s ease-in-out infinite" : undefined,
             }}
           />
         </div>
@@ -608,7 +608,18 @@ function ChatPage() {
           >
             {contact?.display_name ?? "…"}
           </p>
-          <p className="text-soft truncate text-xs">@{contact?.username ?? "…"}</p>
+          <p className="text-soft flex items-center gap-1 truncate text-xs">
+            {peerTyping ? (
+              <span className="flex items-center gap-1" style={{ color: "var(--theme-accent)" }}>
+                <span>{t("typing")}</span>
+                <TypingDots />
+              </span>
+            ) : presence.isOnline ? (
+              <span style={{ color: "#22c55e" }}>● {t("online")}</span>
+            ) : (
+              <span>{formatLastSeen(presence.lastSeen, t)}</span>
+            )}
+          </p>
         </div>
 
         <FloatingHeaderButton
