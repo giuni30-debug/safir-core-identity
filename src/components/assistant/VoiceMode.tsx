@@ -399,6 +399,8 @@ function VoiceModeInner({
   const stop = useCallback(async () => {
     feedback("tap", "tap");
     playSound("voice-stop");
+    console.log("[voice] state: closing (user)");
+    sessionStartedRef.current = false;
     try {
       await conversation.endSession();
     } catch {
@@ -410,17 +412,21 @@ function VoiceModeInner({
     setOrbState("idle");
   }, [conversation]);
 
-  // Cleanup on close — does NOT auto-start
+  // Cleanup ONLY when the overlay is actually closed AND a session was started.
+  // Without the started-flag this effect tears the SDK down on its first render,
+  // which is what was causing the session to die ~immediately after connect.
   useEffect(() => {
-    if (!open) {
-      try {
-        conversation.endSession();
-      } catch {
-        /* ignore */
-      }
-      setTranscript([]);
-      convoIdRef.current = null;
+    if (open) return;
+    if (!sessionStartedRef.current) return;
+    console.log("[voice] state: closing (overlay closed)");
+    sessionStartedRef.current = false;
+    try {
+      conversation.endSession();
+    } catch {
+      /* ignore */
     }
+    setTranscript([]);
+    convoIdRef.current = null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
