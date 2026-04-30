@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { useApp, type ThemeColor, type BgKind, type AnimKind } from "@/contexts/AppContext";
+import { useApp, type ThemeColor, type BgKind, type AnimKind, type NeonColor } from "@/contexts/AppContext";
 
 export const Route = createFileRoute("/_app/appearance")({
   component: AppearancePage,
@@ -24,6 +24,7 @@ const COLORS: { id: ThemeColor; hex: string; label: string }[] = [
 const BGS: { id: BgKind; label: string }[] = [
   { id: "gradient", label: "Gradient" },
   { id: "image", label: "Image" },
+  { id: "neon", label: "Neon" },
 ];
 
 const ANIMS: { id: AnimKind; label: string }[] = [
@@ -33,8 +34,17 @@ const ANIMS: { id: AnimKind; label: string }[] = [
   { id: "particles", label: "Particles" },
 ];
 
+const NEONS: { id: NeonColor; hex: string; label: string }[] = [
+  { id: "blue", hex: "#3b82f6", label: "Neon Blue" },
+  { id: "purple", hex: "#a855f7", label: "Neon Purple" },
+  { id: "pink", hex: "#ec4899", label: "Neon Pink" },
+  { id: "green", hex: "#22c55e", label: "Neon Green" },
+  { id: "orange", hex: "#f97316", label: "Neon Orange" },
+  { id: "red", hex: "#ef4444", label: "Neon Red" },
+];
+
 function AppearancePage() {
-  const { t, theme, setTheme, bg, setBg, anim, setAnim } = useApp();
+  const { t, theme, setTheme, bg, setBg, anim, setAnim, neon, setNeon, neonAnim, setNeonAnim } = useApp();
 
   return (
     <div className="animate-[fade-in_0.4s_ease-out]">
@@ -66,6 +76,43 @@ function AppearancePage() {
       <Section title={t("background")}>
         <Pills options={BGS} value={bg} onChange={setBg} />
       </Section>
+
+      {bg === "neon" && (
+        <Section title={t("neonBackground")}>
+          <div className="grid grid-cols-6 gap-3">
+            {NEONS.map((n) => {
+              const active = neon === n.id;
+              return (
+                <button
+                  key={n.id}
+                  onClick={() => setNeon(n.id)}
+                  aria-label={n.label}
+                  className={`aspect-square rounded-full transition ${active ? "ring-2 ring-offset-2 ring-offset-background scale-110" : "opacity-85 hover:opacity-100"}`}
+                  style={{
+                    background: `radial-gradient(circle at 30% 30%, ${n.hex}, ${n.hex}99 60%, ${n.hex}55)`,
+                    boxShadow: active
+                      ? `0 0 24px ${n.hex}, 0 0 48px ${n.hex}80`
+                      : `0 0 12px ${n.hex}60`,
+                    ["--tw-ring-color" as never]: n.hex,
+                  }}
+                />
+              );
+            })}
+          </div>
+
+          <label className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-border bg-card/30 px-4 py-3">
+            <span className="text-sm font-medium">{t("neonAnimation")}</span>
+            <input
+              type="checkbox"
+              checked={neonAnim}
+              onChange={(e) => setNeonAnim(e.target.checked)}
+              className="h-5 w-9 cursor-pointer appearance-none rounded-full bg-muted transition checked:bg-primary relative
+                before:content-[''] before:absolute before:top-0.5 before:left-0.5 before:h-4 before:w-4 before:rounded-full before:bg-white before:transition
+                checked:before:translate-x-4"
+            />
+          </label>
+        </Section>
+      )}
 
       <Section title={t("animations")}>
         <Pills options={ANIMS} value={anim} onChange={setAnim} />
