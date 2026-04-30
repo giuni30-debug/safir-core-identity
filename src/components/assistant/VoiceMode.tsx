@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ConversationProvider, useConversation } from "@elevenlabs/react";
-import { Mic, MicOff, X, Loader2, Settings as SettingsIcon, Volume2 } from "lucide-react";
+import { Mic, X, Loader2, Settings as SettingsIcon, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { AssistantOrb, type OrbState } from "./AssistantOrb";
 import {
@@ -9,7 +9,7 @@ import {
 } from "@/server/elevenlabs.functions";
 import { feedback, playSound } from "@/lib/sound";
 import { useApp } from "@/contexts/AppContext";
-import { appendMessage, createConversation, type AiConversation } from "@/hooks/useAiMemory";
+import { appendMessage, createConversation } from "@/hooks/useAiMemory";
 import { supabase } from "@/integrations/supabase/client";
 import type { AssistantPersonality } from "@/hooks/useAssistantPrefs";
 
@@ -19,23 +19,7 @@ type ConversationExtras = {
   sendUserMessage?: (message: string) => void;
 };
 
-type ElevenLabsStartOptions = NonNullable<
-  Parameters<ReturnType<typeof useConversation>["startSession"]>[0]
->;
-
-type WebkitAudioWindow = Window & {
-  webkitAudioContext?: typeof AudioContext;
-};
-
-function errorText(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error || "Unknown error");
-}
-
-function isOverrideConfigError(error: unknown): boolean {
-  const text = errorText(error).toLowerCase();
-  return text.includes("override") || text.includes("agent_config") || text.includes("overrides");
-}
+type WebkitAudioWindow = Window & { webkitAudioContext?: typeof AudioContext };
 
 function getString(value: unknown, path: string[]): string | undefined {
   let current: unknown = value;
@@ -46,6 +30,11 @@ function getString(value: unknown, path: string[]): string | undefined {
   return typeof current === "string" ? current : undefined;
 }
 
+function cryptoId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return Math.random().toString(36).slice(2);
+}
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -53,17 +42,14 @@ type Props = {
   personality: AssistantPersonality;
   autoMode: boolean;
   onOpenSettings: () => void;
-  /** Optional existing voice conversation id to append into */
   voiceConversationId?: string | null;
   onConversationCreated?: (id: string) => void;
 };
 
 const personalityPrompts: Record<AssistantPersonality, string> = {
-  calm: "You are All Assist AI. Speak calmly, warmly, and concisely. Use short natural sentences with light pauses. Be empathetic.",
-  friendly:
-    "You are All Assist AI. Be playful, upbeat, and friendly. Light humor is welcome. Keep replies short and natural.",
-  professional:
-    "You are All Assist AI. Be formal, efficient, and to the point. No jokes. Use professional vocabulary.",
+  calm: "You are All Assist AI. Speak calmly, warmly, and concisely.",
+  friendly: "You are All Assist AI. Be playful, upbeat, and friendly.",
+  professional: "You are All Assist AI. Be formal, efficient, and to the point.",
 };
 
 export function VoiceMode(props: Props) {
@@ -93,21 +79,15 @@ function VoiceModeInner({
   >([]);
   const [partial, setPartial] = useState("");
   const [connecting, setConnecting] = useState(false);
-  const [pttHeld, setPttHeld] = useState(false);
-  const [retrying, setRetrying] = useState(false);
 
   const convoIdRef = useRef<string | null>(voiceConversationId ?? null);
-  const lastUserRef = useRef<string>("");
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const retryingRef = useRef(false);
 
   const conversation = useConversation({
     onConnect: () => {
       console.log("[voice] connected");
-      setOrbState("idle");
-      setRetrying(false);
-      retryingRef.current = false;
+      setOrbState("listening");
       playSound("notification");
     },
     onDisconnect: () => {
@@ -115,24 +95,16 @@ function VoiceModeInner({
       setOrbState("idle");
       setInputLevel(0);
       setOutputLevel(0);
-      setPttHeld(false);
     },
-    onError: (e) => {
-      // Errors during startSession are handled by waitForSessionStart;
-      // only log here to avoid duplicate toasts / retry loops.
-      console.error("[voice] sdk error:", e);
-    },
+    onError: (e) => console.error("[voice] sdk error:", e),
     onMessage: async (msg: unknown) => {
-      // Surface user transcript & agent response
       const type = getString(msg, ["type"]) ?? getString(msg, ["event_type"]);
       if (type === "user_transcript") {
         const text = getString(msg, ["user_transcription_event", "user_transcript"]) ?? "";
         if (text) {
-          lastUserRef.current = text;
-          setTranscript((prev) => [...prev, { role: "user", text, id: cryptoId() }]);
+          setTranscript((p) => [...p, { role: "user", text, id: cryptoId() }]);
           setPartial("");
           setOrbState("thinking");
-          // persist
           if (user?.id) {
             const cid = await ensureConversation(user.id);
             if (cid) await appendMessage(user.id, cid, "user", text);
@@ -141,39 +113,21 @@ function VoiceModeInner({
       } else if (type === "agent_response") {
         const text = getString(msg, ["agent_response_event", "agent_response"]) ?? "";
         if (text) {
-          setTranscript((prev) => [...prev, { role: "assistant", text, id: cryptoId() }]);
+          setTranscript((p) => [...p, { role: "assistant", text, id: cryptoId() }]);
           if (user?.id) {
             const cid = await ensureConversation(user.id);
             if (cid) await appendMessage(user.id, cid, "assistant", text);
           }
         }
-      } else if (type === "agent_response_correction") {
-        const text =
-          getString(msg, ["agent_response_correction_event", "corrected_agent_response"]) ?? "";
-        if (text) {
-          setTranscript((prev) => {
-            const next = [...prev];
-            // replace last assistant
-            for (let i = next.length - 1; i >= 0; i--) {
-              if (next[i].role === "assistant") {
-                next[i] = { ...next[i], text };
-                break;
-              }
-            }
-            return next;
-          });
-        }
       }
     },
   });
 
-  // Ensure ai_conversations row for transcript persistence
   const ensureConversation = useCallback(
     async (uid: string): Promise<string | null> => {
       if (convoIdRef.current) return convoIdRef.current;
       const id = await createConversation(uid, "🎙️ Voice — " + new Date().toLocaleString());
       if (id) {
-        // mark as voice
         await supabase.from("ai_conversations").update({ is_voice: true }).eq("id", id);
         convoIdRef.current = id;
         onConversationCreated?.(id);
@@ -183,24 +137,21 @@ function VoiceModeInner({
     [onConversationCreated],
   );
 
-  // Update orb state from conversation status
+  // Orb state from conversation
   useEffect(() => {
     if (conversation.status !== "connected") return;
     if (conversation.isSpeaking) setOrbState("speaking");
-    else if (pttHeld || autoMode) setOrbState("listening");
-    else setOrbState("idle");
-  }, [conversation.status, conversation.isSpeaking, pttHeld, autoMode]);
+    else setOrbState("listening");
+  }, [conversation.status, conversation.isSpeaking]);
 
-  // Audio level sampling at 60fps
+  // Audio levels
   useEffect(() => {
     if (conversation.status !== "connected") return;
     const tick = () => {
       try {
-        // SDK exposes getInputVolume / getOutputVolume returning 0..1
-        const inV = (conversation as ConversationExtras).getInputVolume?.() ?? 0;
-        const outV = (conversation as ConversationExtras).getOutputVolume?.() ?? 0;
-        setInputLevel(typeof inV === "number" ? inV : 0);
-        setOutputLevel(typeof outV === "number" ? outV : 0);
+        const ext = conversation as ConversationExtras;
+        setInputLevel(ext.getInputVolume?.() ?? 0);
+        setOutputLevel(ext.getOutputVolume?.() ?? 0);
       } catch {
         /* ignore */
       }
@@ -212,21 +163,19 @@ function VoiceModeInner({
     };
   }, [conversation, conversation.status]);
 
-  /**
-   * Synchronously unlock the AudioContext inside a user gesture.
-   * Must NOT be awaited before calling — keep call before any `await`.
-   */
-  const unlockAudioPlayback = useCallback(() => {
-    const AudioContextCtor =
-      window.AudioContext || (window as WebkitAudioWindow).webkitAudioContext;
-    if (!AudioContextCtor) return;
-    let ctx = audioContextRef.current;
+  /** Unlock the AudioContext synchronously, inside the user gesture. */
+  const unlockAudio = useCallback(() => {
+    const Ctor = window.AudioContext || (window as WebkitAudioWindow).webkitAudioContext;
+    if (!Ctor) return;
+    let ctx = audioCtxRef.current;
     if (!ctx) {
-      ctx = new AudioContextCtor();
-      audioContextRef.current = ctx;
+      ctx = new Ctor();
+      audioCtxRef.current = ctx;
     }
     if (ctx.state === "suspended") void ctx.resume();
     try {
+      // Route output through the media element category so it uses the
+      // media volume channel, not the call/in-ear channel.
       const buffer = ctx.createBuffer(1, 1, 22050);
       const source = ctx.createBufferSource();
       source.buffer = buffer;
@@ -237,11 +186,8 @@ function VoiceModeInner({
     }
   }, []);
 
-  /**
-   * Request mic permission. The getUserMedia() call MUST be the first await
-   * after the user gesture — no other awaits before it, or Safari/iOS deny.
-   */
-  const requestMicStream = useCallback(async () => {
+  /** Request mic permission. MUST be the first await after the user tap. */
+  const requestMic = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("Microphone is not available in this browser.");
     }
@@ -249,7 +195,6 @@ function VoiceModeInner({
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
-      // Release immediately — ElevenLabs SDK opens its own stream; permission persists.
       stream.getTracks().forEach((t) => t.stop());
     } catch (err) {
       const name = err instanceof Error ? err.name : "";
@@ -263,157 +208,63 @@ function VoiceModeInner({
     }
   }, []);
 
-  const createSessionOptions = useCallback(
-    (
-      connection: { conversationToken: string } | { signedUrl: string },
-      withOverrides: boolean,
-      callbacks: Pick<NonNullable<ElevenLabsStartOptions>, "onConnect" | "onError">,
-    ) => {
-      const baseOpts: ElevenLabsStartOptions =
-        "conversationToken" in connection
-          ? { conversationToken: connection.conversationToken, connectionType: "webrtc" }
-          : { signedUrl: connection.signedUrl, connectionType: "websocket" };
-      if (!withOverrides) return { ...baseOpts, ...callbacks } as ElevenLabsStartOptions;
+  const overrides = useMemo(() => {
+    const language = (lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en") as
+      "ro" | "tr" | "de" | "en";
+    return {
+      agent: { prompt: { prompt: personalityPrompts[personality] }, language },
+      tts: { voiceId },
+    } as const;
+  }, [lang, personality, voiceId]);
 
-      const language = lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en";
-
-      return {
-        ...baseOpts,
-        ...callbacks,
-        overrides: {
-          agent: {
-            prompt: { prompt: personalityPrompts[personality] },
-            language,
-          },
-          tts: { voiceId },
-        },
-      } as ElevenLabsStartOptions;
-    },
-    [lang, personality, voiceId],
-  );
-
-  const waitForSessionStart = useCallback(
-    (options: ElevenLabsStartOptions) =>
-      new Promise<void>((resolve, reject) => {
-        let settled = false;
-        const timeout = window.setTimeout(() => {
-          if (settled) return;
-          settled = true;
-          reject(new Error("ElevenLabs connection timed out"));
-        }, 18000);
-
-        conversation.startSession({
-          ...options,
-          onConnect: () => {
-            if (settled) return;
-            settled = true;
-            window.clearTimeout(timeout);
-            resolve();
-          },
-          onError: (message: string, context?: unknown) => {
-            if (settled) return;
-            settled = true;
-            window.clearTimeout(timeout);
-            reject(
-              context instanceof Error
-                ? context
-                : new Error(String(message || "ElevenLabs connection failed")),
-            );
-          },
-        } as ElevenLabsStartOptions);
-      }),
-    [conversation],
-  );
-
-  const startElevenLabsSession = useCallback(
-    async (transport: "webrtc" | "websocket", withOverrides: boolean) => {
-      const callbacks = { onConnect: () => undefined, onError: () => undefined };
-      if (transport === "webrtc") {
-        const res = await getElevenLabsAgentToken({ data: {} });
-        if (!res.token) throw new Error(res.error || "No token returned from server");
-        await waitForSessionStart(
-          createSessionOptions({ conversationToken: res.token }, withOverrides, callbacks),
-        );
-      } else {
-        const signed = await getElevenLabsAgentSignedUrl({ data: {} });
-        if (!signed.signedUrl)
-          throw new Error(signed.error || "No signed URL returned from server");
-        await waitForSessionStart(
-          createSessionOptions({ signedUrl: signed.signedUrl }, withOverrides, callbacks),
-        );
-      }
-    },
-    [createSessionOptions, waitForSessionStart],
-  );
-
-  const connectWithFallbackRetry = useCallback(async () => {
-    try {
-      await startElevenLabsSession("webrtc", true);
-    } catch (overrideErr) {
-      if (!isOverrideConfigError(overrideErr)) throw overrideErr;
-      console.warn(
-        "ElevenLabs startSession failed with overrides — retrying without. " +
-          "Enable 'Security → Overrides' in your agent dashboard to customize voice/prompt.",
-        overrideErr,
-      );
-      await startElevenLabsSession("webrtc", false);
-    }
-  }, [startElevenLabsSession]);
-
-  const connectWithWebSocketFallback = useCallback(async () => {
-    try {
-      await startElevenLabsSession("websocket", true);
-    } catch (overrideErr) {
-      if (!isOverrideConfigError(overrideErr)) throw overrideErr;
-      console.warn(
-        "ElevenLabs WebSocket startSession failed with overrides — retrying without.",
-        overrideErr,
-      );
-      await startElevenLabsSession("websocket", false);
-    }
-  }, [startElevenLabsSession]);
-
-  // Start session — invoked directly from a user tap.
+  /** Start the ElevenLabs session — single attempt, WebRTC then WebSocket fallback. */
   const start = useCallback(async () => {
     if (connecting || conversation.status === "connected") return;
-    console.log("[voice] connecting…");
     feedback("tap", "tap");
 
-    // STEP 1 — synchronous, inside the user gesture (no awaits before this):
-    unlockAudioPlayback();
-
+    // STEP 1: synchronous unlock (must NOT be awaited before)
+    unlockAudio();
     setConnecting(true);
     setOrbState("listening");
 
     try {
-      // STEP 2 — first await must be getUserMedia, otherwise iOS/Safari deny it.
-      await requestMicStream();
+      // STEP 2: first await must be getUserMedia
+      await requestMic();
 
-      // STEP 3 — try WebRTC first (with overrides, then without if blocked).
+      // STEP 3: WebRTC via short-lived token from server
       try {
-        await connectWithFallbackRetry();
+        const res = await getElevenLabsAgentToken({ data: {} });
+        if (!res.token) throw new Error(res.error || "No token returned from server");
+        await conversation.startSession({
+          conversationToken: res.token,
+          connectionType: "webrtc",
+          overrides,
+        });
       } catch (webrtcErr) {
-        console.warn("[voice] WebRTC failed, falling back to WebSocket:", webrtcErr);
-        setRetrying(true);
-        retryingRef.current = true;
+        console.warn("[voice] WebRTC failed, trying WebSocket:", webrtcErr);
         try {
           await conversation.endSession();
         } catch {
           /* ignore */
         }
-        // STEP 4 — single WebSocket fallback attempt. No infinite retry loop.
-        await connectWithWebSocketFallback();
+        // STEP 4: WebSocket fallback via signed URL
+        const signed = await getElevenLabsAgentSignedUrl({ data: {} });
+        if (!signed.signedUrl) {
+          throw new Error(signed.error || "No signed URL returned from server");
+        }
+        await conversation.startSession({
+          signedUrl: signed.signedUrl,
+          connectionType: "websocket",
+          overrides,
+        });
       }
 
-      console.log("[voice] session started");
-      setPttHeld(true);
       playSound("voice-start");
     } catch (e) {
       console.error("[voice] start failed", e);
-      const msg = errorText(e);
-      toast.error(msg.length < 120 ? msg : "Voice not connected. Try again.");
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error(msg.length < 140 ? msg : "Voice not connected. Try again.");
       setOrbState("error");
-      setPttHeld(false);
       playSound("error");
       setTimeout(() => setOrbState("idle"), 1200);
       try {
@@ -423,17 +274,8 @@ function VoiceModeInner({
       }
     } finally {
       setConnecting(false);
-      setRetrying(false);
-      retryingRef.current = false;
     }
-  }, [
-    connecting,
-    conversation,
-    connectWithFallbackRetry,
-    connectWithWebSocketFallback,
-    requestMicStream,
-    unlockAudioPlayback,
-  ]);
+  }, [connecting, conversation, overrides, requestMic, unlockAudio]);
 
   const stop = useCallback(async () => {
     feedback("tap", "tap");
@@ -446,25 +288,22 @@ function VoiceModeInner({
     setTranscript([]);
     setPartial("");
     convoIdRef.current = null;
-    setPttHeld(false);
     setOrbState("idle");
   }, [conversation]);
 
-  // Push-to-talk
-  const onPttDown = useCallback(() => {
-    if (conversation.status !== "connected") return;
-    setPttHeld(true);
-    feedback("tap", "tap");
-  }, [conversation.status]);
-  const onPttUp = useCallback(() => {
-    setPttHeld(false);
-  }, []);
-
-  // Suggestion chips after assistant response
-  const lastAssistant = useMemo(
-    () => [...transcript].reverse().find((t) => t.role === "assistant")?.text ?? "",
-    [transcript],
-  );
+  // Cleanup on close — does NOT auto-start
+  useEffect(() => {
+    if (!open) {
+      try {
+        conversation.endSession();
+      } catch {
+        /* ignore */
+      }
+      setTranscript([]);
+      convoIdRef.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const sendChip = useCallback(
     (label: string) => {
@@ -479,40 +318,26 @@ function VoiceModeInner({
     [conversation],
   );
 
-  // Cleanup on close
-  useEffect(() => {
-    if (!open) {
-      try {
-        conversation.endSession();
-      } catch {
-        /* ignore */
-      }
-      setTranscript([]);
-      convoIdRef.current = null;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  const lastAssistant = useMemo(
+    () => [...transcript].reverse().find((t) => t.role === "assistant")?.text ?? "",
+    [transcript],
+  );
 
   if (!open) return null;
 
   const isConnected = conversation.status === "connected";
-  const statusLabel = retrying
-    ? "Voice not connected. Retrying…"
+  const statusLabel = connecting
+    ? "Connecting…"
     : orbState === "thinking"
       ? "Thinking…"
-      : orbState === "listening"
-        ? "Listening…"
-        : orbState === "speaking"
-          ? "Speaking"
-          : isConnected
-            ? autoMode
-              ? "Auto · ready"
-              : "Hold mic to talk"
-            : "Tap to start";
+      : orbState === "speaking"
+        ? "Speaking"
+        : isConnected
+          ? "Listening…"
+          : "Tap the mic to begin";
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col bg-gradient-to-b from-[#05060c] via-[#0a0e22] to-[#05060c] text-foreground">
-      {/* Background ambient */}
       <div
         className="pointer-events-none absolute inset-0 opacity-60"
         style={{
@@ -520,7 +345,6 @@ function VoiceModeInner({
             "radial-gradient(60% 50% at 50% 35%, rgba(99,102,241,0.18), transparent 70%), radial-gradient(40% 40% at 50% 70%, rgba(34,211,238,0.12), transparent 70%)",
         }}
       />
-      {/* Top bar */}
       <header className="relative z-10 flex items-center justify-between px-4 pt-5 pb-3">
         <button
           onClick={onClose}
@@ -542,7 +366,6 @@ function VoiceModeInner({
         </button>
       </header>
 
-      {/* Orb */}
       <div className="relative z-10 flex flex-1 items-center justify-center px-4">
         <AssistantOrb
           state={orbState}
@@ -555,7 +378,6 @@ function VoiceModeInner({
         />
       </div>
 
-      {/* Transcript panel */}
       <div className="relative z-10 mx-3 mb-3 max-h-[28vh] overflow-y-auto rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10 backdrop-blur">
         {transcript.length === 0 && !partial && (
           <p className="text-center text-sm text-white/50">
@@ -579,10 +401,9 @@ function VoiceModeInner({
           {partial && <div className="text-sm italic text-white/60">{partial}…</div>}
         </div>
 
-        {/* Suggestion chips */}
         {lastAssistant && (
           <div className="mt-3 flex flex-wrap gap-2">
-            {["Explain more", "Translate", "Summarize", "Create image of this"].map((c) => (
+            {["Explain more", "Translate", "Summarize"].map((c) => (
               <button
                 key={c}
                 onClick={() => sendChip(c)}
@@ -595,7 +416,6 @@ function VoiceModeInner({
         )}
       </div>
 
-      {/* Bottom controls */}
       <footer className="relative z-10 flex items-center justify-between gap-3 px-6 pb-8 pt-2">
         <button
           onClick={stop}
@@ -606,43 +426,23 @@ function VoiceModeInner({
           <X className="h-5 w-5" />
         </button>
 
-        {/* Mic — push to talk OR start/stop */}
+        {/* Mic — single tap to start; tap again to stop */}
         <button
-          onPointerDown={isConnected && !autoMode ? onPttDown : undefined}
-          onPointerUp={isConnected && !autoMode ? onPttUp : undefined}
-          onPointerLeave={isConnected && !autoMode ? onPttUp : undefined}
-          onClick={!isConnected ? start : autoMode ? stop : undefined}
+          onClick={isConnected ? stop : start}
           disabled={connecting}
           className={`relative grid h-20 w-20 place-items-center rounded-full transition-transform active:scale-[0.97] ${
             conversation.isSpeaking
-              ? "animate-bounce bg-gradient-to-br from-cyan-300 to-sky-500 shadow-[0_0_70px_rgba(34,211,238,0.75)]"
-              : pttHeld || (isConnected && autoMode)
-                ? "animate-pulse bg-gradient-to-br from-emerald-400 to-cyan-500 shadow-[0_0_65px_rgba(45,212,191,0.65)]"
-                : isConnected
-                  ? "bg-gradient-to-br from-cyan-400 to-indigo-500 shadow-[0_0_60px_rgba(99,102,241,0.6)]"
-                  : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-[0_0_50px_rgba(124,58,237,0.55)]"
+              ? "animate-pulse bg-gradient-to-br from-cyan-300 to-sky-500 shadow-[0_0_70px_rgba(34,211,238,0.75)]"
+              : isConnected
+                ? "bg-gradient-to-br from-emerald-400 to-cyan-500 shadow-[0_0_60px_rgba(45,212,191,0.6)]"
+                : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-[0_0_50px_rgba(124,58,237,0.55)]"
           }`}
           aria-label="Microphone"
         >
           {connecting ? (
             <Loader2 className="h-7 w-7 animate-spin text-white" />
-          ) : isConnected ? (
-            pttHeld || autoMode ? (
-              <Mic className="h-8 w-8 text-white" />
-            ) : (
-              <MicOff className="h-8 w-8 text-white/90" />
-            )
           ) : (
             <Mic className="h-8 w-8 text-white" />
-          )}
-          {conversation.isSpeaking && (
-            <>
-              <span className="absolute inset-0 animate-ping rounded-full bg-white/20" />
-              <span className="absolute inset-[-10px] animate-pulse rounded-full border border-cyan-200/40" />
-            </>
-          )}
-          {!conversation.isSpeaking && (pttHeld || (isConnected && autoMode)) && (
-            <span className="absolute inset-0 animate-ping rounded-full bg-white/20" />
           )}
         </button>
 
@@ -656,9 +456,4 @@ function VoiceModeInner({
       </footer>
     </div>
   );
-}
-
-function cryptoId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
-  return Math.random().toString(36).slice(2);
 }
