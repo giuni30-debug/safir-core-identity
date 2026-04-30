@@ -251,6 +251,11 @@ export function initSoundEngine() {
         /* ignore */
       }
     }
+    // Resume the AudioContext (autoplay policies require a user gesture).
+    const ctx = ensureAudioCtx();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => undefined);
+    }
     window.removeEventListener("pointerdown", tryUnlock);
     window.removeEventListener("keydown", tryUnlock);
     window.removeEventListener("touchstart", tryUnlock);
@@ -261,10 +266,12 @@ export function initSoundEngine() {
 }
 
 /**
- * Play a sound. Returns a cancel function.
- * Respects user prefs and per-sound throttling. Never overlaps the same id.
+ * Play a sound. Respects user prefs and per-sound throttling.
+ *
+ * Optional `opts.pan` (-1..1) and `opts.depth` (0..1) apply subtle 3D feel
+ * via WebAudio. Falls back to flat HTMLAudio when WebAudio is unavailable.
  */
-export function playSound(id: SoundId): void {
+export function playSound(id: SoundId, opts?: SpatialOpts): void {
   if (!prefs.soundEnabled) return;
   const buf = buffers[id];
   if (!buf) return;
@@ -276,6 +283,42 @@ export function playSound(id: SoundId): void {
     if (now - last < minGap) return;
   }
   lastPlayedAt[id] = now;
+
+  // Apply spatial settings (pan + depth) if provided.
+  const spatial = opts ? getSpatial(id) : null;
+  if (spatial && opts && audioCtx) {
+    const t = audioCtx.currentTime;
+    if (typeof opts.pan === "number") {
+      const pan = clamp(opts.pan, -1, 1);
+      try {
+        spatial.panner.pan.cancelScheduledValues(t);
+        spatial.panner.pan.setValueAtTime(pan, t);
+      } catch {
+        spatial.panner.pan.value = pan;
+      }
+    }
+    if (typeof opts.depth === "number") {
+      // depth: 0 (far, ~35%) → 1 (near, 100%)
+      const d = clamp(opts.depth, 0, 1);
+      const g = 0.35 + d * 0.65;
+      try {
+        spatial.gain.gain.cancelScheduledValues(t);
+        spatial.gain.gain.setValueAtTime(g, t);
+      } catch {
+        spatial.gain.gain.value = g;
+      }
+    }
+  } else if (spatialNodes[id] && audioCtx) {
+    // Reset to neutral if previously panned and now called without opts.
+    const s = spatialNodes[id]!;
+    try {
+      s.panner.pan.setValueAtTime(0, audioCtx.currentTime);
+      s.gain.gain.setValueAtTime(1, audioCtx.currentTime);
+    } catch {
+      s.panner.pan.value = 0;
+      s.gain.gain.value = 1;
+    }
+  }
 
   try {
     buf.pause();
@@ -290,13 +333,54 @@ export function playSound(id: SoundId): void {
 
 // ---------------- Ringtone (looping) ----------------
 
-export function startRingtone() {
+/**
+ * Start the looping ringtone. With `opts.depthSweep` true (default) the call
+ * fades in from "far" to "near" over ~1.6s and gently pans L↔R while ringing,
+ * giving an incoming-call depth/spatial feel.
+ */
+export function startRingtone(opts?: { depthSweep?: boolean }) {
   if (!prefs.soundEnabled) return;
   stopRingtone();
   const a = new Audio(SOURCES.ringtone);
   a.loop = true;
+  a.crossOrigin = "anonymous";
   a.volume = effectiveVolume("ringtone");
   ringtoneEl = a;
+
+  // Wire ringtone through WebAudio for spatial effect.
+  const ctx = ensureAudioCtx();
+  const sweep = opts?.depthSweep ?? true;
+  if (ctx) {
+    try {
+      const source = ctx.createMediaElementSource(a);
+      const panner = ctx.createStereoPanner();
+      const gain = ctx.createGain();
+      source.connect(panner);
+      panner.connect(gain);
+      gain.connect(ctx.destination);
+      ringtoneNodes = { panner, gain };
+      const t0 = ctx.currentTime;
+      if (sweep) {
+        // Depth fade-in: far (0.25) → near (1.0) over 1.6s
+        gain.gain.setValueAtTime(0.25, t0);
+        gain.gain.linearRampToValueAtTime(1.0, t0 + 1.6);
+        // Subtle stereo sway matching ring cadence
+        panner.pan.setValueAtTime(-0.35, t0);
+        for (let i = 1; i < 30; i++) {
+          panner.pan.linearRampToValueAtTime(
+            i % 2 === 0 ? -0.35 : 0.35,
+            t0 + i * 2.2,
+          );
+        }
+      } else {
+        gain.gain.setValueAtTime(1, t0);
+        panner.pan.setValueAtTime(0, t0);
+      }
+    } catch {
+      /* WebAudio unavailable — fall back to flat ringtone */
+    }
+  }
+
   const p = a.play();
   if (p && typeof p.catch === "function") p.catch(() => undefined);
 
@@ -324,6 +408,7 @@ export function stopRingtone() {
     }
     ringtoneEl = null;
   }
+  ringtoneNodes = null;
   if (vibrationLoopId != null) {
     window.clearInterval(vibrationLoopId);
     vibrationLoopId = null;
