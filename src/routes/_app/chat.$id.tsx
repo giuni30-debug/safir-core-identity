@@ -290,6 +290,7 @@ function ChatPage() {
     if (!body || !myId || sending) return;
     setSending(true);
     setText("");
+    stopTyping();
     const { error } = await supabase
       .from("messages")
       .insert({
