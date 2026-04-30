@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
-import { Settings, Users, MessagesSquare, Calendar, NotebookPen, Wallet, ShoppingBag, Search } from "lucide-react";
+import { Settings, Users, MessagesSquare, Calendar, NotebookPen, Wallet, ShoppingBag, Search, CalendarClock } from "lucide-react";
 import { HomeInstallBanner } from "@/components/HomeInstallBanner";
 
 export const Route = createFileRoute("/_app/home")({
@@ -25,6 +25,7 @@ function Home() {
     { to: "/calendar" as const, icon: Calendar, label: t("calendar") },
     { to: "/notes" as const, icon: NotebookPen, label: t("notes") },
     { to: "/expenses" as const, icon: Wallet, label: t("expenses") },
+    { to: "/appointments" as const, icon: CalendarClock, label: "Appointments" },
     { to: "/coming-soon" as const, icon: ShoppingBag, label: t("shopping") },
   ];
 
