@@ -61,18 +61,27 @@ function Home() {
             <Link
               key={i}
               to={to}
-              className="glass-card glass-card-hover flex aspect-square flex-col items-start justify-between gap-4 p-4"
+              className="glass-card glass-card-hover tile-press flex aspect-square flex-col items-start justify-between gap-4 p-4"
+              style={{
+                borderRadius: "20px",
+                borderColor: "color-mix(in oklab, var(--theme-accent) 22%, transparent)",
+                boxShadow:
+                  "0 8px 28px oklch(0 0 0 / 45%), 0 0 18px color-mix(in oklab, var(--theme-accent) 12%, transparent)",
+              }}
             >
               <div
-                className="grid h-10 w-10 place-items-center rounded-xl"
+                className="grid h-11 w-11 place-items-center rounded-2xl"
                 style={{
-                  background: "color-mix(in oklab, var(--theme-accent) 15%, transparent)",
+                  background:
+                    "linear-gradient(135deg, color-mix(in oklab, var(--theme-accent) 22%, transparent), color-mix(in oklab, var(--theme-accent) 8%, transparent))",
                   color: "var(--theme-accent)",
+                  boxShadow:
+                    "0 0 14px color-mix(in oklab, var(--theme-accent) 35%, transparent)",
                 }}
               >
                 <Icon className="h-5 w-5" />
               </div>
-              <span className="text-sm font-semibold">{label}</span>
+              <span className="text-sm font-semibold tracking-tight">{label}</span>
             </Link>
           ))}
         </div>

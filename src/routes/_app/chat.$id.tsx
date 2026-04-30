@@ -708,7 +708,7 @@ function ChatPage() {
           <button
             type="button"
             onClick={() => stopRecording(false)}
-            className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground"
+            className="neon-circle mic-pulse grid h-10 w-10 place-items-center rounded-full"
             aria-label="Stop recording"
           >
             <Square className="h-4 w-4" />
@@ -722,7 +722,7 @@ function ChatPage() {
               onClick={() => setAttachMenuOpen((v) => !v)}
               disabled={!!voicePreview || !!attachment}
               aria-label="Attach"
-              className="grid h-12 w-12 place-items-center rounded-2xl border border-border bg-card/40 disabled:opacity-40"
+              className="grid h-12 w-12 place-items-center rounded-full border border-glass-border bg-white/5 backdrop-blur-xl disabled:opacity-40"
             >
               <Plus className={`h-5 w-5 transition-transform ${attachMenuOpen ? "rotate-45" : ""}`} />
             </button>
@@ -760,19 +760,21 @@ function ChatPage() {
               </>
             )}
           </div>
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={t("typeMessage")}
-            disabled={!!voicePreview || !!attachment}
-            className="flex-1 rounded-2xl border border-input bg-card/30 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-          />
+          <div className="input-pill flex flex-1 items-center px-4">
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={t("typeMessage")}
+              disabled={!!voicePreview || !!attachment}
+              className="flex-1 bg-transparent py-3 text-sm placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+            />
+          </div>
           {text.trim() ? (
             <button
               type="submit"
               disabled={!text.trim() || sending}
               aria-label={t("send")}
-              className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-primary-foreground disabled:opacity-40"
+              className="neon-circle grid h-12 w-12 place-items-center rounded-full disabled:opacity-40"
             >
               <Send className="h-4 w-4" />
             </button>
@@ -782,7 +784,7 @@ function ChatPage() {
               onClick={startRecording}
               disabled={!!voicePreview || !!attachment}
               aria-label="Record voice message"
-              className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-primary-foreground disabled:opacity-40"
+              className="neon-circle grid h-12 w-12 place-items-center rounded-full disabled:opacity-40"
             >
               <Mic className="h-4 w-4" />
             </button>
