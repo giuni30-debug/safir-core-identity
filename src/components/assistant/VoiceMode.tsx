@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useConversation } from "@elevenlabs/react";
+import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { Mic, MicOff, X, Loader2, Settings as SettingsIcon, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { AssistantOrb, type OrbState } from "./AssistantOrb";
@@ -50,7 +50,15 @@ const personalityPrompts: Record<AssistantPersonality, string> = {
     "You are All Assist AI. Be formal, efficient, and to the point. No jokes. Use professional vocabulary.",
 };
 
-export function VoiceMode({
+export function VoiceMode(props: Props) {
+  return (
+    <ConversationProvider>
+      <VoiceModeInner {...props} />
+    </ConversationProvider>
+  );
+}
+
+function VoiceModeInner({
   open,
   onClose,
   agentId,
