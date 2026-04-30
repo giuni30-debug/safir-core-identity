@@ -20,6 +20,11 @@ function AppLayout() {
   // Broadcast online presence while signed in & inside the app
   usePresenceHeartbeat(user?.id ?? null);
 
+  // Preload premium sound pack once on app entry
+  useEffect(() => {
+    initSoundEngine();
+  }, []);
+
   return (
     <CallProvider>
       <div className="app-shell">
