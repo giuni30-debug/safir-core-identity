@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
-import { Settings, ArrowRight } from "lucide-react";
+import { Settings, ArrowRight, Shield, Sparkles, Languages } from "lucide-react";
 import { HomeInstallBanner } from "@/components/HomeInstallBanner";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useMemo } from "react";
@@ -101,13 +101,12 @@ function Home() {
 
       <HomeInstallBanner />
 
-      {/* Centerpiece: Logo + tagline */}
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8">
+      {/* Centerpiece: Logo + tagline (compact to make room for module cards) */}
+      <div className="relative z-10 flex flex-col items-center gap-5 pt-2">
         {/* Sapphire S logo */}
         <div className="relative grid place-items-center" aria-hidden>
-          {/* Outer halo */}
           <div
-            className="absolute h-[280px] w-[280px] rounded-full"
+            className="absolute h-[220px] w-[220px] rounded-full"
             style={{
               background:
                 "radial-gradient(closest-side, oklch(0.70 0.18 250 / 38%), transparent 70%)",
@@ -115,9 +114,8 @@ function Home() {
               animation: "logo-breath 4.5s ease-in-out infinite",
             }}
           />
-          {/* Glass disc */}
           <div
-            className="relative grid h-44 w-44 place-items-center rounded-full"
+            className="relative grid h-32 w-32 place-items-center rounded-full"
             style={{
               background:
                 "linear-gradient(160deg, oklch(1 0 0 / 12%), oklch(0.70 0.18 250 / 18%) 60%, oklch(0 0 0 / 25%))",
@@ -131,7 +129,7 @@ function Home() {
           >
             <span
               style={{
-                fontSize: 96,
+                fontSize: 72,
                 fontWeight: 200,
                 lineHeight: 1,
                 letterSpacing: "-0.05em",
@@ -151,41 +149,95 @@ function Home() {
         </div>
 
         {/* Tagline */}
-        <div className="flex flex-col items-center gap-1.5 text-center">
+        <div className="flex flex-col items-center gap-1 text-center">
           <h1
-            className="text-2xl font-light tracking-[0.04em] text-white"
+            className="text-xl font-light tracking-[0.04em] text-white"
             style={{ textShadow: "0 0 18px oklch(0.70 0.18 250 / 55%)" }}
           >
             {t("homeTagline")}
           </h1>
-          <p className="text-xs font-light tracking-[0.3em] text-white/50 uppercase">
+          <p className="text-[10px] font-light tracking-[0.3em] text-white/50 uppercase">
             {t("homeSubline")}
           </p>
         </div>
       </div>
 
-      {/* Bottom CTA */}
-      <div className="relative z-10 mt-6 flex flex-col items-center gap-3 pb-2">
-        <button
-          type="button"
+      {/* Module selection cards */}
+      <div className="relative z-10 mt-6 flex flex-col gap-3">
+        <p className="text-soft text-center text-[10px] font-semibold uppercase tracking-[0.3em]">
+          {t("homeChooseModule")}
+        </p>
+        <ModuleCard
+          icon={<Shield className="h-7 w-7" />}
+          title={t("modPrivateLife")}
+          desc={t("modPrivateLifeDesc")}
+          accent="oklch(0.70 0.18 250)"
           onClick={() => navigate({ to: "/dashboard" })}
-          className="press-glow group flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold tracking-wide"
-          style={{
-            background:
-              "linear-gradient(135deg, oklch(0.70 0.18 250), oklch(0.55 0.18 260))",
-            color: "white",
-            border: "1px solid oklch(0.85 0.14 240 / 60%)",
-            boxShadow:
-              "0 0 24px oklch(0.70 0.18 250 / 65%), inset 0 1px 0 oklch(1 0 0 / 25%)",
-          }}
-        >
-          {t("enterApp")}
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-        </button>
+        />
+        <ModuleCard
+          icon={<Sparkles className="h-7 w-7" />}
+          title={t("modAllAssist")}
+          desc={t("modAllAssistDesc")}
+          accent="oklch(0.78 0.18 320)"
+          onClick={() => navigate({ to: "/assistant" })}
+        />
+        <ModuleCard
+          icon={<Languages className="h-7 w-7" />}
+          title={t("modTranslator")}
+          desc={t("modTranslatorDesc")}
+          accent="oklch(0.78 0.16 165)"
+          onClick={() => navigate({ to: "/translator" })}
+        />
+      </div>
+
+      {/* Bottom CTA */}
+      <div className="relative z-10 mt-5 flex flex-col items-center gap-2 pb-2">
         <p className="text-[10px] font-light tracking-[0.25em] text-white/40 uppercase">
           {t("orSwipeLeft")}
         </p>
       </div>
     </div>
+  );
+}
+
+function ModuleCard({
+  icon, title, desc, accent, onClick,
+}: { icon: React.ReactNode; title: string; desc: string; accent: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="press-glow group relative flex w-full items-center gap-4 rounded-2xl p-4 text-left transition-transform"
+      style={{
+        background:
+          "linear-gradient(135deg, oklch(1 0 0 / 8%) 0%, oklch(1 0 0 / 3%) 100%)",
+        border: `1.5px solid ${accent}`,
+        backdropFilter: "blur(28px) saturate(160%)",
+        WebkitBackdropFilter: "blur(28px) saturate(160%)",
+        boxShadow: `0 0 22px color-mix(in oklab, ${accent} 35%, transparent), 0 10px 32px oklch(0 0 0 / 50%), inset 0 1px 0 oklch(1 0 0 / 10%)`,
+      }}
+    >
+      <div
+        className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-white"
+        style={{
+          background: `linear-gradient(135deg, ${accent}, color-mix(in oklab, ${accent} 50%, #000))`,
+          boxShadow: `0 0 18px ${accent}, inset 0 1px 0 oklch(1 0 0 / 25%)`,
+        }}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p
+          className="text-base font-bold tracking-wide text-white"
+          style={{ textShadow: `0 0 12px color-mix(in oklab, ${accent} 60%, transparent)` }}
+        >
+          {title}
+        </p>
+        <p className="text-soft mt-0.5 text-xs">{desc}</p>
+      </div>
+      <ArrowRight
+        className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-1"
+        style={{ color: accent }}
+      />
+    </button>
   );
 }

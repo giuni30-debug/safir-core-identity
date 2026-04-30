@@ -16,6 +16,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppWalletRouteImport } from './routes/_app/wallet'
+import { Route as AppTranslatorRouteImport } from './routes/_app/translator'
 import { Route as AppShoppingRouteImport } from './routes/_app/shopping'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
@@ -66,6 +67,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppWalletRoute = AppWalletRouteImport.update({
   id: '/wallet',
   path: '/wallet',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTranslatorRoute = AppTranslatorRouteImport.update({
+  id: '/translator',
+  path: '/translator',
   getParentRoute: () => AppRoute,
 } as any)
 const AppShoppingRoute = AppShoppingRouteImport.update({
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
   '/shopping': typeof AppShoppingRoute
+  '/translator': typeof AppTranslatorRoute
   '/wallet': typeof AppWalletRoute
   '/chat/$id': typeof AppChatIdRoute
 }
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
   '/shopping': typeof AppShoppingRoute
+  '/translator': typeof AppTranslatorRoute
   '/wallet': typeof AppWalletRoute
   '/chat/$id': typeof AppChatIdRoute
 }
@@ -228,6 +236,7 @@ export interface FileRoutesById {
   '/_app/profile': typeof AppProfileRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/shopping': typeof AppShoppingRoute
+  '/_app/translator': typeof AppTranslatorRoute
   '/_app/wallet': typeof AppWalletRoute
   '/_app/chat/$id': typeof AppChatIdRoute
 }
@@ -255,6 +264,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/shopping'
+    | '/translator'
     | '/wallet'
     | '/chat/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/shopping'
+    | '/translator'
     | '/wallet'
     | '/chat/$id'
   id:
@@ -306,6 +317,7 @@ export interface FileRouteTypes {
     | '/_app/profile'
     | '/_app/settings'
     | '/_app/shopping'
+    | '/_app/translator'
     | '/_app/wallet'
     | '/_app/chat/$id'
   fileRoutesById: FileRoutesById
@@ -368,6 +380,13 @@ declare module '@tanstack/react-router' {
       path: '/wallet'
       fullPath: '/wallet'
       preLoaderRoute: typeof AppWalletRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/translator': {
+      id: '/_app/translator'
+      path: '/translator'
+      fullPath: '/translator'
+      preLoaderRoute: typeof AppTranslatorRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/shopping': {
@@ -509,6 +528,7 @@ interface AppRouteChildren {
   AppProfileRoute: typeof AppProfileRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppShoppingRoute: typeof AppShoppingRoute
+  AppTranslatorRoute: typeof AppTranslatorRoute
   AppWalletRoute: typeof AppWalletRoute
   AppChatIdRoute: typeof AppChatIdRoute
 }
@@ -530,6 +550,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppProfileRoute: AppProfileRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppShoppingRoute: AppShoppingRoute,
+  AppTranslatorRoute: AppTranslatorRoute,
   AppWalletRoute: AppWalletRoute,
   AppChatIdRoute: AppChatIdRoute,
 }
