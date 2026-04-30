@@ -300,6 +300,8 @@ function ChatPage() {
     setSending(true);
     setText("");
     stopTyping();
+    playSound("send");
+    vibrate("light");
     const { error } = await supabase
       .from("messages")
       .insert({
