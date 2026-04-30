@@ -152,6 +152,11 @@ function ChatPage() {
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Gift state
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [activeGift, setActiveGift] = useState<Gift | null>(null);
+  const lastSeenGiftId = useRef<string | null>(null);
+
   // Load contact profile
   useEffect(() => {
     (async () => {
