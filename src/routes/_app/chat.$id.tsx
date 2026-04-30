@@ -377,11 +377,20 @@ function ChatPage() {
     if (!file) return;
     const limit =
       kind === "image" ? MAX_IMAGE_BYTES : kind === "video" ? MAX_VIDEO_BYTES : MAX_FILE_BYTES;
-    const limitLabel =
-      kind === "image" ? "10MB" : kind === "video" ? "100MB" : "50MB";
     if (file.size > limit) {
-      setAttachError(`File too large. Max ${limitLabel}.`);
+      if (kind === "video") {
+        setAttachError("Video is too large. Maximum size is 300MB.");
+      } else if (kind === "image") {
+        setAttachError("Image is too large. Maximum size is 25MB.");
+      } else {
+        setAttachError("File is too large. Maximum size is 100MB.");
+      }
       return;
+    }
+    if (kind === "video" && file.size > VIDEO_WARN_BYTES) {
+      setAttachError("Large video. Upload may take longer.");
+    } else {
+      setAttachError(null);
     }
     if (attachment && "url" in attachment) URL.revokeObjectURL(attachment.url);
     if (kind === "file") {
