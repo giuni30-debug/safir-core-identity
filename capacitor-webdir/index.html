@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Safir Home Call</title>
+    <style>
+      body {
+        margin: 0;
+        background: #0a0a1a;
+        color: #fff;
+        font-family: -apple-system, system-ui, sans-serif;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <h2>Safir Home Call</h2>
+      <p>Se încarcă...</p>
+    </div>
+    <script>
+      // Fallback redirect dacă serverul Capacitor nu pornește
+      setTimeout(() => {
+        window.location.href = 'https://id-preview--c37270b2-ee89-406c-9f05-d457f52c1094.lovable.app';
+      }, 2000);
+    </script>
+  </body>
+</html>
