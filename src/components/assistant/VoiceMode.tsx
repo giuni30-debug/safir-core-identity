@@ -307,7 +307,11 @@ function VoiceModeInner({
             if (settled) return;
             settled = true;
             window.clearTimeout(timeout);
-            reject(context instanceof Error ? context : new Error(String(message || "ElevenLabs connection failed")));
+            reject(
+              context instanceof Error
+                ? context
+                : new Error(String(message || "ElevenLabs connection failed")),
+            );
           },
         } as ElevenLabsStartOptions);
       }),
@@ -320,11 +324,16 @@ function VoiceModeInner({
       if (transport === "webrtc") {
         const res = await getElevenLabsAgentToken({ data: { agentId: activeAgentId } });
         if (!res.token) throw new Error(res.error || "No token returned from server");
-        await waitForSessionStart(createSessionOptions({ conversationToken: res.token }, withOverrides, callbacks));
+        await waitForSessionStart(
+          createSessionOptions({ conversationToken: res.token }, withOverrides, callbacks),
+        );
       } else {
         const signed = await getElevenLabsAgentSignedUrl({ data: { agentId: activeAgentId } });
-        if (!signed.signedUrl) throw new Error(signed.error || "No signed URL returned from server");
-        await waitForSessionStart(createSessionOptions({ signedUrl: signed.signedUrl }, withOverrides, callbacks));
+        if (!signed.signedUrl)
+          throw new Error(signed.error || "No signed URL returned from server");
+        await waitForSessionStart(
+          createSessionOptions({ signedUrl: signed.signedUrl }, withOverrides, callbacks),
+        );
       }
     },
     [activeAgentId, createSessionOptions, waitForSessionStart],
@@ -349,7 +358,10 @@ function VoiceModeInner({
       await startElevenLabsSession("websocket", true);
     } catch (overrideErr) {
       if (!isOverrideConfigError(overrideErr)) throw overrideErr;
-      console.warn("ElevenLabs WebSocket startSession failed with overrides — retrying without.", overrideErr);
+      console.warn(
+        "ElevenLabs WebSocket startSession failed with overrides — retrying without.",
+        overrideErr,
+      );
       await startElevenLabsSession("websocket", false);
     }
   }, [startElevenLabsSession]);
@@ -455,10 +467,9 @@ function VoiceModeInner({
   if (!open) return null;
 
   const isConnected = conversation.status === "connected";
-  const statusLabel =
-    retrying
-      ? "Voice not connected. Retrying…"
-      : orbState === "thinking"
+  const statusLabel = retrying
+    ? "Voice not connected. Retrying…"
+    : orbState === "thinking"
       ? "Thinking…"
       : orbState === "listening"
         ? "Listening…"
