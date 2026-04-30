@@ -46,7 +46,7 @@ const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-image`;
 const SUPA_KEY  = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 function AssistantPage() {
-  const { t } = useApp();
+  const { t, user } = useApp();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -54,11 +54,16 @@ function AssistantPage() {
   const [recording, setRecording] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [imageMode, setImageMode] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [conversations, setConversations] = useState<AiConversation[]>([]);
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const recogRef = useRef<unknown>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  const memory = useAiMemory();
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
