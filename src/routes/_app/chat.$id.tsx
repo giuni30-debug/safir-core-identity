@@ -48,6 +48,11 @@ const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 300 * 1024 * 1024;
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
 const VIDEO_WARN_BYTES = 100 * 1024 * 1024;
+const VOICE_BUCKET = "voice-messages";
+
+type WebkitAudioWindow = Window & {
+  webkitAudioContext?: typeof AudioContext;
+};
 
 function formatBytes(b: number) {
   if (b < 1024) return `${b} B`;
@@ -60,6 +65,37 @@ function formatDuration(s: number) {
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
   return `${m}:${sec.toString().padStart(2, "0")}`;
+}
+
+function extractVoiceObjectPath(value: string) {
+  if (!value) return null;
+  const marker = `/${VOICE_BUCKET}/`;
+  const markerIndex = value.indexOf(marker);
+  if (markerIndex >= 0) {
+    const rawPath = value.slice(markerIndex + marker.length).split("?")[0];
+    try {
+      return decodeURIComponent(rawPath);
+    } catch {
+      return rawPath;
+    }
+  }
+  if (!value.startsWith("http://") && !value.startsWith("https://")) {
+    return value.replace(/^\/+/, "");
+  }
+  return null;
+}
+
+async function createPlayableVoiceUrl(storedUrl: string) {
+  const path = extractVoiceObjectPath(storedUrl);
+  if (!path) return storedUrl;
+  const { data, error } = await supabase.storage
+    .from(VOICE_BUCKET)
+    .createSignedUrl(path, 60 * 60 * 24);
+  if (error || !data?.signedUrl) {
+    console.error("voice signed url error", error);
+    return storedUrl;
+  }
+  return data.signedUrl;
 }
 
 function VoicePlayer({ url, duration, mine }: { url: string; duration: number | null; mine: boolean }) {
