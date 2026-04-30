@@ -162,7 +162,7 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
 
         <button
           onClick={submit}
-          disabled={saving}
+          disabled={saving || !!agentIdError}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-500 px-4 py-3 font-medium text-white shadow-lg disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
