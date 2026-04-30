@@ -209,11 +209,12 @@ function VoiceModeInner({
   }, []);
 
   const overrides = useMemo(() => {
-    const language = lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en";
+    const language = (lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en") as
+      "ro" | "tr" | "de" | "en";
     return {
       agent: { prompt: { prompt: personalityPrompts[personality] }, language },
       tts: { voiceId },
-    };
+    } as const;
   }, [lang, personality, voiceId]);
 
   /** Start the ElevenLabs session — single attempt, WebRTC then WebSocket fallback. */
