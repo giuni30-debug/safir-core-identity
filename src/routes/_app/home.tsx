@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
 import { Settings, Users, MessagesSquare, Calendar, NotebookPen, Wallet, ShoppingBag, Search } from "lucide-react";
+import { HomeInstallBanner } from "@/components/HomeInstallBanner";
 
 export const Route = createFileRoute("/_app/home")({
   component: Home,
@@ -50,6 +51,8 @@ function Home() {
           <Settings className="h-5 w-5" />
         </Link>
       </header>
+
+      <HomeInstallBanner />
 
       {/* Tiles — vertically centered */}
       <div className="flex flex-1 items-center">
