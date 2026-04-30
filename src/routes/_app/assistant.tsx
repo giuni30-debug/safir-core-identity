@@ -718,7 +718,6 @@ function AssistantPage() {
       <VoiceMode
         open={voiceOpen}
         onClose={() => setVoiceOpen(false)}
-        agentId={assistantPrefs.agentId}
         voiceId={assistantPrefs.voiceId}
         personality={assistantPrefs.personality}
         autoMode={assistantPrefs.autoMode}

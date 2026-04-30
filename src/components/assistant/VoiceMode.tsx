@@ -49,7 +49,6 @@ function getString(value: unknown, path: string[]): string | undefined {
 type Props = {
   open: boolean;
   onClose: () => void;
-  agentId: string | null;
   voiceId: string;
   personality: AssistantPersonality;
   autoMode: boolean;
@@ -78,7 +77,6 @@ export function VoiceMode(props: Props) {
 function VoiceModeInner({
   open,
   onClose,
-  agentId,
   voiceId,
   personality,
   autoMode,
@@ -103,7 +101,6 @@ function VoiceModeInner({
   const rafRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const retryingRef = useRef(false);
-  const activeAgentId = useMemo(() => agentId?.trim() || undefined, [agentId]);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -332,13 +329,13 @@ function VoiceModeInner({
     async (transport: "webrtc" | "websocket", withOverrides: boolean) => {
       const callbacks = { onConnect: () => undefined, onError: () => undefined };
       if (transport === "webrtc") {
-        const res = await getElevenLabsAgentToken({ data: { agentId: activeAgentId } });
+        const res = await getElevenLabsAgentToken({ data: {} });
         if (!res.token) throw new Error(res.error || "No token returned from server");
         await waitForSessionStart(
           createSessionOptions({ conversationToken: res.token }, withOverrides, callbacks),
         );
       } else {
-        const signed = await getElevenLabsAgentSignedUrl({ data: { agentId: activeAgentId } });
+        const signed = await getElevenLabsAgentSignedUrl({ data: {} });
         if (!signed.signedUrl)
           throw new Error(signed.error || "No signed URL returned from server");
         await waitForSessionStart(
@@ -346,7 +343,7 @@ function VoiceModeInner({
         );
       }
     },
-    [activeAgentId, createSessionOptions, waitForSessionStart],
+    [createSessionOptions, waitForSessionStart],
   );
 
   const connectWithFallbackRetry = useCallback(async () => {
