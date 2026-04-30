@@ -244,6 +244,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       setInfo(null);
       facingRef.current = "user";
+      await unlockCallAudio();
 
       const { data: peer } = await supabase
         .from("profiles")
@@ -299,7 +300,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         media,
       });
     },
-    [myId, state.kind, buildPeer, sendSignal, getLocalMedia],
+    [myId, state.kind, buildPeer, sendSignal, getLocalMedia, unlockCallAudio],
   );
 
   const startCall = useCallback((id: string) => startCallInternal(id, "audio"), [startCallInternal]);
@@ -309,6 +310,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const acceptIncoming = useCallback(async () => {
     if (state.kind !== "incoming" || !myId) return;
     const { callId, peer, offer, media } = state;
+    await unlockCallAudio();
 
     const stream = await getLocalMedia(media);
     if (!stream) {
@@ -342,7 +344,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     await updateCallStatus(callId, "accepted");
 
     setState({ kind: "active", callId, peer, role: "callee", startedAt: Date.now(), media });
-  }, [state, myId, buildPeer, sendSignal, updateCallStatus, cleanup, getLocalMedia]);
+  }, [state, myId, buildPeer, sendSignal, updateCallStatus, cleanup, getLocalMedia, unlockCallAudio]);
 
   const declineIncoming = useCallback(async () => {
     if (state.kind !== "incoming") return;
@@ -367,6 +369,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (!a) return;
     const next = !speakerOn;
     a.muted = !next;
+    if (next) {
+      void unlockCallAudio().then(playRemoteMedia);
+    }
     setSpeakerOn(next);
   };
 
