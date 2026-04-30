@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { translations, type Lang, type TKey } from "@/lib/i18n";
 
 export type ThemeColor = "cyan" | "blue" | "purple" | "gold" | "emerald" | "red";
-export type BgKind = "gradient" | "image";
+export type BgKind = "gradient" | "image" | "neon";
 export type AnimKind = "none" | "stars" | "glow" | "particles";
+export type NeonColor = "blue" | "purple" | "pink" | "green" | "orange" | "red";
 
 type Profile = {
   id: string;
