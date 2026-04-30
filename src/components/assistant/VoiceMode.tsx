@@ -181,26 +181,55 @@ export function VoiceMode({
     setOrbState("thinking");
     feedback("tap", "tap");
     try {
+      // 1. Mic permission (must be inside user gesture)
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      const res = await getElevenLabsAgentToken({ data: { agentId } });
-      if (!res.token) throw new Error(res.error || "No token");
 
-      await conversation.startSession({
+      // 2. Get short-lived WebRTC token from our server
+      const res = await getElevenLabsAgentToken({ data: { agentId: id } });
+      if (!res.token) throw new Error(res.error || "No token returned from server");
+
+      // 3. Connect — try with overrides first, fall back without if the agent
+      //    doesn't have overrides enabled in the ElevenLabs dashboard.
+      const baseOpts = {
         conversationToken: res.token,
-        connectionType: "webrtc",
-        overrides: {
-          agent: {
-            prompt: { prompt: personalityPrompts[personality] },
-            language: lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en",
-          },
-          tts: { voiceId },
+        connectionType: "webrtc" as const,
+      };
+      const language =
+        lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en";
+      const overrides = {
+        agent: {
+          prompt: { prompt: personalityPrompts[personality] },
+          language,
         },
-      } as any);
+        tts: { voiceId },
+      };
+
+      try {
+        await conversation.startSession({ ...baseOpts, overrides } as any);
+      } catch (overrideErr) {
+        console.warn(
+          "ElevenLabs startSession failed with overrides — retrying without. " +
+            "Enable 'Security → Overrides' in your agent dashboard to customize voice/prompt.",
+          overrideErr,
+        );
+        // Need a fresh token (the previous one was consumed)
+        const res2 = await getElevenLabsAgentToken({ data: { agentId: id } });
+        if (!res2.token) throw new Error(res2.error || "No token (retry)");
+        await conversation.startSession({
+          ...baseOpts,
+          conversationToken: res2.token,
+        } as any);
+      }
 
       playSound("voice-start");
     } catch (e) {
       console.error("start voice failed", e);
-      toast.error(e instanceof Error ? e.message : "Failed to start");
+      const msg = e instanceof Error ? e.message : "Failed to start";
+      toast.error(
+        msg.toLowerCase().includes("agent")
+          ? "Could not reach the agent. Verify the Agent ID and that the agent is published."
+          : msg,
+      );
       setOrbState("error");
       setTimeout(() => setOrbState("idle"), 1200);
     } finally {
