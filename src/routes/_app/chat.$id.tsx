@@ -944,7 +944,12 @@ function ChatPage() {
           <div className="input-pill flex flex-1 items-center px-4">
             <input
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (e.target.value.length > 0) notifyTyping();
+                else stopTyping();
+              }}
+              onBlur={() => stopTyping()}
               placeholder={t("typeMessage")}
               disabled={!!voicePreview || !!attachment}
               className="flex-1 bg-transparent py-3 text-sm placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
