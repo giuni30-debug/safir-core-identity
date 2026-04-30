@@ -175,6 +175,20 @@
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--theme-accent) 35%, transparent); }
   50% { box-shadow: 0 0 24px 4px color-mix(in oklab, var(--theme-accent) 25%, transparent); }
 }
+@keyframes page-enter {
+  0% { opacity: 0; transform: scale(0.985) translateY(6px); filter: blur(2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+}
+@keyframes press-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--theme-accent) 50%, transparent); }
+  100% { box-shadow: 0 0 0 14px color-mix(in oklab, var(--theme-accent) 0%, transparent); }
+}
+@keyframes selection-glow {
+  0%, 100% { box-shadow: 0 0 18px var(--sel-color, var(--theme-accent)),
+                         0 0 38px color-mix(in oklab, var(--sel-color, var(--theme-accent)) 45%, transparent); }
+  50%      { box-shadow: 0 0 26px var(--sel-color, var(--theme-accent)),
+                         0 0 56px color-mix(in oklab, var(--sel-color, var(--theme-accent)) 60%, transparent); }
+}
 
 @layer base {
   * {
