@@ -51,8 +51,9 @@ type AudioSinkElement = HTMLAudioElement & { setSinkId?: (sinkId: string) => Pro
 type RemoteAudioGraph = {
   input: MediaStream;
   source: MediaStreamAudioSourceNode;
-  compressor: DynamicsCompressorNode;
-  gain: GainNode;
+  leveler: DynamicsCompressorNode;
+  makeupGain: GainNode;
+  limiter: DynamicsCompressorNode;
   destination: MediaStreamAudioDestinationNode;
 };
 
@@ -73,7 +74,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
-  const speakerAudioRef = useRef<HTMLAudioElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -93,12 +93,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
     remoteAudioGraphRef.current?.source.disconnect();
-    remoteAudioGraphRef.current?.compressor.disconnect();
-    remoteAudioGraphRef.current?.gain.disconnect();
+    remoteAudioGraphRef.current?.leveler.disconnect();
+    remoteAudioGraphRef.current?.makeupGain.disconnect();
+    remoteAudioGraphRef.current?.limiter.disconnect();
     remoteAudioGraphRef.current = null;
     remoteStreamRef.current = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
-    if (speakerAudioRef.current) speakerAudioRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     pendingIceRef.current = [];
@@ -171,8 +171,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const graph = remoteAudioGraphRef.current;
     if (graph?.input === stream) return graph.destination.stream;
     graph?.source.disconnect();
-    graph?.compressor.disconnect();
-    graph?.gain.disconnect();
+    graph?.leveler.disconnect();
+    graph?.makeupGain.disconnect();
+    graph?.limiter.disconnect();
     const AudioContextCtor =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -180,37 +181,44 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const ctx = audioContextRef.current ?? new AudioContextCtor();
     audioContextRef.current = ctx;
     const source = ctx.createMediaStreamSource(new MediaStream(audioTracks));
-    const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.value = -28;
-    compressor.knee.value = 24;
-    compressor.ratio.value = 4;
-    compressor.attack.value = 0.004;
-    compressor.release.value = 0.18;
-    const gain = ctx.createGain();
-    gain.gain.value = 1.18;
+    const leveler = ctx.createDynamicsCompressor();
+    leveler.threshold.value = -34;
+    leveler.knee.value = 18;
+    leveler.ratio.value = 7;
+    leveler.attack.value = 0.006;
+    leveler.release.value = 0.28;
+    const makeupGain = ctx.createGain();
+    makeupGain.gain.value = 0.92;
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -10;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.08;
     const destination = ctx.createMediaStreamDestination();
-    source.connect(compressor).connect(gain).connect(destination);
-    remoteAudioGraphRef.current = { input: stream, source, compressor, gain, destination };
+    source.connect(leveler).connect(makeupGain).connect(limiter).connect(destination);
+    remoteAudioGraphRef.current = { input: stream, source, leveler, makeupGain, limiter, destination };
     return destination.stream;
   }, []);
 
-  // Clean speaker routing: keep the remote track alive, only switch output device.
   const applyAudioRouting = useCallback(async () => {
-    const earpieceAudio = remoteAudioRef.current as AudioSinkElement | null;
-    const speakerAudio = speakerAudioRef.current as AudioSinkElement | null;
-    if (!earpieceAudio && !speakerAudio) return;
+    const audio = remoteAudioRef.current as AudioSinkElement | null;
+    if (!audio) return;
+    audio.muted = false;
+    audio.volume = 0.82;
+    if (typeof audio.setSinkId !== "function") return;
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const outputs = devices.filter((d) => d.kind === "audiooutput");
-      const findOutput = (words: RegExp) => outputs.find((d) => words.test(d.label.toLowerCase()))?.deviceId;
-      const earpiece = findOutput(/earpiece|receiver|phone|communication|comunicare|cască|casca/);
-      const loudspeaker = findOutput(/speaker|loud|media|multimedia|difuzor/);
-      await Promise.all([
-        earpieceAudio?.setSinkId?.(earpiece || "communications").catch(() => undefined),
-        speakerAudio?.setSinkId?.(loudspeaker || "default").catch(() => undefined),
-      ]);
-    } catch (e) {
-      console.warn("[call] audio output routing unavailable", e);
+      const normalize = (v: string) => v.toLowerCase();
+      const earpiece = outputs.find((d) => /earpiece|receiver|phone|communication|comunicare|cască|casca/.test(normalize(d.label)))?.deviceId;
+      await audio.setSinkId(earpiece || "communications");
+    } catch (firstError) {
+      try {
+        await audio.setSinkId("default");
+      } catch (secondError) {
+        console.warn("[call] earpiece routing unavailable", firstError, secondError);
+      }
     }
   }, []);
 
@@ -219,22 +227,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (!stream) return;
     if (remoteAudioRef.current) {
       const a = remoteAudioRef.current;
-      if (a.srcObject !== stream) a.srcObject = stream;
-      a.muted = speakerOnRef.current;
-      a.volume = 1;
-      a.play().catch((e) => {
-        console.warn("remote audio play blocked", e);
-        setInfo("Tap speaker to enable audio");
-      });
-      void applyAudioRouting();
-    }
-    if (speakerAudioRef.current) {
-      const a = speakerAudioRef.current;
       const playbackStream = getRemotePlaybackStream(stream);
       if (a.srcObject !== playbackStream) a.srcObject = playbackStream;
-      a.muted = !speakerOnRef.current;
-      a.volume = 1;
-      a.play().catch(() => {});
+      a.muted = false;
+      a.volume = 0.82;
+      a.play().catch((e) => {
+        console.warn("remote audio play blocked", e);
+        setInfo("Tap to enable call audio");
+      });
+      void applyAudioRouting();
     }
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = stream;
@@ -449,23 +450,16 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleSpeaker = () => {
-    const next = !speakerOn;
-    speakerOnRef.current = next;
-    setSpeakerOn(next);
+    speakerOnRef.current = false;
+    setSpeakerOn(false);
     if (remoteAudioRef.current) {
-      remoteAudioRef.current.muted = next;
-      remoteAudioRef.current.volume = 1;
+      remoteAudioRef.current.muted = false;
+      remoteAudioRef.current.volume = 0.82;
+      remoteAudioRef.current.play().catch(() => {});
     }
-    if (speakerAudioRef.current) {
-      speakerAudioRef.current.muted = !next;
-      speakerAudioRef.current.volume = 1;
-      speakerAudioRef.current.play().catch(() => {});
-    }
-    // Reroute output WITHOUT muting the stream and WITHOUT touching the
-    // peer connection / local mic. Voice keeps flowing throughout.
     void unlockCallAudio()
       .then(() => applyAudioRouting())
-      .catch((e) => console.warn("[call] speaker toggle routing failed", e));
+      .catch((e) => console.warn("[call] earpiece routing failed", e));
   };
 
   const toggleCamera = () => {
@@ -672,7 +666,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       {children}
 
       <audio ref={remoteAudioRef} autoPlay playsInline />
-      <audio ref={speakerAudioRef} autoPlay playsInline />
 
       {error && state.kind === "idle" && (
         <div className="fixed left-1/2 top-4 z-[100] -translate-x-1/2 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-2 text-xs text-destructive backdrop-blur">
