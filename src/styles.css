@@ -202,9 +202,39 @@
   50% { box-shadow: 0 0 24px 4px color-mix(in oklab, var(--theme-accent) 25%, transparent); }
 }
 @keyframes page-enter {
-  0% { opacity: 0; transform: scale(0.92) translateY(4px); filter: blur(6px); }
-  60% { opacity: 1; filter: blur(0); }
+  0%   { opacity: 0; transform: scale(0.94) translateY(6px); filter: blur(8px); }
+  55%  { opacity: 1; filter: blur(0); }
   100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+}
+/* Cinematic neon ring that pulses once when a module opens */
+@keyframes page-ring {
+  0%   { opacity: 0; transform: scale(0.92); }
+  35%  { opacity: 0.85; }
+  100% { opacity: 0; transform: scale(1.04); }
+}
+/* Soft light rays orbiting subtly */
+@keyframes rays-spin {
+  to { transform: rotate(360deg); }
+}
+/* Drifting light wave overlay */
+@keyframes wave-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(-3%, 2%, 0); }
+}
+/* Background tap ripple */
+@keyframes bg-ripple {
+  0%   { opacity: 0.55; transform: translate(-50%, -50%) scale(0); }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(1); }
+}
+/* Icon idle float (very subtle) */
+@keyframes icon-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+/* Button tap ripple flash */
+@keyframes ripple-flash {
+  0%   { opacity: 0.7; transform: translate(-50%, -50%) scale(0.2); }
+  100% { opacity: 0;   transform: translate(-50%, -50%) scale(2.4); }
 }
 @keyframes bg-drift {
   0%, 100% { background-position: 0% 0%, 100% 100%; }
@@ -395,10 +425,65 @@
     animation: selection-glow 2.4s ease-in-out infinite;
   }
 
-  /* Page-level enter animation for routed views — iPhone-style expand */
+  /* Page-level enter animation for routed views — iPhone/Tesla zoom-in */
   .page-enter {
+    position: relative;
     animation: page-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
     transform-origin: center center;
+    will-change: transform, opacity, filter;
+  }
+  /* Cinematic neon ring that pulses ONCE when a route opens */
+  .page-enter::after {
+    content: "";
+    position: absolute;
+    inset: -10px;
+    border-radius: 28px;
+    pointer-events: none;
+    border: 2px solid color-mix(in oklab, var(--theme-accent) 70%, transparent);
+    box-shadow:
+      0 0 30px color-mix(in oklab, var(--theme-accent) 55%, transparent),
+      inset 0 0 20px color-mix(in oklab, var(--theme-accent) 25%, transparent);
+    opacity: 0;
+    animation: page-ring 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* iOS-style smooth inertia scroll on all scrollable surfaces */
+  .app-frame, [data-scroll], .overflow-y-auto, .overflow-auto {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+  }
+
+  /* Subtle floating idle animation for icons */
+  .icon-float {
+    animation: icon-float 4s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  /* Universal soft tap ripple on all buttons (skip with .no-ripple) */
+  button:not(.no-ripple) {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  button:not(.no-ripple)::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 140%;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    background: radial-gradient(closest-side,
+      color-mix(in oklab, var(--theme-accent) 50%, transparent) 0%,
+      transparent 70%);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+    pointer-events: none;
+    z-index: -1;
+  }
+  button:not(.no-ripple):active:not(:disabled)::after {
+    animation: ripple-flash 0.5s ease-out;
   }
 
   /* Smooth iOS-style toggle */
