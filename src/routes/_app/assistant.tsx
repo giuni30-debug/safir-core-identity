@@ -66,15 +66,6 @@ function AssistantPage() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
-  function speak(text: string) {
-    if (!text || !("speechSynthesis" in window)) return;
-    try {
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = navigator.language || "en-US";
-      window.speechSynthesis.speak(u);
-    } catch { /* ignore */ }
-  }
 
   async function streamReply(history: Msg[]) {
     setLoading(true);
