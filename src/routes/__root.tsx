@@ -2,6 +2,7 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/r
 import appCss from "../styles.css?url";
 import { AppProvider } from "@/contexts/AppContext";
 import { BackgroundFX } from "@/components/BackgroundFX";
+import { PWAManager } from "@/components/PWAManager";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -84,6 +85,7 @@ function RootComponent() {
     <AppProvider>
       <BackgroundFX />
       <Outlet />
+      <PWAManager />
       <Toaster />
     </AppProvider>
   );
