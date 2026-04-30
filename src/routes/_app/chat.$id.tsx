@@ -133,6 +133,18 @@ function ChatPage() {
   const cancelRecordRef = useRef<boolean>(false);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Attachment state
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [attachError, setAttachError] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<
+    | { kind: "image" | "video"; file: File; url: string }
+    | { kind: "file"; file: File }
+    | null
+  >(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   // Load contact profile
   useEffect(() => {
     (async () => {
