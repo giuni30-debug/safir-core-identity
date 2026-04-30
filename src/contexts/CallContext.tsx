@@ -445,19 +445,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setMuted(next);
   };
 
-  const toggleSpeaker = () => {
-    speakerOnRef.current = false;
-    setSpeakerOn(false);
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.muted = false;
-      remoteAudioRef.current.volume = 0.82;
-      remoteAudioRef.current.play().catch(() => {});
-    }
-    void unlockCallAudio()
-      .then(() => applyAudioRouting())
-      .catch((e) => console.warn("[call] earpiece routing failed", e));
-  };
-
   const toggleCamera = () => {
     const stream = localStreamRef.current;
     if (!stream) return;
@@ -674,7 +661,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           state={state}
           elapsed={elapsed}
           muted={muted}
-          speakerOn={speakerOn}
           cameraOn={cameraOn}
           hasRemoteVideo={hasRemoteVideo}
           error={error}
@@ -685,7 +671,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           onDecline={declineIncoming}
           onEnd={() => handleEnd("ended")}
           onToggleMute={toggleMute}
-          onToggleSpeaker={toggleSpeaker}
           onToggleCamera={toggleCamera}
           onSwitchCamera={switchCamera}
         />
