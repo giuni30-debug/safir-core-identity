@@ -236,6 +236,10 @@ function AssistantPage() {
   }
 
   // ---------------- Voice: STT push-to-talk (Web Speech API) ----------------
+  // Tap-to-talk: tap once to start; auto-stops on silence and sends.
+  // Tap again while recording = cancel (don't send).
+  const cancelRecRef = useRef(false);
+
   function startRecording() {
     const SR: any =
       (typeof window !== "undefined" &&
@@ -245,13 +249,15 @@ function AssistantPage() {
       toast.error("Voice input not supported on this browser");
       return;
     }
+    if (loading) return;
     // Stop any ongoing TTS so user hears themselves
     stopSpeaking();
     try {
       const rec = new SR();
       rec.lang = "en-US";
-      rec.continuous = false;
+      rec.continuous = false;       // browser auto-ends on silence
       rec.interimResults = true;
+      cancelRecRef.current = false;
       let finalText = "";
       rec.onresult = (e: any) => {
         let interim = "";
@@ -267,12 +273,22 @@ function AssistantPage() {
         console.warn("[stt] error", e?.error);
         if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
           toast.error("Microphone permission denied");
+        } else if (e?.error === "no-speech") {
+          toast.message("Didn't catch that — try again");
         }
+        cancelRecRef.current = true;
         setRecording(false);
       };
       rec.onend = () => {
         setRecording(false);
         recognitionRef.current = null;
+        const text = finalText.trim();
+        if (!cancelRecRef.current && text) {
+          // Auto-send what was heard
+          setInput("");
+          send(text);
+        }
+        cancelRecRef.current = false;
       };
       recognitionRef.current = rec;
       rec.start();
@@ -283,13 +299,21 @@ function AssistantPage() {
     }
   }
 
-  function stopRecording() {
+  // Tap mic again while recording = cancel (don't auto-send)
+  function cancelRecording() {
     const rec = recognitionRef.current;
+    cancelRecRef.current = true;
     if (rec) {
       try { rec.stop(); } catch { /* ignore */ }
     }
     setRecording(false);
   }
+
+  function toggleRecording() {
+    if (recording) cancelRecording();
+    else startRecording();
+  }
+
 
   // Cleanup on unmount: stop any audio + recognition
   useEffect(() => {
