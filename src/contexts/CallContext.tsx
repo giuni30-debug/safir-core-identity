@@ -450,11 +450,18 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleSpeaker = () => {
-    const a = remoteAudioRef.current;
-    if (!a) return;
     const next = !speakerOn;
     speakerOnRef.current = next;
     setSpeakerOn(next);
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.muted = next;
+      remoteAudioRef.current.volume = 1;
+    }
+    if (speakerAudioRef.current) {
+      speakerAudioRef.current.muted = !next;
+      speakerAudioRef.current.volume = 1;
+      speakerAudioRef.current.play().catch(() => {});
+    }
     // Reroute output WITHOUT muting the stream and WITHOUT touching the
     // peer connection / local mic. Voice keeps flowing throughout.
     void unlockCallAudio()
