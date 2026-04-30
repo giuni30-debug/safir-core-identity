@@ -26,6 +26,7 @@ import { Route as AppContactsRouteImport } from './routes/_app/contacts'
 import { Route as AppConnectRouteImport } from './routes/_app/connect'
 import { Route as AppComingSoonRouteImport } from './routes/_app/coming-soon'
 import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
+import { Route as AppAppointmentsRouteImport } from './routes/_app/appointments'
 import { Route as AppAppearanceRouteImport } from './routes/_app/appearance'
 import { Route as AppChatIdRouteImport } from './routes/_app/chat.$id'
 
@@ -113,6 +114,11 @@ const AppCalendarRoute = AppCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAppointmentsRoute = AppAppointmentsRouteImport.update({
+  id: '/appointments',
+  path: '/appointments',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAppearanceRoute = AppAppearanceRouteImport.update({
   id: '/appearance',
   path: '/appearance',
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/appearance': typeof AppAppearanceRoute
+  '/appointments': typeof AppAppointmentsRoute
   '/calendar': typeof AppCalendarRoute
   '/coming-soon': typeof AppComingSoonRoute
   '/connect': typeof AppConnectRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/appearance': typeof AppAppearanceRoute
+  '/appointments': typeof AppAppointmentsRoute
   '/calendar': typeof AppCalendarRoute
   '/coming-soon': typeof AppComingSoonRoute
   '/connect': typeof AppConnectRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_app/appearance': typeof AppAppearanceRoute
+  '/_app/appointments': typeof AppAppointmentsRoute
   '/_app/calendar': typeof AppCalendarRoute
   '/_app/coming-soon': typeof AppComingSoonRoute
   '/_app/connect': typeof AppConnectRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/appearance'
+    | '/appointments'
     | '/calendar'
     | '/coming-soon'
     | '/connect'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/appearance'
+    | '/appointments'
     | '/calendar'
     | '/coming-soon'
     | '/connect'
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_app/appearance'
+    | '/_app/appointments'
     | '/_app/calendar'
     | '/_app/coming-soon'
     | '/_app/connect'
@@ -380,6 +392,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCalendarRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/appointments': {
+      id: '/_app/appointments'
+      path: '/appointments'
+      fullPath: '/appointments'
+      preLoaderRoute: typeof AppAppointmentsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/appearance': {
       id: '/_app/appearance'
       path: '/appearance'
@@ -399,6 +418,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppAppearanceRoute: typeof AppAppearanceRoute
+  AppAppointmentsRoute: typeof AppAppointmentsRoute
   AppCalendarRoute: typeof AppCalendarRoute
   AppComingSoonRoute: typeof AppComingSoonRoute
   AppConnectRoute: typeof AppConnectRoute
@@ -415,6 +435,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAppearanceRoute: AppAppearanceRoute,
+  AppAppointmentsRoute: AppAppointmentsRoute,
   AppCalendarRoute: AppCalendarRoute,
   AppComingSoonRoute: AppComingSoonRoute,
   AppConnectRoute: AppConnectRoute,
