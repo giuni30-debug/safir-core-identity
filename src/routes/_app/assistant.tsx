@@ -67,6 +67,9 @@ function AssistantPage() {
   const abortRef = useRef<AbortController | null>(null);
 
   const memory = useAiMemory();
+  const { prefs: assistantPrefs, update: updateAssistantPrefs } = useAssistantPrefs(user?.id);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
