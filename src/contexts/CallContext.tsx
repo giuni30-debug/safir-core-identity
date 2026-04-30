@@ -586,30 +586,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(t);
   }, [info]);
 
-  // Ringtone
-  useEffect(() => {
-    if (state.kind !== "incoming") return;
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    let stopped = false;
-    const playBeep = () => {
-      if (stopped) return;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = 480;
-      gain.gain.value = 0.05;
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.4);
-    };
-    playBeep();
-    const i = window.setInterval(playBeep, 1500);
-    return () => {
-      stopped = true;
-      window.clearInterval(i);
-      ctx.close().catch(() => {});
-    };
-  }, [state.kind]);
-
   const api = useMemo<CallApi>(
     () => ({ startCall, startVideoCall, inCall: state.kind !== "idle" }),
     [startCall, startVideoCall, state.kind],
