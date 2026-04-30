@@ -8,7 +8,7 @@ const TokenInput = z.object({
     .string()
     .min(8)
     .max(128)
-    .regex(/^[a-zA-Z0-9_\-]+$/, "Invalid agent id")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Invalid agent id")
     .optional()
     .nullable(),
 });
