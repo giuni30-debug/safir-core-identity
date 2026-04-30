@@ -151,6 +151,18 @@
   0%, 100% { opacity: 0.3; }
   50% { opacity: 1; }
 }
+@keyframes neon-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, 30px) scale(1.1); }
+}
+@keyframes neon-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-30px, -20px) scale(1.08); }
+}
+@keyframes neon-pulse {
+  0%, 100% { opacity: 0.18; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.32; transform: translate(-50%, -50%) scale(1.15); }
+}
 
 @layer base {
   * {

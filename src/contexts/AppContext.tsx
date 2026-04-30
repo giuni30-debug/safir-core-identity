@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { translations, type Lang, type TKey } from "@/lib/i18n";
 
 export type ThemeColor = "cyan" | "blue" | "purple" | "gold" | "emerald" | "red";
-export type BgKind = "gradient" | "image";
+export type BgKind = "gradient" | "image" | "neon";
 export type AnimKind = "none" | "stars" | "glow" | "particles";
+export type NeonColor = "blue" | "purple" | "pink" | "green" | "orange" | "red";
 
 type Profile = {
   id: string;
@@ -32,6 +33,10 @@ type Ctx = {
   setBg: (b: BgKind) => void;
   anim: AnimKind;
   setAnim: (a: AnimKind) => void;
+  neon: NeonColor;
+  setNeon: (n: NeonColor) => void;
+  neonAnim: boolean;
+  setNeonAnim: (v: boolean) => void;
 };
 
 const AppCtx = createContext<Ctx | null>(null);
@@ -41,6 +46,8 @@ const LS = {
   theme: "spl_theme",
   bg: "spl_bg",
   anim: "spl_anim",
+  neon: "spl_neon",
+  neonAnim: "spl_neon_anim",
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -52,6 +59,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeColor>("cyan");
   const [bg, setBgState] = useState<BgKind>("gradient");
   const [anim, setAnimState] = useState<AnimKind>("stars");
+  const [neon, setNeonState] = useState<NeonColor>("blue");
+  const [neonAnim, setNeonAnimState] = useState<boolean>(true);
 
   // Load preferences
   useEffect(() => {
@@ -60,6 +69,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setThemeState((localStorage.getItem(LS.theme) as ThemeColor) || "cyan");
     setBgState((localStorage.getItem(LS.bg) as BgKind) || "gradient");
     setAnimState((localStorage.getItem(LS.anim) as AnimKind) || "stars");
+    setNeonState((localStorage.getItem(LS.neon) as NeonColor) || "blue");
+    setNeonAnimState(localStorage.getItem(LS.neonAnim) !== "0");
   }, []);
 
   // Apply theme attribute
@@ -73,6 +84,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setTheme = (c: ThemeColor) => { setThemeState(c); localStorage.setItem(LS.theme, c); };
   const setBg = (b: BgKind) => { setBgState(b); localStorage.setItem(LS.bg, b); };
   const setAnim = (a: AnimKind) => { setAnimState(a); localStorage.setItem(LS.anim, a); };
+  const setNeon = (n: NeonColor) => { setNeonState(n); localStorage.setItem(LS.neon, n); };
+  const setNeonAnim = (v: boolean) => { setNeonAnimState(v); localStorage.setItem(LS.neonAnim, v ? "1" : "0"); };
 
   const t = (k: TKey) => translations[lang][k] ?? translations.en[k];
 
@@ -125,6 +138,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         theme, setTheme,
         bg, setBg,
         anim, setAnim,
+        neon, setNeon,
+        neonAnim, setNeonAnim,
       }}
     >
       {children}

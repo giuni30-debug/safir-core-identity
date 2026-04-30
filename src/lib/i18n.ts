@@ -51,6 +51,8 @@ export const translations = {
     resetEmail: "Send reset link",
     backToLogin: "Back to login",
     confirmDelete: "This permanently deletes your account.",
+    neonBackground: "Neon Background",
+    neonAnimation: "Neon Animation",
   },
   ro: {
     appName: "Safir Private Life",
@@ -102,6 +104,8 @@ export const translations = {
     resetEmail: "Trimite link de resetare",
     backToLogin: "Înapoi la login",
     confirmDelete: "Aceasta șterge definitiv contul tău.",
+    neonBackground: "Fundal Neon",
+    neonAnimation: "Animație Neon",
   },
   tr: {
     appName: "Safir Private Life",
@@ -153,6 +157,8 @@ export const translations = {
     resetEmail: "Sıfırlama bağlantısı gönder",
     backToLogin: "Girişe dön",
     confirmDelete: "Bu hesabını kalıcı olarak siler.",
+    neonBackground: "Neon Arka Plan",
+    neonAnimation: "Neon Animasyon",
   },
   de: {
     appName: "Safir Private Life",
@@ -204,6 +210,8 @@ export const translations = {
     resetEmail: "Reset-Link senden",
     backToLogin: "Zurück zum Login",
     confirmDelete: "Dies löscht dein Konto endgültig.",
+    neonBackground: "Neon-Hintergrund",
+    neonAnimation: "Neon-Animation",
   },
 } as const;
 

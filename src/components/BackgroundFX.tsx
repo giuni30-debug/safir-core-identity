@@ -1,10 +1,19 @@
-import { useApp } from "@/contexts/AppContext";
+import { useApp, type NeonColor } from "@/contexts/AppContext";
 import { useEffect, useState } from "react";
 
 type Star = { id: number; top: string; left: string; size: number; delay: string };
 
+const NEON_HEX: Record<NeonColor, string> = {
+  blue: "#3b82f6",
+  purple: "#a855f7",
+  pink: "#ec4899",
+  green: "#22c55e",
+  orange: "#f97316",
+  red: "#ef4444",
+};
+
 export function BackgroundFX() {
-  const { anim } = useApp();
+  const { anim, bg, neon, neonAnim } = useApp();
   const [stars, setStars] = useState<Star[]>([]);
 
   useEffect(() => {
@@ -19,6 +28,36 @@ export function BackgroundFX() {
     }));
     setStars(arr);
   }, [anim]);
+
+  // Neon background takes over when selected
+  if (bg === "neon") {
+    const color = NEON_HEX[neon];
+    return (
+      <div
+        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+        style={{ background: "#05060a" }}
+      >
+        <div
+          className={`absolute -top-40 left-[10%] h-[520px] w-[520px] rounded-full blur-[120px] opacity-50 ${
+            neonAnim ? "animate-[neon-drift_18s_ease-in-out_infinite]" : ""
+          }`}
+          style={{ background: color }}
+        />
+        <div
+          className={`absolute bottom-[-160px] right-[5%] h-[460px] w-[460px] rounded-full blur-[120px] opacity-40 ${
+            neonAnim ? "animate-[neon-drift-2_22s_ease-in-out_infinite]" : ""
+          }`}
+          style={{ background: color }}
+        />
+        <div
+          className={`absolute top-1/2 left-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px] opacity-25 ${
+            neonAnim ? "animate-[neon-pulse_8s_ease-in-out_infinite]" : ""
+          }`}
+          style={{ background: color }}
+        />
+      </div>
+    );
+  }
 
   if (anim === "none") return null;
 
