@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { fetchConversationToken } from "./elevenlabs.server";
+import { fetchConversationSignedUrl, fetchConversationToken } from "./elevenlabs.server";
 
 // agentId is optional — when omitted we fall back to ELEVENLABS_AGENT_ID secret.
 const TokenInput = z.object({
@@ -35,5 +35,25 @@ export const getElevenLabsAgentToken = createServerFn({ method: "POST" })
       const msg = err instanceof Error ? err.message : "Unknown error";
       console.error("getElevenLabsAgentToken failed", msg);
       return { token: null as string | null, error: msg };
+    }
+  });
+
+export const getElevenLabsAgentSignedUrl = createServerFn({ method: "POST" })
+  .inputValidator((input) => TokenInput.parse(input))
+  .handler(async ({ data }) => {
+    try {
+      const agentId = data.agentId?.trim() || process.env.ELEVENLABS_AGENT_ID;
+      if (!agentId) {
+        return {
+          signedUrl: null as string | null,
+          error: "No Agent ID configured in ELEVENLABS_AGENT_ID secret.",
+        };
+      }
+      const signedUrl = await fetchConversationSignedUrl(agentId);
+      return { signedUrl, error: null as string | null };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      console.error("getElevenLabsAgentSignedUrl failed", msg);
+      return { signedUrl: null as string | null, error: msg };
     }
   });

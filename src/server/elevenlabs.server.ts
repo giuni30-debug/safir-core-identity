@@ -24,3 +24,21 @@ export async function fetchConversationToken(agentId: string): Promise<string> {
   if (!json?.token) throw new Error("No token in ElevenLabs response");
   return json.token;
 }
+
+/**
+ * Generates a short-lived WebSocket signed URL for the same ElevenLabs agent.
+ * Used as a real fallback when WebRTC/LiveKit is blocked by the browser/network.
+ */
+export async function fetchConversationSignedUrl(agentId: string): Promise<string> {
+  const apiKey = requireKey();
+  const url = `${ELEVEN_BASE}/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agentId)}`;
+  const res = await fetch(url, { headers: { "xi-api-key": apiKey } });
+  if (!res.ok) {
+    const body = await res.text();
+    console.error("ElevenLabs signed URL error", res.status, body);
+    throw new Error(`ElevenLabs signed URL request failed (${res.status})`);
+  }
+  const json = (await res.json()) as { signed_url?: string };
+  if (!json?.signed_url) throw new Error("No signed URL in ElevenLabs response");
+  return json.signed_url;
+}

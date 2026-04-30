@@ -3,7 +3,10 @@ import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { Mic, MicOff, X, Loader2, Settings as SettingsIcon, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { AssistantOrb, type OrbState } from "./AssistantOrb";
-import { getElevenLabsAgentToken } from "@/server/elevenlabs.functions";
+import {
+  getElevenLabsAgentSignedUrl,
+  getElevenLabsAgentToken,
+} from "@/server/elevenlabs.functions";
 import { feedback, playSound } from "@/lib/sound";
 import { useApp } from "@/contexts/AppContext";
 import { appendMessage, createConversation, type AiConversation } from "@/hooks/useAiMemory";
@@ -15,6 +18,10 @@ type ConversationExtras = {
   getOutputVolume?: () => number;
   sendUserMessage?: (message: string) => void;
 };
+
+type ElevenLabsStartOptions = NonNullable<
+  Parameters<ReturnType<typeof useConversation>["startSession"]>[0]
+>;
 
 type WebkitAudioWindow = Window & {
   webkitAudioContext?: typeof AudioContext;
@@ -79,15 +86,20 @@ function VoiceModeInner({
   const [partial, setPartial] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [pttHeld, setPttHeld] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const convoIdRef = useRef<string | null>(voiceConversationId ?? null);
   const lastUserRef = useRef<string>("");
   const rafRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const retryingRef = useRef(false);
 
   const conversation = useConversation({
     onConnect: () => {
+      console.log("Connection success");
       setOrbState("idle");
+      setRetrying(false);
+      retryingRef.current = false;
       playSound("notification");
     },
     onDisconnect: () => {
@@ -100,7 +112,7 @@ function VoiceModeInner({
       console.error("ElevenLabs convo error:", e);
       setOrbState("error");
       playSound("error");
-      toast.error("Voice not connected. Retrying...");
+      if (!retryingRef.current) toast.error("Voice not connected. Retrying...");
       setTimeout(() => setOrbState("idle"), 1200);
     },
     onMessage: async (msg: unknown) => {
@@ -227,26 +239,29 @@ function VoiceModeInner({
     stream.getTracks().forEach((track) => track.stop());
   }, []);
 
-  const startElevenLabsSession = useCallback(
-    async (withOverrides: boolean) => {
-      const res = await getElevenLabsAgentToken({ data: { agentId: undefined } });
-      if (!res.token) throw new Error(res.error || "No token returned from server");
+  const prepareAudioFromTap = useCallback(async () => {
+    const audioUnlock = unlockAudioPlayback();
+    const micPermission = requestMicStream();
+    await Promise.all([audioUnlock, micPermission]);
+  }, [requestMicStream, unlockAudioPlayback]);
 
-      const baseOpts = {
-        conversationToken: res.token,
-        connectionType: "webrtc" as const,
-      };
+  const createSessionOptions = useCallback(
+    (
+      connection: { conversationToken: string } | { signedUrl: string },
+      withOverrides: boolean,
+      callbacks: Pick<NonNullable<ElevenLabsStartOptions>, "onConnect" | "onError">,
+    ) => {
+      const baseOpts: ElevenLabsStartOptions =
+        "conversationToken" in connection
+          ? { conversationToken: connection.conversationToken, connectionType: "webrtc" }
+          : { signedUrl: connection.signedUrl, connectionType: "websocket" };
+      if (!withOverrides) return { ...baseOpts, ...callbacks } as ElevenLabsStartOptions;
+
       const language = lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en";
 
-      if (!withOverrides) {
-        await conversation.startSession(
-          baseOpts as unknown as Parameters<typeof conversation.startSession>[0],
-        );
-        return;
-      }
-
-      await conversation.startSession({
+      return {
         ...baseOpts,
+        ...callbacks,
         overrides: {
           agent: {
             prompt: { prompt: personalityPrompts[personality] },
@@ -254,21 +269,75 @@ function VoiceModeInner({
           },
           tts: { voiceId },
         },
-      } as unknown as Parameters<typeof conversation.startSession>[0]);
+      } as ElevenLabsStartOptions;
     },
-    [conversation, lang, personality, voiceId],
+    [lang, personality, voiceId],
+  );
+
+  const waitForSessionStart = useCallback(
+    (options: ElevenLabsStartOptions) =>
+      new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const timeout = window.setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          reject(new Error("ElevenLabs connection timed out"));
+        }, 18000);
+
+        conversation.startSession({
+          ...options,
+          onConnect: () => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timeout);
+            resolve();
+          },
+          onError: (message: string, context?: unknown) => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timeout);
+            reject(context instanceof Error ? context : new Error(String(message || "ElevenLabs connection failed")));
+          },
+        } as ElevenLabsStartOptions);
+      }),
+    [conversation],
+  );
+
+  const startElevenLabsSession = useCallback(
+    async (transport: "webrtc" | "websocket", withOverrides: boolean) => {
+      const callbacks = { onConnect: () => undefined, onError: () => undefined };
+      if (transport === "webrtc") {
+        const res = await getElevenLabsAgentToken({ data: { agentId: undefined } });
+        if (!res.token) throw new Error(res.error || "No token returned from server");
+        await waitForSessionStart(createSessionOptions({ conversationToken: res.token }, withOverrides, callbacks));
+      } else {
+        const signed = await getElevenLabsAgentSignedUrl({ data: { agentId: undefined } });
+        if (!signed.signedUrl) throw new Error(signed.error || "No signed URL returned from server");
+        await waitForSessionStart(createSessionOptions({ signedUrl: signed.signedUrl }, withOverrides, callbacks));
+      }
+    },
+    [createSessionOptions, waitForSessionStart],
   );
 
   const connectWithFallbackRetry = useCallback(async () => {
     try {
-      await startElevenLabsSession(true);
+      await startElevenLabsSession("webrtc", true);
     } catch (overrideErr) {
       console.warn(
         "ElevenLabs startSession failed with overrides — retrying without. " +
           "Enable 'Security → Overrides' in your agent dashboard to customize voice/prompt.",
         overrideErr,
       );
-      await startElevenLabsSession(false);
+      await startElevenLabsSession("webrtc", false);
+    }
+  }, [startElevenLabsSession]);
+
+  const connectWithWebSocketFallback = useCallback(async () => {
+    try {
+      await startElevenLabsSession("websocket", true);
+    } catch (overrideErr) {
+      console.warn("ElevenLabs WebSocket startSession failed with overrides — retrying without.", overrideErr);
+      await startElevenLabsSession("websocket", false);
     }
   }, [startElevenLabsSession]);
 
@@ -280,14 +349,20 @@ function VoiceModeInner({
     setOrbState("listening");
     feedback("tap", "tap");
     try {
-      await unlockAudioPlayback();
-      await requestMicStream();
+      await prepareAudioFromTap();
       try {
         await connectWithFallbackRetry();
       } catch (firstErr) {
-        console.warn("ElevenLabs first connection attempt failed; retrying once.", firstErr);
+        console.warn("Connection fail", firstErr);
         toast.error("Voice not connected. Retrying...");
-        await connectWithFallbackRetry();
+        setRetrying(true);
+        retryingRef.current = true;
+        try {
+          await conversation.endSession();
+        } catch {
+          /* ignore */
+        }
+        await connectWithWebSocketFallback();
       }
       console.log("Connection success");
       setPttHeld(true);
@@ -301,8 +376,10 @@ function VoiceModeInner({
       setTimeout(() => setOrbState("idle"), 1200);
     } finally {
       setConnecting(false);
+      setRetrying(false);
+      retryingRef.current = false;
     }
-  }, [connectWithFallbackRetry, requestMicStream, unlockAudioPlayback]);
+  }, [connectWithFallbackRetry, connectWithWebSocketFallback, conversation, prepareAudioFromTap]);
 
   const stop = useCallback(async () => {
     feedback("tap", "tap");
@@ -366,7 +443,9 @@ function VoiceModeInner({
 
   const isConnected = conversation.status === "connected";
   const statusLabel =
-    orbState === "thinking"
+    retrying
+      ? "Voice not connected. Retrying…"
+      : orbState === "thinking"
       ? "Thinking…"
       : orbState === "listening"
         ? "Listening…"
