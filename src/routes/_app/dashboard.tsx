@@ -30,7 +30,7 @@ function Dashboard() {
     { to: "/calendar" as const,     icon: Calendar,       label: t("calendar"),   color: "oklch(0.88 0.17 95)"  },
     { to: "/notes" as const,        icon: NotebookPen,    label: t("notes"),      color: "oklch(0.78 0.18 150)" },
     { to: "/expenses" as const,     icon: Wallet,         label: t("expenses"),   color: "oklch(0.70 0.22 25)"  },
-    { to: "/appointments" as const, icon: CalendarClock,  label: "Appointments",  color: "oklch(0.82 0.16 200)" },
+    { to: "/appointments" as const, icon: CalendarClock,  label: t("appointments"),  color: "oklch(0.82 0.16 200)" },
     { to: "/coming-soon" as const,  icon: ShoppingBag,    label: t("shopping"),   color: "oklch(0.78 0.18 55)"  },
   ];
 
@@ -59,7 +59,7 @@ function Dashboard() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="flex-1 text-center text-base font-semibold tracking-wide">
-          Dashboard
+          {t("dashboard")}
         </h1>
         <Link
           to="/settings"
@@ -76,7 +76,7 @@ function Dashboard() {
 
       {/* Swipe hint */}
       <p className="mb-3 text-center text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        Swipe right to return home
+        {t("swipeRightHome")}
       </p>
 
       {/* Tiles */}
