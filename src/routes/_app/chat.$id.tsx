@@ -708,7 +708,7 @@ function ChatPage() {
           <button
             type="button"
             onClick={() => stopRecording(false)}
-            className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground"
+            className="neon-circle mic-pulse grid h-10 w-10 place-items-center rounded-full"
             aria-label="Stop recording"
           >
             <Square className="h-4 w-4" />
