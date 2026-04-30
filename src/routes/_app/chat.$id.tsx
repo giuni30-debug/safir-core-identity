@@ -38,6 +38,8 @@ type Message = {
   file_name: string | null;
   file_size: number | null;
   created_at: string;
+  delivered_at: string | null;
+  read_at: string | null;
 };
 
 const MAX_RECORDING_SECONDS = 120;
