@@ -151,12 +151,15 @@ function VoiceModeInner({
     else setOrbState("listening");
   }, [conversation.status, conversation.isSpeaking]);
 
-  // Audio levels
+  // Audio levels — depend on status only, not the conversation object reference.
+  // Reading levels via the latest closure is fine since the SDK keeps its handle stable.
+  const conversationRef = useRef(conversation);
+  conversationRef.current = conversation;
   useEffect(() => {
     if (conversation.status !== "connected") return;
     const tick = () => {
       try {
-        const ext = conversation as ConversationExtras;
+        const ext = conversationRef.current as ConversationExtras;
         setInputLevel(ext.getInputVolume?.() ?? 0);
         setOutputLevel(ext.getOutputVolume?.() ?? 0);
       } catch {
@@ -168,7 +171,7 @@ function VoiceModeInner({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [conversation, conversation.status]);
+  }, [conversation.status]);
 
   /** Unlock the AudioContext synchronously, inside the user gesture. */
   const unlockAudio = useCallback(() => {
