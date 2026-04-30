@@ -713,6 +713,23 @@ function AssistantPage() {
           )}
         </div>
       </div>
+
+      {/* Voice mode overlay */}
+      <VoiceMode
+        open={voiceOpen}
+        onClose={() => setVoiceOpen(false)}
+        agentId={assistantPrefs.agentId}
+        voiceId={assistantPrefs.voiceId}
+        personality={assistantPrefs.personality}
+        autoMode={assistantPrefs.autoMode}
+        onOpenSettings={() => setVoiceSettingsOpen(true)}
+      />
+      <AssistantSettingsSheet
+        open={voiceSettingsOpen}
+        onClose={() => setVoiceSettingsOpen(false)}
+        prefs={assistantPrefs}
+        onSave={updateAssistantPrefs}
+      />
     </div>
   );
 }
