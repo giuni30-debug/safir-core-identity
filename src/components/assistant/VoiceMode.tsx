@@ -352,13 +352,17 @@ function VoiceModeInner({
         });
 
       try {
-        await tryConnect({
-          conversationToken: token,
-          connectionType: "webrtc",
-          overrides,
-        });
+        await tryConnect(
+          {
+            conversationToken: token,
+            connectionType: "webrtc",
+            overrides,
+          },
+          3000,
+          "WebRTC",
+        );
       } catch (webrtcErr) {
-        console.error("[voice] WebRTC fail, falling back to WebSocket:", webrtcErr);
+        console.warn("[voice] fallback triggered (WebRTC → WebSocket):", webrtcErr);
         try {
           await conversation.endSession();
         } catch {
@@ -373,11 +377,15 @@ function VoiceModeInner({
           console.error("[voice] signed-url error:", signed.error);
           throw new Error(signed.error || "No signed URL returned from server");
         }
-        await tryConnect({
-          signedUrl: signed.signedUrl,
-          connectionType: "websocket",
-          overrides,
-        });
+        await tryConnect(
+          {
+            signedUrl: signed.signedUrl,
+            connectionType: "websocket",
+            overrides,
+          },
+          5000,
+          "WebSocket",
+        );
       }
 
       // Connected — route audio to speaker now that elements exist
