@@ -102,25 +102,58 @@ function VoicePlayer({ url, duration, mine }: { url: string; duration: number | 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [playableUrl, setPlayableUrl] = useState(url);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPlayableUrl(url);
+    void createPlayableVoiceUrl(url).then((nextUrl) => {
+      if (!cancelled) setPlayableUrl(nextUrl);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
 
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
     const onEnd = () => { setPlaying(false); setProgress(0); };
     const onTime = () => setProgress(a.currentTime);
+    const onError = () => {
+      setPlaying(false);
+      void createPlayableVoiceUrl(url).then((nextUrl) => setPlayableUrl(nextUrl));
+    };
     a.addEventListener("ended", onEnd);
     a.addEventListener("timeupdate", onTime);
+    a.addEventListener("error", onError);
     return () => {
       a.removeEventListener("ended", onEnd);
       a.removeEventListener("timeupdate", onTime);
+      a.removeEventListener("error", onError);
     };
-  }, []);
+  }, [url]);
 
-  const toggle = () => {
+  const toggle = async () => {
     const a = audioRef.current;
     if (!a) return;
     if (playing) { a.pause(); setPlaying(false); }
-    else { a.play(); setPlaying(true); }
+    else {
+      try {
+        await a.play();
+        setPlaying(true);
+      } catch (err) {
+        console.error("voice play error", err);
+        const nextUrl = await createPlayableVoiceUrl(url);
+        setPlayableUrl(nextUrl);
+        window.setTimeout(() => {
+          audioRef.current?.play().then(() => setPlaying(true)).catch((e) => {
+            console.error("voice retry play error", e);
+            setPlaying(false);
+          });
+        }, 50);
+      }
+    }
   };
 
   const total = duration ?? 0;
@@ -149,7 +182,7 @@ function VoicePlayer({ url, duration, mine }: { url: string; duration: number | 
       <span className="text-[10px] tabular-nums opacity-80">
         {formatDuration(playing ? progress : total)}
       </span>
-      <audio ref={audioRef} src={url} preload="metadata" />
+      <audio ref={audioRef} src={playableUrl} preload="metadata" playsInline />
     </div>
   );
 }
