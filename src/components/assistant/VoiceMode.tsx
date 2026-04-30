@@ -75,7 +75,7 @@ export function VoiceMode({
       console.error("ElevenLabs convo error:", e);
       setOrbState("error");
       playSound("error");
-      toast.error("Voice connection error");
+      toast.error("Voice not connected. Retrying...");
       setTimeout(() => setOrbState("idle"), 1200);
     },
     onMessage: async (msg: any) => {
@@ -224,6 +224,19 @@ export function VoiceMode({
     [conversation, lang, personality, voiceId],
   );
 
+  const connectWithFallbackRetry = useCallback(async () => {
+    try {
+      await startElevenLabsSession(true);
+    } catch (overrideErr) {
+      console.warn(
+        "ElevenLabs startSession failed with overrides — retrying without. " +
+          "Enable 'Security → Overrides' in your agent dashboard to customize voice/prompt.",
+        overrideErr,
+      );
+      await startElevenLabsSession(false);
+    }
+  }, [startElevenLabsSession]);
+
   // Start session
   const start = useCallback(async () => {
     console.log("Connecting to ElevenLabs...");
@@ -235,15 +248,11 @@ export function VoiceMode({
       await unlockAudioPlayback();
       await requestMicStream();
       try {
-        await startElevenLabsSession(true);
-      } catch (overrideErr) {
-        console.warn(
-          "ElevenLabs startSession failed with overrides — retrying without. " +
-            "Enable 'Security → Overrides' in your agent dashboard to customize voice/prompt.",
-          overrideErr,
-        );
+        await connectWithFallbackRetry();
+      } catch (firstErr) {
+        console.warn("ElevenLabs first connection attempt failed; retrying once.", firstErr);
         toast.error("Voice not connected. Retrying...");
-        await startElevenLabsSession(false);
+        await connectWithFallbackRetry();
       }
       console.log("Connection success");
       playSound("voice-start");
@@ -256,7 +265,7 @@ export function VoiceMode({
     } finally {
       setConnecting(false);
     }
-  }, [requestMicStream, startElevenLabsSession, unlockAudioPlayback]);
+  }, [connectWithFallbackRetry, requestMicStream, unlockAudioPlayback]);
 
   const stop = useCallback(async () => {
     feedback("tap", "tap");
