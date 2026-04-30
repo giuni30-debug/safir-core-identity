@@ -207,6 +207,7 @@ function ChatPage() {
   const [voicePreview, setVoicePreview] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
@@ -360,6 +361,20 @@ function ChatPage() {
   const stopMediaStream = () => {
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
+  };
+
+  const unlockAudioPlayback = async () => {
+    const AudioContextCtor =
+      window.AudioContext || (window as WebkitAudioWindow).webkitAudioContext;
+    if (!AudioContextCtor) return;
+    const ctx = audioContextRef.current ?? new AudioContextCtor();
+    audioContextRef.current = ctx;
+    if (ctx.state === "suspended") await ctx.resume();
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
   };
 
   const onSend = async (e: FormEvent) => {
