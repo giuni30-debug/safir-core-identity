@@ -54,7 +54,13 @@ Style: warm, smart, premium — like a real assistant, not a chatbot.`;
         },
         body: JSON.stringify({
           model: model || "google/gemini-2.5-flash",
-          messages: [{ role: "system", content: sys }, ...(messages || [])],
+          messages: [
+            { role: "system", content: sys },
+            ...(memory && typeof memory === "string" && memory.trim()
+              ? [{ role: "system", content: memory }]
+              : []),
+            ...(messages || []),
+          ],
           stream: true,
         }),
       },
