@@ -20,6 +20,15 @@ type WebkitAudioWindow = Window & {
   webkitAudioContext?: typeof AudioContext;
 };
 
+function getString(value: unknown, path: string[]): string | undefined {
+  let current: unknown = value;
+  for (const key of path) {
+    if (!current || typeof current !== "object" || !(key in current)) return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+  return typeof current === "string" ? current : undefined;
+}
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -161,8 +170,8 @@ export function VoiceMode({
     const tick = () => {
       try {
         // SDK exposes getInputVolume / getOutputVolume returning 0..1
-        const inV = (conversation as any).getInputVolume?.() ?? 0;
-        const outV = (conversation as any).getOutputVolume?.() ?? 0;
+        const inV = (conversation as ConversationExtras).getInputVolume?.() ?? 0;
+        const outV = (conversation as ConversationExtras).getOutputVolume?.() ?? 0;
         setInputLevel(typeof inV === "number" ? inV : 0);
         setOutputLevel(typeof outV === "number" ? outV : 0);
       } catch {
@@ -177,7 +186,7 @@ export function VoiceMode({
   }, [conversation, conversation.status]);
 
   const unlockAudioPlayback = useCallback(async () => {
-    const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+    const AudioContextCtor = window.AudioContext || (window as WebkitAudioWindow).webkitAudioContext;
     if (!AudioContextCtor) return;
     const ctx = audioContextRef.current ?? new AudioContextCtor();
     audioContextRef.current = ctx;
@@ -221,7 +230,9 @@ export function VoiceMode({
       const language = lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en";
 
       if (!withOverrides) {
-        await conversation.startSession(baseOpts as any);
+        await conversation.startSession(
+          baseOpts as unknown as Parameters<typeof conversation.startSession>[0],
+        );
         return;
       }
 
@@ -234,7 +245,7 @@ export function VoiceMode({
           },
           tts: { voiceId },
         },
-      } as any);
+      } as unknown as Parameters<typeof conversation.startSession>[0]);
     },
     [conversation, lang, personality, voiceId],
   );
