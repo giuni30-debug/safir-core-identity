@@ -215,45 +215,56 @@ function VoiceModeInner({
     };
   }, [conversation, conversation.status]);
 
-  const unlockAudioPlayback = useCallback(async () => {
+  /**
+   * Synchronously unlock the AudioContext inside a user gesture.
+   * Must NOT be awaited before calling — keep call before any `await`.
+   */
+  const unlockAudioPlayback = useCallback(() => {
     const AudioContextCtor =
       window.AudioContext || (window as WebkitAudioWindow).webkitAudioContext;
     if (!AudioContextCtor) return;
-    const ctx = audioContextRef.current ?? new AudioContextCtor();
-    audioContextRef.current = ctx;
-    if (ctx.state === "suspended") await ctx.resume();
-    const buffer = ctx.createBuffer(1, 1, 22050);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    source.start(0);
+    let ctx = audioContextRef.current;
+    if (!ctx) {
+      ctx = new AudioContextCtor();
+      audioContextRef.current = ctx;
+    }
+    if (ctx.state === "suspended") void ctx.resume();
+    try {
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch {
+      /* ignore */
+    }
   }, []);
 
+  /**
+   * Request mic permission. The getUserMedia() call MUST be the first await
+   * after the user gesture — no other awaits before it, or Safari/iOS deny.
+   */
   const requestMicStream = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("Microphone is not available in this browser.");
     }
-    if (navigator.permissions?.query) {
-      try {
-        const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
-        if (status.state === "denied") {
-          throw new Error("Microphone permission is blocked. Enable it in browser settings.");
-        }
-      } catch (err) {
-        if (err instanceof Error && err.message.includes("Microphone permission")) throw err;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      // Release immediately — ElevenLabs SDK opens its own stream; permission persists.
+      stream.getTracks().forEach((t) => t.stop());
+    } catch (err) {
+      const name = err instanceof Error ? err.name : "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        throw new Error("Microphone permission denied. Enable it in browser settings.");
       }
+      if (name === "NotFoundError") {
+        throw new Error("No microphone detected on this device.");
+      }
+      throw err instanceof Error ? err : new Error("Could not access microphone.");
     }
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
-    stream.getTracks().forEach((track) => track.stop());
   }, []);
-
-  const prepareAudioFromTap = useCallback(async () => {
-    const audioUnlock = unlockAudioPlayback();
-    const micPermission = requestMicStream();
-    await Promise.all([audioUnlock, micPermission]);
-  }, [requestMicStream, unlockAudioPlayback]);
 
   const createSessionOptions = useCallback(
     (
