@@ -26,10 +26,23 @@ type Message = {
   message_type: string;
   audio_url: string | null;
   duration_seconds: number | null;
+  media_url: string | null;
+  file_name: string | null;
+  file_size: number | null;
   created_at: string;
 };
 
 const MAX_RECORDING_SECONDS = 120;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+const MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+function formatBytes(b: number) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  if (b < 1024 * 1024 * 1024) return `${(b / 1024 / 1024).toFixed(1)} MB`;
+  return `${(b / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
 
 function formatDuration(s: number) {
   const m = Math.floor(s / 60);
