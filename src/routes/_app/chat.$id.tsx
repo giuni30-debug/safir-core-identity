@@ -212,6 +212,16 @@ function ChatPage() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages.length]);
 
+  // Auto-play cinematic FX when a new gift message arrives (incoming or my own)
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const last = messages[messages.length - 1];
+    if (lastSeenGiftId.current === last.id) return;
+    lastSeenGiftId.current = last.id;
+    const g = decodeGiftMessage(last.message_text);
+    if (g) setActiveGift(g);
+  }, [messages]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
