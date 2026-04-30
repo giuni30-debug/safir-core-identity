@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Plus, X, TrendingUp, TrendingDown, Coffee, ShoppingBag, Car, Home, Utensils, Wallet } from "lucide-react";
+import { useApp } from "@/contexts/AppContext";
 
 export const Route = createFileRoute("/_app/expenses")({
   component: Expenses,
@@ -53,9 +54,15 @@ function useCount(target: number, ms = 700) {
 }
 
 function Expenses() {
+  const { t, lang } = useApp();
   const [txs, setTxs] = useState<Tx[]>([]);
   const [filter, setFilter] = useState<"today" | "week" | "month">("month");
   const [open, setOpen] = useState(false);
+
+  const catLabel = (k: string) =>
+    ({ Food: t("catFood"), Coffee: t("catCoffee"), Shopping: t("catShopping"), Transport: t("catTransport"), Home: t("catHome"), Income: t("catIncome") } as Record<string, string>)[k] ?? k;
+  const filterLabel = (f: string) =>
+    ({ today: t("filterToday"), week: t("filterWeek"), month: t("filterMonth") } as Record<string, string>)[f] ?? f;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -94,7 +101,7 @@ function Expenses() {
       const v = txs
         .filter((t) => new Date(t.date).toDateString() === d.toDateString() && t.amount < 0)
         .reduce((s, t) => s + Math.abs(t.amount), 0);
-      days.push({ label: d.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2), v });
+      days.push({ label: d.toLocaleDateString(lang, { weekday: "short" }).slice(0, 2), v });
     }
     return days;
   }, [txs]);
@@ -110,12 +117,12 @@ function Expenses() {
         <Link to="/home" aria-label="Back" className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card/40">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-lg font-semibold">Expenses</h1>
+        <h1 className="text-lg font-semibold">{t("expenses")}</h1>
       </header>
 
       {/* Total */}
       <div className="mt-4 flex flex-col items-center text-center">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">Total balance</p>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("totalBalance")}</p>
         <p
           className="mt-2 text-5xl font-bold tabular-nums"
           style={{
@@ -129,7 +136,7 @@ function Expenses() {
 
       {/* Chart */}
       <div className="glass-card mt-6 p-4" style={{ borderRadius: 20 }}>
-        <p className="mb-3 text-xs text-muted-foreground">Last 7 days</p>
+        <p className="mb-3 text-xs text-muted-foreground">{t("last7days")}</p>
         <div className="flex h-32 items-end gap-2">
           {chart.map((c, i) => (
             <div key={i} className="flex flex-1 flex-col items-center gap-1">
@@ -155,7 +162,7 @@ function Expenses() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className="rounded-2xl border px-3 py-2 text-sm capitalize transition-all"
+            className="rounded-2xl border px-3 py-2 text-sm transition-all"
             style={
               filter === f
                 ? {
@@ -167,7 +174,7 @@ function Expenses() {
                 : { borderColor: "hsl(var(--border))", background: "transparent" }
             }
           >
-            {f}
+            {filterLabel(f)}
           </button>
         ))}
       </div>
@@ -175,7 +182,7 @@ function Expenses() {
       {/* Transactions */}
       <div className="mt-5 flex flex-col gap-2">
         {filtered.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted-foreground">No transactions yet</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">{t("noTransactions")}</p>
         )}
         {filtered.map((t, i) => {
           const Icon = iconFor(t.category);
@@ -198,7 +205,7 @@ function Expenses() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{t.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {new Date(t.date).toLocaleDateString()} · {t.category}
+                  {new Date(t.date).toLocaleDateString(lang)} · {catLabel(t.category)}
                 </p>
               </div>
               <div className="flex items-center gap-1 text-right">
@@ -228,12 +235,12 @@ function Expenses() {
         <Plus className="h-6 w-6" />
       </button>
 
-      {open && <AddModal onClose={() => setOpen(false)} onAdd={add} />}
+      {open && <AddModal t={t} catLabel={catLabel} onClose={() => setOpen(false)} onAdd={add} />}
     </div>
   );
 }
 
-function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (t: Omit<Tx, "id" | "date">) => void }) {
+function AddModal({ t, catLabel, onClose, onAdd }: { t: (k: any) => string; catLabel: (k: string) => string; onClose: () => void; onAdd: (t: Omit<Tx, "id" | "date">) => void }) {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState<string>("Food");
@@ -256,25 +263,25 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (t: Omit<Tx,
         style={{ borderRadius: "24px 24px 0 0" }}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Add transaction</h2>
+          <h2 className="text-lg font-semibold">{t("addTransaction")}</h2>
           <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full bg-card/60">
             <X className="h-4 w-4" />
           </button>
         </div>
         <div className="mb-3 grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => setIncome(false)} className="rounded-xl border py-2 text-sm" style={!income ? { borderColor: "var(--theme-accent)", color: "var(--theme-accent)" } : {}}>Expense</button>
-          <button type="button" onClick={() => setIncome(true)} className="rounded-xl border py-2 text-sm" style={income ? { borderColor: "oklch(0.78 0.18 145)", color: "oklch(0.78 0.18 145)" } : {}}>Income</button>
+          <button type="button" onClick={() => setIncome(false)} className="rounded-xl border py-2 text-sm" style={!income ? { borderColor: "var(--theme-accent)", color: "var(--theme-accent)" } : {}}>{t("expense")}</button>
+          <button type="button" onClick={() => setIncome(true)} className="rounded-xl border py-2 text-sm" style={income ? { borderColor: "oklch(0.78 0.18 145)", color: "oklch(0.78 0.18 145)" } : {}}>{t("income")}</button>
         </div>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="mb-2 w-full rounded-xl border border-border bg-card/40 px-3 py-2 text-sm outline-none" />
-        <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount" inputMode="decimal" className="mb-3 w-full rounded-xl border border-border bg-card/40 px-3 py-2 text-sm outline-none" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("name")} className="mb-2 w-full rounded-xl border border-border bg-card/40 px-3 py-2 text-sm outline-none" />
+        <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={t("amount")} inputMode="decimal" className="mb-3 w-full rounded-xl border border-border bg-card/40 px-3 py-2 text-sm outline-none" />
         {!income && (
           <div className="mb-4 grid grid-cols-3 gap-2">
             {CATS.filter((c) => c.key !== "Income").map((c) => (
-              <button key={c.key} type="button" onClick={() => setCategory(c.key)} className="rounded-xl border px-2 py-2 text-xs" style={category === c.key ? { borderColor: "var(--theme-accent)", color: "var(--theme-accent)" } : {}}>{c.key}</button>
+              <button key={c.key} type="button" onClick={() => setCategory(c.key)} className="rounded-xl border px-2 py-2 text-xs" style={category === c.key ? { borderColor: "var(--theme-accent)", color: "var(--theme-accent)" } : {}}>{catLabel(c.key)}</button>
             ))}
           </div>
         )}
-        <button type="submit" className="neon-circle w-full rounded-2xl py-3 text-sm font-semibold text-white">Save</button>
+        <button type="submit" className="neon-circle w-full rounded-2xl py-3 text-sm font-semibold text-white">{t("save")}</button>
       </form>
     </div>
   );
