@@ -334,7 +334,7 @@ function VoiceModeInner({
     } finally {
       setConnecting(false);
     }
-  }, [connecting, conversation, overrides, requestMic, unlockAudio]);
+  }, [connecting, conversation, overrides, requestMic, routeAudioToSpeaker, unlockAudio]);
 
   const stop = useCallback(async () => {
     feedback("tap", "tap");
