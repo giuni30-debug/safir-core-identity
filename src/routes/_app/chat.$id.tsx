@@ -460,10 +460,20 @@ function ChatPage() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <Avatar url={contact?.avatar_url ?? null} name={contact?.display_name ?? "?"} size={40} />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{contact?.display_name ?? "…"}</p>
           <p className="truncate text-xs text-muted-foreground">@{contact?.username ?? "…"}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => { if (contact) void startCall(contactId); }}
+          disabled={!contact || inCall}
+          aria-label="Audio call"
+          className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card/40 text-primary disabled:opacity-40"
+          style={{ boxShadow: contact && !inCall ? "var(--shadow-glow)" : undefined }}
+        >
+          <Phone className="h-5 w-5" />
+        </button>
       </header>
 
       <div
