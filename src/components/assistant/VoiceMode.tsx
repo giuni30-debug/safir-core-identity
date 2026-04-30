@@ -277,20 +277,24 @@ function VoiceModeInner({
   const start = useCallback(async () => {
     if (connecting || conversation.status === "connected") return;
     feedback("tap", "tap");
+    console.log("[voice] state: connecting");
 
     // STEP 1 — synchronous unlock inside the user gesture (no awaits before)
     unlockAudio();
     setConnecting(true);
-    setOrbState("listening"); // "connecting" visual state
+    sessionStartedRef.current = true;
+    connectedOnceRef.current = false;
+    setOrbState("listening");
 
     try {
       // STEP 2 — first await: mic permission
       await requestMic();
 
-      // STEP 3 — fetch WebRTC token (separate try so we log "token error" distinctly)
+      // STEP 3 — fetch WebRTC token from server (NEVER use API key client-side)
       let token: string | null = null;
       try {
         const res = await getElevenLabsAgentToken({ data: {} });
+        console.log("[voice] session token result:", res.token ? "ok" : `error: ${res.error}`);
         if (!res.token) throw new Error(res.error || "No token returned from server");
         token = res.token;
       } catch (tokenErr) {
@@ -298,26 +302,60 @@ function VoiceModeInner({
         throw tokenErr;
       }
 
-      // STEP 4 — single WebRTC attempt; on failure, fall back to WebSocket ONCE
+      // STEP 4 — single WebRTC attempt → wait for onConnect, fallback to WebSocket once.
+      const tryConnect = (opts: Parameters<typeof conversation.startSession>[0]) =>
+        new Promise<void>((resolve, reject) => {
+          let settled = false;
+          const onConnectOnce = () => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timer);
+            resolve();
+          };
+          const onErrorOnce = (msg: string, ctx?: unknown) => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timer);
+            reject(ctx instanceof Error ? ctx : new Error(String(msg || "connection failed")));
+          };
+          const timer = window.setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            reject(new Error("ElevenLabs connection timed out"));
+          }, 15000);
+          conversation
+            .startSession({ ...opts, onConnect: onConnectOnce, onError: onErrorOnce })
+            .catch((err) => {
+              if (settled) return;
+              settled = true;
+              window.clearTimeout(timer);
+              reject(err instanceof Error ? err : new Error(String(err)));
+            });
+        });
+
       try {
-        await conversation.startSession({
+        await tryConnect({
           conversationToken: token,
           connectionType: "webrtc",
           overrides,
         });
       } catch (webrtcErr) {
-        console.error("[voice] WebRTC fail:", webrtcErr);
+        console.error("[voice] WebRTC fail, falling back to WebSocket:", webrtcErr);
         try {
           await conversation.endSession();
         } catch {
           /* ignore */
         }
         const signed = await getElevenLabsAgentSignedUrl({ data: {} });
+        console.log(
+          "[voice] signed url result:",
+          signed.signedUrl ? "ok" : `error: ${signed.error}`,
+        );
         if (!signed.signedUrl) {
           console.error("[voice] signed-url error:", signed.error);
           throw new Error(signed.error || "No signed URL returned from server");
         }
-        await conversation.startSession({
+        await tryConnect({
           signedUrl: signed.signedUrl,
           connectionType: "websocket",
           overrides,
@@ -326,11 +364,11 @@ function VoiceModeInner({
 
       // Connected — route audio to speaker now that elements exist
       routeAudioToSpeaker();
-      // Re-route after the SDK injects its <audio> element on the next tick
       window.setTimeout(routeAudioToSpeaker, 250);
       playSound("voice-start");
     } catch (e) {
       console.error("[voice] connection failed:", e);
+      sessionStartedRef.current = false;
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(msg.length < 140 ? msg : "Voice failed. Try again.");
       setOrbState("error");
