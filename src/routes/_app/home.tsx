@@ -1,10 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
-import { Settings, ArrowRight, Shield, Sparkles, Languages } from "lucide-react";
+import { Settings, ArrowRight, Shield, Sparkles, Languages, MessageCircle, Phone, Video } from "lucide-react";
 import { HomeInstallBanner } from "@/components/HomeInstallBanner";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useCall } from "@/contexts/CallContext";
 
 export const Route = createFileRoute("/_app/home")({
   component: Home,
