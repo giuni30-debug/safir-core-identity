@@ -1,10 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
-import { Settings, ArrowRight, Shield, Sparkles, Languages } from "lucide-react";
+import { Settings, ArrowRight, Shield, Sparkles, Languages, MessageCircle, Phone, Video } from "lucide-react";
 import { HomeInstallBanner } from "@/components/HomeInstallBanner";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useCall } from "@/contexts/CallContext";
 
 export const Route = createFileRoute("/_app/home")({
   component: Home,
@@ -17,8 +19,32 @@ export const Route = createFileRoute("/_app/home")({
 });
 
 function Home() {
-  const { profile, t } = useApp();
+  const { profile, t, user } = useApp();
   const navigate = useNavigate();
+  const { startCall, startVideoCall } = useCall();
+
+  // Recent quick contacts (top 3)
+  const [quickContacts, setQuickContacts] = useState<
+    { id: string; display_name: string; avatar_url: string | null }[]
+  >([]);
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data: conns } = await supabase
+        .from("connections")
+        .select("contact_id")
+        .eq("owner_id", user.id)
+        .limit(3);
+      const ids = (conns ?? []).map((c) => c.contact_id);
+      if (!ids.length) return;
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url")
+        .in("id", ids);
+      setQuickContacts(profs ?? []);
+    })();
+  }, [user]);
+
 
   // Swipe left → open Dashboard
   const { dx, isSwiping } = useSwipeNav({ onSwipeLeft: "/dashboard" });
@@ -101,7 +127,108 @@ function Home() {
 
       <HomeInstallBanner />
 
+      {/* Communication Hero panel */}
+      <section
+        className="relative z-10 mt-3 animate-[fade-in_0.5s_ease-out] rounded-3xl p-4"
+        style={{
+          background:
+            "linear-gradient(135deg, oklch(1 0 0 / 8%) 0%, oklch(0.70 0.18 250 / 10%) 50%, oklch(1 0 0 / 4%) 100%)",
+          border: "1.5px solid oklch(0.70 0.18 250 / 45%)",
+          backdropFilter: "blur(28px) saturate(160%)",
+          WebkitBackdropFilter: "blur(28px) saturate(160%)",
+          boxShadow:
+            "0 0 32px oklch(0.70 0.18 250 / 28%), 0 12px 40px oklch(0 0 0 / 50%), inset 0 1px 0 oklch(1 0 0 / 12%)",
+        }}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <p
+            className="text-sm font-semibold tracking-wide text-white"
+            style={{ textShadow: "0 0 14px oklch(0.70 0.18 250 / 60%)" }}
+          >
+            {t("commTitle")}
+          </p>
+          <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white/70">
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"
+              style={{
+                boxShadow: "0 0 8px #34d399, 0 0 14px #34d399",
+                animation: "logo-breath 1.6s ease-in-out infinite",
+              }}
+            />
+            {t("commOnlineNow")}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2.5">
+          <CommButton
+            accent="oklch(0.78 0.18 200)"
+            label={t("commChat")}
+            desc={t("commChatDesc")}
+            icon={<MessageCircle className="h-6 w-6" />}
+            badge={<TypingDots />}
+            onClick={() => navigate({ to: "/contacts" })}
+          />
+          <CommButton
+            accent="oklch(0.78 0.18 145)"
+            label={t("commCall")}
+            desc={t("commCallDesc")}
+            icon={<Phone className="h-6 w-6" />}
+            badge={<PulseRing color="oklch(0.78 0.18 145)" />}
+            onClick={() => {
+              if (quickContacts[0]) void startCall(quickContacts[0].id);
+              else navigate({ to: "/contacts" });
+            }}
+          />
+          <CommButton
+            accent="oklch(0.78 0.18 320)"
+            label={t("commVideo")}
+            desc={t("commVideoDesc")}
+            icon={<Video className="h-6 w-6" />}
+            badge={<GlowFlicker color="oklch(0.78 0.18 320)" />}
+            onClick={() => {
+              if (quickContacts[0]) void startVideoCall(quickContacts[0].id);
+              else navigate({ to: "/contacts" });
+            }}
+          />
+        </div>
+
+        {/* Quick contacts */}
+        <div className="mt-3 flex items-center gap-2">
+          <p className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/55">
+            {t("commQuickContacts")}
+          </p>
+          <div className="flex-1 overflow-x-auto">
+            <div className="flex items-center gap-2">
+              {quickContacts.length === 0 && (
+                <Link
+                  to="/connect"
+                  className="press-glow shrink-0 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-white/70"
+                >
+                  {t("commNoContactsYet")} →
+                </Link>
+              )}
+              {quickContacts.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => navigate({ to: "/chat/$id", params: { id: c.id } })}
+                  className="press-glow relative shrink-0"
+                  aria-label={c.display_name}
+                  title={c.display_name}
+                >
+                  <Avatar url={c.avatar_url} name={c.display_name} size={36} />
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-emerald-400"
+                    style={{ boxShadow: "0 0 6px #34d399" }}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Centerpiece: Logo + tagline (compact to make room for module cards) */}
+
       <div className="relative z-10 flex flex-col items-center gap-5 pt-2">
         {/* Sapphire S logo */}
         <div className="relative grid place-items-center" aria-hidden>
@@ -239,5 +366,96 @@ function ModuleCard({
         style={{ color: accent }}
       />
     </button>
+  );
+}
+
+function CommButton({
+  icon, label, desc, accent, badge, onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  desc: string;
+  accent: string;
+  badge?: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="press-glow group relative flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 text-center transition-transform active:scale-95"
+      style={{
+        background:
+          "linear-gradient(160deg, oklch(1 0 0 / 10%) 0%, oklch(1 0 0 / 3%) 100%)",
+        border: `1.5px solid ${accent}`,
+        backdropFilter: "blur(20px) saturate(160%)",
+        WebkitBackdropFilter: "blur(20px) saturate(160%)",
+        boxShadow: `0 0 18px color-mix(in oklab, ${accent} 45%, transparent), inset 0 1px 0 oklch(1 0 0 / 12%)`,
+      }}
+    >
+      <div
+        className="relative grid h-12 w-12 place-items-center rounded-2xl text-white"
+        style={{
+          background: `linear-gradient(135deg, ${accent}, color-mix(in oklab, ${accent} 45%, #000))`,
+          boxShadow: `0 0 16px ${accent}, inset 0 1px 0 oklch(1 0 0 / 25%)`,
+          animation: "logo-breath 2.6s ease-in-out infinite",
+        }}
+      >
+        {icon}
+        {badge && (
+          <span className="pointer-events-none absolute inset-0 grid place-items-center">
+            {badge}
+          </span>
+        )}
+      </div>
+      <p
+        className="text-[12px] font-bold tracking-wide text-white"
+        style={{ textShadow: `0 0 10px color-mix(in oklab, ${accent} 70%, transparent)` }}
+      >
+        {label}
+      </p>
+      <p className="text-[9.5px] leading-tight text-white/60">{desc}</p>
+    </button>
+  );
+}
+
+function TypingDots() {
+  return (
+    <span className="absolute -bottom-0.5 right-0.5 flex gap-[2px]">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="h-1 w-1 rounded-full bg-white"
+          style={{
+            animation: `home-float 1.1s ease-in-out ${i * 0.15}s infinite`,
+            boxShadow: "0 0 4px #fff",
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
+function PulseRing({ color }: { color: string }) {
+  return (
+    <span
+      className="absolute inset-0 rounded-2xl"
+      style={{
+        border: `2px solid ${color}`,
+        animation: "logo-breath 1.8s ease-out infinite",
+        opacity: 0.55,
+      }}
+    />
+  );
+}
+
+function GlowFlicker({ color }: { color: string }) {
+  return (
+    <span
+      className="absolute inset-0 rounded-2xl"
+      style={{
+        background: `radial-gradient(closest-side, ${color}40, transparent 70%)`,
+        animation: "neon-drift 2.4s ease-in-out infinite",
+      }}
+    />
   );
 }
