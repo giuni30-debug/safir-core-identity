@@ -325,7 +325,7 @@ export function playSound(id: SoundId, opts?: SpatialOpts): void {
 
   // Apply spatial settings (pan + depth) if provided.
   const spatial = effectiveOpts ? getSpatial(id) : null;
-  if (spatial && opts && audioCtx) {
+  if (spatial && effectiveOpts && audioCtx) {
     const t = audioCtx.currentTime;
     if (typeof opts.pan === "number") {
       const pan = clamp(opts.pan, -1, 1);
