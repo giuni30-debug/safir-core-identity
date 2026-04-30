@@ -202,8 +202,13 @@
   50% { box-shadow: 0 0 24px 4px color-mix(in oklab, var(--theme-accent) 25%, transparent); }
 }
 @keyframes page-enter {
-  0% { opacity: 0; transform: scale(0.985) translateY(6px); filter: blur(2px); }
+  0% { opacity: 0; transform: scale(0.92) translateY(4px); filter: blur(6px); }
+  60% { opacity: 1; filter: blur(0); }
   100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+}
+@keyframes bg-drift {
+  0%, 100% { background-position: 0% 0%, 100% 100%; }
+  50% { background-position: 100% 50%, 0% 50%; }
 }
 @keyframes press-pulse {
   0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--theme-accent) 50%, transparent); }
@@ -390,9 +395,10 @@
     animation: selection-glow 2.4s ease-in-out infinite;
   }
 
-  /* Page-level enter animation for routed views */
+  /* Page-level enter animation for routed views — iPhone-style expand */
   .page-enter {
     animation: page-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: center center;
   }
 
   /* Smooth iOS-style toggle */
