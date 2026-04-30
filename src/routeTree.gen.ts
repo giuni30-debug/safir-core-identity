@@ -9,38 +9,257 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppProfileRouteImport } from './routes/_app/profile'
+import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
+import { Route as AppLanguageRouteImport } from './routes/_app/language'
+import { Route as AppHomeRouteImport } from './routes/_app/home'
+import { Route as AppContactsRouteImport } from './routes/_app/contacts'
+import { Route as AppConnectRouteImport } from './routes/_app/connect'
+import { Route as AppComingSoonRouteImport } from './routes/_app/coming-soon'
+import { Route as AppAppearanceRouteImport } from './routes/_app/appearance'
+import { Route as AppChatIdRouteImport } from './routes/_app/chat.$id'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLanguageRoute = AppLanguageRouteImport.update({
+  id: '/language',
+  path: '/language',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHomeRoute = AppHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContactsRoute = AppContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConnectRoute = AppConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppComingSoonRoute = AppComingSoonRouteImport.update({
+  id: '/coming-soon',
+  path: '/coming-soon',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAppearanceRoute = AppAppearanceRouteImport.update({
+  id: '/appearance',
+  path: '/appearance',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppChatIdRoute = AppChatIdRouteImport.update({
+  id: '/chat/$id',
+  path: '/chat/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
+  '/appearance': typeof AppAppearanceRoute
+  '/coming-soon': typeof AppComingSoonRoute
+  '/connect': typeof AppConnectRoute
+  '/contacts': typeof AppContactsRoute
+  '/home': typeof AppHomeRoute
+  '/language': typeof AppLanguageRoute
+  '/notifications': typeof AppNotificationsRoute
+  '/profile': typeof AppProfileRoute
+  '/settings': typeof AppSettingsRoute
+  '/chat/$id': typeof AppChatIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
+  '/appearance': typeof AppAppearanceRoute
+  '/coming-soon': typeof AppComingSoonRoute
+  '/connect': typeof AppConnectRoute
+  '/contacts': typeof AppContactsRoute
+  '/home': typeof AppHomeRoute
+  '/language': typeof AppLanguageRoute
+  '/notifications': typeof AppNotificationsRoute
+  '/profile': typeof AppProfileRoute
+  '/settings': typeof AppSettingsRoute
+  '/chat/$id': typeof AppChatIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
+  '/_app/appearance': typeof AppAppearanceRoute
+  '/_app/coming-soon': typeof AppComingSoonRoute
+  '/_app/connect': typeof AppConnectRoute
+  '/_app/contacts': typeof AppContactsRoute
+  '/_app/home': typeof AppHomeRoute
+  '/_app/language': typeof AppLanguageRoute
+  '/_app/notifications': typeof AppNotificationsRoute
+  '/_app/profile': typeof AppProfileRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/_app/chat/$id': typeof AppChatIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/appearance'
+    | '/coming-soon'
+    | '/connect'
+    | '/contacts'
+    | '/home'
+    | '/language'
+    | '/notifications'
+    | '/profile'
+    | '/settings'
+    | '/chat/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/appearance'
+    | '/coming-soon'
+    | '/connect'
+    | '/contacts'
+    | '/home'
+    | '/language'
+    | '/notifications'
+    | '/profile'
+    | '/settings'
+    | '/chat/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/_app/appearance'
+    | '/_app/coming-soon'
+    | '/_app/connect'
+    | '/_app/contacts'
+    | '/_app/home'
+    | '/_app/language'
+    | '/_app/notifications'
+    | '/_app/profile'
+    | '/_app/settings'
+    | '/_app/chat/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,21 +267,115 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/profile': {
+      id: '/_app/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/notifications': {
+      id: '/_app/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/language': {
+      id: '/_app/language'
+      path: '/language'
+      fullPath: '/language'
+      preLoaderRoute: typeof AppLanguageRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/home': {
+      id: '/_app/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AppHomeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/contacts': {
+      id: '/_app/contacts'
+      path: '/contacts'
+      fullPath: '/contacts'
+      preLoaderRoute: typeof AppContactsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/connect': {
+      id: '/_app/connect'
+      path: '/connect'
+      fullPath: '/connect'
+      preLoaderRoute: typeof AppConnectRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/coming-soon': {
+      id: '/_app/coming-soon'
+      path: '/coming-soon'
+      fullPath: '/coming-soon'
+      preLoaderRoute: typeof AppComingSoonRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/appearance': {
+      id: '/_app/appearance'
+      path: '/appearance'
+      fullPath: '/appearance'
+      preLoaderRoute: typeof AppAppearanceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/chat/$id': {
+      id: '/_app/chat/$id'
+      path: '/chat/$id'
+      fullPath: '/chat/$id'
+      preLoaderRoute: typeof AppChatIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppAppearanceRoute: typeof AppAppearanceRoute
+  AppComingSoonRoute: typeof AppComingSoonRoute
+  AppConnectRoute: typeof AppConnectRoute
+  AppContactsRoute: typeof AppContactsRoute
+  AppHomeRoute: typeof AppHomeRoute
+  AppLanguageRoute: typeof AppLanguageRoute
+  AppNotificationsRoute: typeof AppNotificationsRoute
+  AppProfileRoute: typeof AppProfileRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppChatIdRoute: typeof AppChatIdRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAppearanceRoute: AppAppearanceRoute,
+  AppComingSoonRoute: AppComingSoonRoute,
+  AppConnectRoute: AppConnectRoute,
+  AppContactsRoute: AppContactsRoute,
+  AppHomeRoute: AppHomeRoute,
+  AppLanguageRoute: AppLanguageRoute,
+  AppNotificationsRoute: AppNotificationsRoute,
+  AppProfileRoute: AppProfileRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppChatIdRoute: AppChatIdRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
