@@ -1,7 +1,7 @@
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from "react";
-import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX, Video as VideoIcon, VideoOff, SwitchCamera } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Volume2, Video as VideoIcon, VideoOff, SwitchCamera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
@@ -39,6 +39,22 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
 ];
+
+const CALL_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+  channelCount: 1,
+};
+
+type AudioSinkElement = HTMLAudioElement & { setSinkId?: (sinkId: string) => Promise<void> };
+type RemoteAudioGraph = {
+  input: MediaStream;
+  source: MediaStreamAudioSourceNode;
+  compressor: DynamicsCompressorNode;
+  gain: GainNode;
+  destination: MediaStreamAudioDestinationNode;
+};
 
 export function CallProvider({ children }: { children: React.ReactNode }) {
   const { user } = useApp();
