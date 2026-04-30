@@ -287,14 +287,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       if (media === "video") {
         try {
           const s = await navigator.mediaDevices.getUserMedia({
-            audio: true,
+            audio: CALL_AUDIO_CONSTRAINTS,
             video: { facingMode: facingRef.current },
           });
           return s;
         } catch (e) {
           console.warn("video+audio failed, trying audio only", e);
           try {
-            const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const s = await navigator.mediaDevices.getUserMedia({ audio: CALL_AUDIO_CONSTRAINTS });
             setInfo("Video unavailable, audio still connected");
             return s;
           } catch {
@@ -303,7 +303,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           }
         }
       }
-      return await navigator.mediaDevices.getUserMedia({ audio: true });
+      return await navigator.mediaDevices.getUserMedia({ audio: CALL_AUDIO_CONSTRAINTS });
     } catch {
       setError(media === "video"
         ? "Camera and microphone permission are required for video calls."
