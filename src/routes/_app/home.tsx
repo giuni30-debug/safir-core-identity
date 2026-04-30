@@ -368,3 +368,94 @@ function ModuleCard({
     </button>
   );
 }
+
+function CommButton({
+  icon, label, desc, accent, badge, onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  desc: string;
+  accent: string;
+  badge?: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="press-glow group relative flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 text-center transition-transform active:scale-95"
+      style={{
+        background:
+          "linear-gradient(160deg, oklch(1 0 0 / 10%) 0%, oklch(1 0 0 / 3%) 100%)",
+        border: `1.5px solid ${accent}`,
+        backdropFilter: "blur(20px) saturate(160%)",
+        WebkitBackdropFilter: "blur(20px) saturate(160%)",
+        boxShadow: `0 0 18px color-mix(in oklab, ${accent} 45%, transparent), inset 0 1px 0 oklch(1 0 0 / 12%)`,
+      }}
+    >
+      <div
+        className="relative grid h-12 w-12 place-items-center rounded-2xl text-white"
+        style={{
+          background: `linear-gradient(135deg, ${accent}, color-mix(in oklab, ${accent} 45%, #000))`,
+          boxShadow: `0 0 16px ${accent}, inset 0 1px 0 oklch(1 0 0 / 25%)`,
+          animation: "logo-breath 2.6s ease-in-out infinite",
+        }}
+      >
+        {icon}
+        {badge && (
+          <span className="pointer-events-none absolute inset-0 grid place-items-center">
+            {badge}
+          </span>
+        )}
+      </div>
+      <p
+        className="text-[12px] font-bold tracking-wide text-white"
+        style={{ textShadow: `0 0 10px color-mix(in oklab, ${accent} 70%, transparent)` }}
+      >
+        {label}
+      </p>
+      <p className="text-[9.5px] leading-tight text-white/60">{desc}</p>
+    </button>
+  );
+}
+
+function TypingDots() {
+  return (
+    <span className="absolute -bottom-0.5 right-0.5 flex gap-[2px]">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="h-1 w-1 rounded-full bg-white"
+          style={{
+            animation: `home-float 1.1s ease-in-out ${i * 0.15}s infinite`,
+            boxShadow: "0 0 4px #fff",
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
+function PulseRing({ color }: { color: string }) {
+  return (
+    <span
+      className="absolute inset-0 rounded-2xl"
+      style={{
+        border: `2px solid ${color}`,
+        animation: "logo-breath 1.8s ease-out infinite",
+        opacity: 0.55,
+      }}
+    />
+  );
+}
+
+function GlowFlicker({ color }: { color: string }) {
+  return (
+    <span
+      className="absolute inset-0 rounded-2xl"
+      style={{
+        background: `radial-gradient(closest-side, ${color}40, transparent 70%)`,
+        animation: "neon-drift 2.4s ease-in-out infinite",
+      }}
+    />
+  );
+}
