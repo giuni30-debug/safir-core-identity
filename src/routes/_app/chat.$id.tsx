@@ -679,85 +679,184 @@ function ChatPage() {
                 </div>
               );
             }
+            const msgReactions = reactionsByMsg.get(m.id) ?? [];
+            // group reactions by emoji
+            const grouped: Record<string, { count: number; mine: boolean }> = {};
+            for (const r of msgReactions) {
+              if (!grouped[r.emoji]) grouped[r.emoji] = { count: 0, mine: false };
+              grouped[r.emoji].count += 1;
+              if (r.user_id === myId) grouped[r.emoji].mine = true;
+            }
+            const isPickerOpen = reactionFor === m.id;
             return (
               <div key={m.id} className={`msg-in flex ${mine ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[78%] ${isMedia ? "p-1" : "px-3.5 py-2"} rounded-3xl text-sm backdrop-blur-xl ${
-                    mine ? "rounded-br-md" : "rounded-bl-md bg-white/5"
-                  }`}
-                  style={
-                    mine
-                      ? {
-                          background:
-                            "linear-gradient(135deg, oklch(0.86 0.17 90), color-mix(in oklab, oklch(0.86 0.17 90) 65%, #000))",
-                          border: "2px solid oklch(0.86 0.17 90)",
-                          boxShadow:
-                            "0 0 14px color-mix(in oklab, oklch(0.86 0.17 90) 55%, transparent), 0 6px 18px oklch(0 0 0 / 45%)",
-                          color: "#1a1500",
-                        }
-                      : {
-                          border: "2px solid color-mix(in oklab, oklch(0.82 0.16 200) 70%, transparent)",
-                          boxShadow:
-                            "0 0 14px color-mix(in oklab, oklch(0.82 0.16 200) 45%, transparent), 0 4px 14px oklch(0 0 0 / 40%)",
-                        }
-                  }
-                >
-                  {isVoice ? (
-                    <VoicePlayer url={m.audio_url!} duration={m.duration_seconds} mine={mine} />
-                  ) : isImage ? (
-                    <a href={m.media_url!} target="_blank" rel="noreferrer" className="block">
-                      <img
-                        src={m.media_url!}
-                        alt={m.file_name ?? "image"}
-                        className="max-h-72 w-auto rounded-xl object-cover"
-                        loading="lazy"
-                      />
-                    </a>
-                  ) : isVideo ? (
-                    <video
-                      src={m.media_url!}
-                      controls
-                      preload="metadata"
-                      className="max-h-72 w-full rounded-xl"
-                    />
-                  ) : isFile ? (
-                    <a
-                      href={m.media_url!}
-                      target="_blank"
-                      rel="noreferrer"
-                      download={m.file_name ?? undefined}
-                      className={`flex items-center gap-2 rounded-xl px-2 py-1 ${
-                        mine ? "bg-primary-foreground/15" : "bg-muted/40"
-                      }`}
-                    >
-                      <span
-                        className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
-                          mine ? "bg-primary-foreground/20" : "bg-primary/80 text-primary-foreground"
-                        }`}
-                      >
-                        <FileIcon className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs font-medium">
-                          {m.file_name ?? "File"}
-                        </span>
-                        <span className="block text-[10px] opacity-70">
-                          {m.file_size != null ? formatBytes(m.file_size) : ""}
-                        </span>
-                      </span>
-                      <Download className="h-4 w-4 opacity-80" />
-                    </a>
-                  ) : (
-                    <p className="whitespace-pre-wrap break-words">{m.message_text}</p>
-                  )}
-                  <p
-                    className={`${isMedia ? "px-2 pb-1 pt-1" : "mt-1"} text-[10px] ${
-                      mine ? "text-primary-foreground/70" : "text-muted-foreground"
-                    }`}
+                <div className="relative max-w-[78%]">
+                  <button
+                    type="button"
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setReactionFor(isPickerOpen ? null : m.id);
+                    }}
+                    onDoubleClick={() => setReactionFor(isPickerOpen ? null : m.id)}
+                    className="block w-full cursor-default text-left"
+                    aria-label="Message"
                   >
-                    {fmtTime(m.created_at)}
-                    {mine ? " · Delivered" : ""}
-                  </p>
+                    <div
+                      className={`${isMedia ? "p-1" : "px-3.5 py-2"} rounded-3xl text-sm backdrop-blur-xl ${
+                        mine ? "rounded-br-md" : "rounded-bl-md bg-white/5"
+                      }`}
+                      style={
+                        mine
+                          ? {
+                              background:
+                                "linear-gradient(135deg, oklch(0.86 0.17 90), color-mix(in oklab, oklch(0.86 0.17 90) 65%, #000))",
+                              border: "2px solid oklch(0.86 0.17 90)",
+                              boxShadow:
+                                "0 0 14px color-mix(in oklab, oklch(0.86 0.17 90) 55%, transparent), 0 6px 18px oklch(0 0 0 / 45%)",
+                              color: "#1a1500",
+                            }
+                          : {
+                              border: "2px solid color-mix(in oklab, oklch(0.82 0.16 200) 70%, transparent)",
+                              boxShadow:
+                                "0 0 14px color-mix(in oklab, oklch(0.82 0.16 200) 45%, transparent), 0 4px 14px oklch(0 0 0 / 40%)",
+                            }
+                      }
+                    >
+                      {isVoice ? (
+                        <VoicePlayer url={m.audio_url!} duration={m.duration_seconds} mine={mine} />
+                      ) : isImage ? (
+                        <a href={m.media_url!} target="_blank" rel="noreferrer" className="block">
+                          <img
+                            src={m.media_url!}
+                            alt={m.file_name ?? "image"}
+                            className="max-h-72 w-auto rounded-xl object-cover"
+                            loading="lazy"
+                          />
+                        </a>
+                      ) : isVideo ? (
+                        <video
+                          src={m.media_url!}
+                          controls
+                          preload="metadata"
+                          className="max-h-72 w-full rounded-xl"
+                        />
+                      ) : isFile ? (
+                        <a
+                          href={m.media_url!}
+                          target="_blank"
+                          rel="noreferrer"
+                          download={m.file_name ?? undefined}
+                          className={`flex items-center gap-2 rounded-xl px-2 py-1 ${
+                            mine ? "bg-primary-foreground/15" : "bg-muted/40"
+                          }`}
+                        >
+                          <span
+                            className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
+                              mine ? "bg-primary-foreground/20" : "bg-primary/80 text-primary-foreground"
+                            }`}
+                          >
+                            <FileIcon className="h-4 w-4" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-medium">
+                              {m.file_name ?? "File"}
+                            </span>
+                            <span className="block text-[10px] opacity-70">
+                              {m.file_size != null ? formatBytes(m.file_size) : ""}
+                            </span>
+                          </span>
+                          <Download className="h-4 w-4 opacity-80" />
+                        </a>
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words">{m.message_text}</p>
+                      )}
+                      <div
+                        className={`${isMedia ? "px-2 pb-1 pt-1" : "mt-1"} flex items-center justify-end gap-1 text-[10px] ${
+                          mine ? "text-primary-foreground/70" : "text-muted-foreground"
+                        }`}
+                        style={mine ? { color: "oklch(0.18 0.05 90 / 75%)" } : undefined}
+                      >
+                        <span>{fmtTime(m.created_at)}</span>
+                        {mine && <MessageStatus message={m} />}
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Add-reaction trigger */}
+                  <button
+                    type="button"
+                    aria-label="Add reaction"
+                    onClick={() => setReactionFor(isPickerOpen ? null : m.id)}
+                    className={`absolute -top-2 ${mine ? "-left-2" : "-right-2"} grid h-6 w-6 place-items-center rounded-full border border-glass-border bg-card/80 opacity-0 backdrop-blur-md transition group-hover:opacity-100 hover:opacity-100`}
+                  >
+                    <SmilePlus className="h-3 w-3" />
+                  </button>
+
+                  {/* Reaction chips */}
+                  {Object.keys(grouped).length > 0 && (
+                    <div
+                      className={`mt-1 flex flex-wrap gap-1 ${mine ? "justify-end" : "justify-start"}`}
+                    >
+                      {Object.entries(grouped).map(([emoji, info]) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => void toggleReaction(m.id, emoji)}
+                          className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] backdrop-blur-md transition active:scale-95 ${
+                            info.mine
+                              ? "border-primary/60 bg-primary/15"
+                              : "border-glass-border bg-card/40"
+                          }`}
+                          style={
+                            info.mine
+                              ? {
+                                  boxShadow:
+                                    "0 0 8px color-mix(in oklab, var(--theme-accent) 40%, transparent)",
+                                }
+                              : undefined
+                          }
+                        >
+                          <span>{emoji}</span>
+                          {info.count > 1 && (
+                            <span className="tabular-nums opacity-80">{info.count}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Reaction picker popover */}
+                  {isPickerOpen && (
+                    <>
+                      <button
+                        type="button"
+                        aria-hidden
+                        onClick={() => setReactionFor(null)}
+                        className="fixed inset-0 z-10 cursor-default bg-transparent"
+                      />
+                      <div
+                        className={`absolute z-20 ${mine ? "right-0" : "left-0"} -top-12 flex items-center gap-1 rounded-full border border-glass-border bg-card/90 px-2 py-1 backdrop-blur-xl animate-[scale-in_0.15s_ease-out]`}
+                        style={{
+                          boxShadow:
+                            "0 0 18px color-mix(in oklab, var(--theme-accent) 40%, transparent), 0 6px 18px oklch(0 0 0 / 45%)",
+                        }}
+                      >
+                        {["❤️", "👍", "🔥", "😂", "😮", "😢"].map((e) => (
+                          <button
+                            key={e}
+                            type="button"
+                            onClick={() => {
+                              void toggleReaction(m.id, e);
+                              setReactionFor(null);
+                            }}
+                            className="grid h-8 w-8 place-items-center rounded-full text-base transition hover:scale-125 active:scale-95"
+                          >
+                            {e}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             );
