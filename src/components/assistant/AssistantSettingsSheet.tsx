@@ -32,6 +32,15 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
   const [autoMode, setAutoMode] = useState(prefs.autoMode);
   const [saving, setSaving] = useState(false);
 
+  // Re-sync local form whenever the sheet is (re)opened or prefs change.
+  useEffect(() => {
+    if (!open) return;
+    setAgentId(prefs.agentId ?? "");
+    setVoiceId(prefs.voiceId);
+    setPersonality(prefs.personality);
+    setAutoMode(prefs.autoMode);
+  }, [open, prefs.agentId, prefs.voiceId, prefs.personality, prefs.autoMode]);
+
   if (!open) return null;
 
   const trimmedId = agentId.trim();
