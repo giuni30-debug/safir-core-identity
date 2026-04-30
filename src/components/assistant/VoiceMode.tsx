@@ -6,13 +6,28 @@ import { AssistantOrb, type OrbState } from "./AssistantOrb";
 import { getElevenLabsAgentToken } from "@/server/elevenlabs.functions";
 import { feedback, playSound } from "@/lib/sound";
 import { useApp } from "@/contexts/AppContext";
-import {
-  appendMessage,
-  createConversation,
-  type AiConversation,
-} from "@/hooks/useAiMemory";
+import { appendMessage, createConversation, type AiConversation } from "@/hooks/useAiMemory";
 import { supabase } from "@/integrations/supabase/client";
 import type { AssistantPersonality } from "@/hooks/useAssistantPrefs";
+
+type ConversationExtras = {
+  getInputVolume?: () => number;
+  getOutputVolume?: () => number;
+  sendUserMessage?: (message: string) => void;
+};
+
+type WebkitAudioWindow = Window & {
+  webkitAudioContext?: typeof AudioContext;
+};
+
+function getString(value: unknown, path: string[]): string | undefined {
+  let current: unknown = value;
+  for (const key of path) {
+    if (!current || typeof current !== "object" || !(key in current)) return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+  return typeof current === "string" ? current : undefined;
+}
 
 type Props = {
   open: boolean;
@@ -28,8 +43,7 @@ type Props = {
 };
 
 const personalityPrompts: Record<AssistantPersonality, string> = {
-  calm:
-    "You are All Assist AI. Speak calmly, warmly, and concisely. Use short natural sentences with light pauses. Be empathetic.",
+  calm: "You are All Assist AI. Speak calmly, warmly, and concisely. Use short natural sentences with light pauses. Be empathetic.",
   friendly:
     "You are All Assist AI. Be playful, upbeat, and friendly. Light humor is welcome. Keep replies short and natural.",
   professional:
@@ -51,7 +65,9 @@ export function VoiceMode({
   const [orbState, setOrbState] = useState<OrbState>("idle");
   const [inputLevel, setInputLevel] = useState(0);
   const [outputLevel, setOutputLevel] = useState(0);
-  const [transcript, setTranscript] = useState<{ role: "user" | "assistant"; text: string; id: string }[]>([]);
+  const [transcript, setTranscript] = useState<
+    { role: "user" | "assistant"; text: string; id: string }[]
+  >([]);
   const [partial, setPartial] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [pttHeld, setPttHeld] = useState(false);
@@ -59,6 +75,7 @@ export function VoiceMode({
   const convoIdRef = useRef<string | null>(voiceConversationId ?? null);
   const lastUserRef = useRef<string>("");
   const rafRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -69,19 +86,20 @@ export function VoiceMode({
       setOrbState("idle");
       setInputLevel(0);
       setOutputLevel(0);
+      setPttHeld(false);
     },
     onError: (e) => {
       console.error("ElevenLabs convo error:", e);
       setOrbState("error");
       playSound("error");
-      toast.error("Voice connection error");
+      toast.error("Voice not connected. Retrying...");
       setTimeout(() => setOrbState("idle"), 1200);
     },
-    onMessage: async (msg: any) => {
+    onMessage: async (msg: unknown) => {
       // Surface user transcript & agent response
-      const type = msg?.type ?? msg?.event_type;
+      const type = getString(msg, ["type"]) ?? getString(msg, ["event_type"]);
       if (type === "user_transcript") {
-        const text = msg?.user_transcription_event?.user_transcript ?? "";
+        const text = getString(msg, ["user_transcription_event", "user_transcript"]) ?? "";
         if (text) {
           lastUserRef.current = text;
           setTranscript((prev) => [...prev, { role: "user", text, id: cryptoId() }]);
@@ -94,7 +112,7 @@ export function VoiceMode({
           }
         }
       } else if (type === "agent_response") {
-        const text = msg?.agent_response_event?.agent_response ?? "";
+        const text = getString(msg, ["agent_response_event", "agent_response"]) ?? "";
         if (text) {
           setTranscript((prev) => [...prev, { role: "assistant", text, id: cryptoId() }]);
           if (user?.id) {
@@ -103,13 +121,17 @@ export function VoiceMode({
           }
         }
       } else if (type === "agent_response_correction") {
-        const text = msg?.agent_response_correction_event?.corrected_agent_response ?? "";
+        const text =
+          getString(msg, ["agent_response_correction_event", "corrected_agent_response"]) ?? "";
         if (text) {
           setTranscript((prev) => {
             const next = [...prev];
             // replace last assistant
             for (let i = next.length - 1; i >= 0; i--) {
-              if (next[i].role === "assistant") { next[i] = { ...next[i], text }; break; }
+              if (next[i].role === "assistant") {
+                next[i] = { ...next[i], text };
+                break;
+              }
             }
             return next;
           });
@@ -148,99 +170,144 @@ export function VoiceMode({
     const tick = () => {
       try {
         // SDK exposes getInputVolume / getOutputVolume returning 0..1
-        const inV = (conversation as any).getInputVolume?.() ?? 0;
-        const outV = (conversation as any).getOutputVolume?.() ?? 0;
+        const inV = (conversation as ConversationExtras).getInputVolume?.() ?? 0;
+        const outV = (conversation as ConversationExtras).getOutputVolume?.() ?? 0;
         setInputLevel(typeof inV === "number" ? inV : 0);
         setOutputLevel(typeof outV === "number" ? outV : 0);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   }, [conversation, conversation.status]);
 
-  // Start session
-  const start = useCallback(async () => {
-    const id = agentId?.trim() || null;
-    // If user provided an ID, validate format. Otherwise the server falls
-    // back to the ELEVENLABS_AGENT_ID secret.
-    if (id) {
-      const isValid = /^agent_[A-Za-z0-9]{16,}$/.test(id) || /^[A-Za-z0-9]{20,}$/.test(id);
-      if (!isValid) {
-        toast.error("Invalid Agent ID format. Expected something like agent_xxxxxxxxxxxxxxxx", {
-          duration: 5000,
-        });
-        onOpenSettings();
-        return;
+  const unlockAudioPlayback = useCallback(async () => {
+    const AudioContextCtor =
+      window.AudioContext || (window as WebkitAudioWindow).webkitAudioContext;
+    if (!AudioContextCtor) return;
+    const ctx = audioContextRef.current ?? new AudioContextCtor();
+    audioContextRef.current = ctx;
+    if (ctx.state === "suspended") await ctx.resume();
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+  }, []);
+
+  const requestMicStream = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Microphone is not available in this browser.");
+    }
+    if (navigator.permissions?.query) {
+      try {
+        const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+        if (status.state === "denied") {
+          throw new Error("Microphone permission is blocked. Enable it in browser settings.");
+        }
+      } catch (err) {
+        if (err instanceof Error && err.message.includes("Microphone permission")) throw err;
       }
     }
-    setConnecting(true);
-    setOrbState("thinking");
-    feedback("tap", "tap");
-    try {
-      // 1. Mic permission (must be inside user gesture)
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+    stream.getTracks().forEach((track) => track.stop());
+  }, []);
 
-      // 2. Get short-lived WebRTC token from our server (uses ELEVENLABS_AGENT_ID secret if id is null)
-      const res = await getElevenLabsAgentToken({ data: { agentId: id ?? undefined } });
+  const startElevenLabsSession = useCallback(
+    async (withOverrides: boolean) => {
+      const res = await getElevenLabsAgentToken({ data: { agentId: undefined } });
       if (!res.token) throw new Error(res.error || "No token returned from server");
 
-      // 3. Connect — try with overrides first, fall back without if the agent
-      //    doesn't have overrides enabled in the ElevenLabs dashboard.
       const baseOpts = {
         conversationToken: res.token,
         connectionType: "webrtc" as const,
       };
-      const language =
-        lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en";
-      const overrides = {
-        agent: {
-          prompt: { prompt: personalityPrompts[personality] },
-          language,
-        },
-        tts: { voiceId },
-      };
+      const language = lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en";
 
-      try {
-        await conversation.startSession({ ...baseOpts, overrides } as any);
-      } catch (overrideErr) {
-        console.warn(
-          "ElevenLabs startSession failed with overrides — retrying without. " +
-            "Enable 'Security → Overrides' in your agent dashboard to customize voice/prompt.",
-          overrideErr,
+      if (!withOverrides) {
+        await conversation.startSession(
+          baseOpts as unknown as Parameters<typeof conversation.startSession>[0],
         );
-        // Need a fresh token (the previous one was consumed)
-        const res2 = await getElevenLabsAgentToken({ data: { agentId: id ?? undefined } });
-        if (!res2.token) throw new Error(res2.error || "No token (retry)");
-        await conversation.startSession({
-          ...baseOpts,
-          conversationToken: res2.token,
-        } as any);
+        return;
       }
 
+      await conversation.startSession({
+        ...baseOpts,
+        overrides: {
+          agent: {
+            prompt: { prompt: personalityPrompts[personality] },
+            language,
+          },
+          tts: { voiceId },
+        },
+      } as unknown as Parameters<typeof conversation.startSession>[0]);
+    },
+    [conversation, lang, personality, voiceId],
+  );
+
+  const connectWithFallbackRetry = useCallback(async () => {
+    try {
+      await startElevenLabsSession(true);
+    } catch (overrideErr) {
+      console.warn(
+        "ElevenLabs startSession failed with overrides — retrying without. " +
+          "Enable 'Security → Overrides' in your agent dashboard to customize voice/prompt.",
+        overrideErr,
+      );
+      await startElevenLabsSession(false);
+    }
+  }, [startElevenLabsSession]);
+
+  // Start session
+  const start = useCallback(async () => {
+    console.log("Connecting to ElevenLabs...");
+    console.log("Agent ID used: (masked)");
+    setConnecting(true);
+    setOrbState("listening");
+    feedback("tap", "tap");
+    try {
+      await unlockAudioPlayback();
+      await requestMicStream();
+      try {
+        await connectWithFallbackRetry();
+      } catch (firstErr) {
+        console.warn("ElevenLabs first connection attempt failed; retrying once.", firstErr);
+        toast.error("Voice not connected. Retrying...");
+        await connectWithFallbackRetry();
+      }
+      console.log("Connection success");
+      setPttHeld(true);
       playSound("voice-start");
     } catch (e) {
+      console.log("Connection fail");
       console.error("start voice failed", e);
-      const msg = e instanceof Error ? e.message : "Failed to start";
-      toast.error(
-        msg.toLowerCase().includes("agent")
-          ? "Could not reach the agent. Verify the Agent ID and that the agent is published."
-          : msg,
-      );
+      toast.error("Voice not connected. Retrying...");
       setOrbState("error");
+      setPttHeld(false);
       setTimeout(() => setOrbState("idle"), 1200);
     } finally {
       setConnecting(false);
     }
-  }, [agentId, conversation, personality, voiceId, lang, onOpenSettings]);
+  }, [connectWithFallbackRetry, requestMicStream, unlockAudioPlayback]);
 
   const stop = useCallback(async () => {
     feedback("tap", "tap");
     playSound("voice-stop");
-    try { await conversation.endSession(); } catch { /* ignore */ }
+    try {
+      await conversation.endSession();
+    } catch {
+      /* ignore */
+    }
     setTranscript([]);
     setPartial("");
     convoIdRef.current = null;
+    setPttHeld(false);
     setOrbState("idle");
   }, [conversation]);
 
@@ -263,7 +330,7 @@ export function VoiceMode({
   const sendChip = useCallback(
     (label: string) => {
       try {
-        (conversation as any).sendUserMessage?.(label);
+        (conversation as ConversationExtras).sendUserMessage?.(label);
         setTranscript((p) => [...p, { role: "user", text: label, id: cryptoId() }]);
         setOrbState("thinking");
       } catch (e) {
@@ -276,7 +343,11 @@ export function VoiceMode({
   // Cleanup on close
   useEffect(() => {
     if (!open) {
-      try { conversation.endSession(); } catch { /* ignore */ }
+      try {
+        conversation.endSession();
+      } catch {
+        /* ignore */
+      }
       setTranscript([]);
       convoIdRef.current = null;
     }
@@ -286,24 +357,29 @@ export function VoiceMode({
   if (!open) return null;
 
   const isConnected = conversation.status === "connected";
-  const statusLabel = orbState === "thinking"
-    ? "Thinking…"
-    : orbState === "listening"
-    ? "Listening…"
-    : orbState === "speaking"
-    ? "Speaking"
-    : isConnected
-    ? (autoMode ? "Auto · ready" : "Hold mic to talk")
-    : "Tap to start";
+  const statusLabel =
+    orbState === "thinking"
+      ? "Thinking…"
+      : orbState === "listening"
+        ? "Listening…"
+        : orbState === "speaking"
+          ? "Speaking"
+          : isConnected
+            ? autoMode
+              ? "Auto · ready"
+              : "Hold mic to talk"
+            : "Tap to start";
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col bg-gradient-to-b from-[#05060c] via-[#0a0e22] to-[#05060c] text-foreground">
       {/* Background ambient */}
-      <div className="pointer-events-none absolute inset-0 opacity-60"
-           style={{
-             background:
-               "radial-gradient(60% 50% at 50% 35%, rgba(99,102,241,0.18), transparent 70%), radial-gradient(40% 40% at 50% 70%, rgba(34,211,238,0.12), transparent 70%)",
-           }} />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-60"
+        style={{
+          background:
+            "radial-gradient(60% 50% at 50% 35%, rgba(99,102,241,0.18), transparent 70%), radial-gradient(40% 40% at 50% 70%, rgba(34,211,238,0.12), transparent 70%)",
+        }}
+      />
       {/* Top bar */}
       <header className="relative z-10 flex items-center justify-between px-4 pt-5 pb-3">
         <button
@@ -326,29 +402,16 @@ export function VoiceMode({
         </button>
       </header>
 
-      {/* Missing Agent ID banner */}
-      {!agentId?.trim() && (
-        <div className="relative z-10 mx-3 mb-2 flex items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-amber-100">
-          <div className="text-xs">
-            <span className="font-semibold">Agent ID missing.</span>{" "}
-            Add your ElevenLabs Agent ID to start a voice session.
-          </div>
-          <button
-            onClick={onOpenSettings}
-            className="shrink-0 rounded-lg bg-amber-400/20 px-3 py-1 text-xs font-medium ring-1 ring-amber-300/40 hover:bg-amber-400/30"
-          >
-            Open settings
-          </button>
-        </div>
-      )}
-
       {/* Orb */}
       <div className="relative z-10 flex flex-1 items-center justify-center px-4">
         <AssistantOrb
           state={orbState}
           inputLevel={inputLevel}
           outputLevel={outputLevel}
-          size={Math.min(320, Math.floor((typeof window !== "undefined" ? window.innerWidth : 320) * 0.78))}
+          size={Math.min(
+            320,
+            Math.floor((typeof window !== "undefined" ? window.innerWidth : 320) * 0.78),
+          )}
         />
       </div>
 
@@ -373,9 +436,7 @@ export function VoiceMode({
               {t.text}
             </div>
           ))}
-          {partial && (
-            <div className="text-sm italic text-white/60">{partial}…</div>
-          )}
+          {partial && <div className="text-sm italic text-white/60">{partial}…</div>}
         </div>
 
         {/* Suggestion chips */}
@@ -413,20 +474,34 @@ export function VoiceMode({
           onClick={!isConnected ? start : autoMode ? stop : undefined}
           disabled={connecting}
           className={`relative grid h-20 w-20 place-items-center rounded-full transition-transform active:scale-[0.97] ${
-            isConnected
-              ? "bg-gradient-to-br from-cyan-400 to-indigo-500 shadow-[0_0_60px_rgba(99,102,241,0.6)]"
-              : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-[0_0_50px_rgba(124,58,237,0.55)]"
+            conversation.isSpeaking
+              ? "animate-bounce bg-gradient-to-br from-cyan-300 to-sky-500 shadow-[0_0_70px_rgba(34,211,238,0.75)]"
+              : pttHeld || (isConnected && autoMode)
+                ? "animate-pulse bg-gradient-to-br from-emerald-400 to-cyan-500 shadow-[0_0_65px_rgba(45,212,191,0.65)]"
+                : isConnected
+                  ? "bg-gradient-to-br from-cyan-400 to-indigo-500 shadow-[0_0_60px_rgba(99,102,241,0.6)]"
+                  : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-[0_0_50px_rgba(124,58,237,0.55)]"
           }`}
           aria-label="Microphone"
         >
           {connecting ? (
             <Loader2 className="h-7 w-7 animate-spin text-white" />
           ) : isConnected ? (
-            pttHeld || autoMode ? <Mic className="h-8 w-8 text-white" /> : <MicOff className="h-8 w-8 text-white/90" />
+            pttHeld || autoMode ? (
+              <Mic className="h-8 w-8 text-white" />
+            ) : (
+              <MicOff className="h-8 w-8 text-white/90" />
+            )
           ) : (
             <Mic className="h-8 w-8 text-white" />
           )}
-          {(pttHeld || conversation.isSpeaking) && (
+          {conversation.isSpeaking && (
+            <>
+              <span className="absolute inset-0 animate-ping rounded-full bg-white/20" />
+              <span className="absolute inset-[-10px] animate-pulse rounded-full border border-cyan-200/40" />
+            </>
+          )}
+          {!conversation.isSpeaking && (pttHeld || (isConnected && autoMode)) && (
             <span className="absolute inset-0 animate-ping rounded-full bg-white/20" />
           )}
         </button>
