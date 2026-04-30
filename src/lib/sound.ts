@@ -145,6 +145,97 @@ let initialized = false;
 let ringtoneEl: HTMLAudioElement | null = null;
 let vibrationLoopId: number | null = null;
 
+// Last known pointer X (viewport coords). Used to subtly pan ambient UI sounds
+// like "tap" so audio cues feel like they originate from the touched location.
+let lastPointerX: number | null = null;
+let lastPointerAt = 0;
+
+/** Read the most recent pointer X (or null if too stale / never set). */
+function recentPointerX(maxAgeMs = 1500): number | null {
+  if (lastPointerX == null) return null;
+  if (performance.now() - lastPointerAt > maxAgeMs) return null;
+  return lastPointerX;
+}
+
+// ---------------- Spatial audio (WebAudio) ----------------
+// We route HTMLAudio through a MediaElementSource → Panner → Gain → destination.
+// This gives us cheap stereo panning + a "depth" gain so callers can imply
+// distance (incoming call sweeping from far → near, UI element pan L/R, etc.).
+
+type SpatialNodes = {
+  source: MediaElementAudioSourceNode;
+  panner: StereoPannerNode;
+  gain: GainNode;
+};
+
+let audioCtx: AudioContext | null = null;
+const spatialNodes: Partial<Record<SoundId, SpatialNodes>> = {};
+
+let ringtoneNodes: { panner: StereoPannerNode; gain: GainNode } | null = null;
+
+function ensureAudioCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (audioCtx) return audioCtx;
+  const Ctor: typeof AudioContext | undefined =
+    (window as any).AudioContext || (window as any).webkitAudioContext;
+  if (!Ctor) return null;
+  try {
+    audioCtx = new Ctor();
+  } catch {
+    audioCtx = null;
+  }
+  return audioCtx;
+}
+
+function getSpatial(id: SoundId): SpatialNodes | null {
+  const ctx = ensureAudioCtx();
+  const el = buffers[id];
+  if (!ctx || !el) return null;
+  if (spatialNodes[id]) return spatialNodes[id]!;
+  try {
+    const source = ctx.createMediaElementSource(el);
+    const panner = ctx.createStereoPanner();
+    const gain = ctx.createGain();
+    gain.gain.value = 1;
+    panner.pan.value = 0;
+    source.connect(panner);
+    panner.connect(gain);
+    gain.connect(ctx.destination);
+    spatialNodes[id] = { source, panner, gain };
+    return spatialNodes[id]!;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Spatial options for any one-shot playback.
+ * - `pan`: -1 (full left) … 0 (center) … 1 (full right).
+ *   Pass a screen X ratio (clientX / window.innerWidth) for "click here" cues.
+ * - `depth`: 0 (far) … 1 (near). Scales gain to feel closer/further.
+ */
+export type SpatialOpts = { pan?: number; depth?: number };
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+/** Convert a viewport X coordinate to a stereo pan value in [-0.85, 0.85]. */
+export function panFromClientX(clientX: number): number {
+  if (typeof window === "undefined") return 0;
+  const w = window.innerWidth || 1;
+  const norm = clientX / w; // 0..1
+  return clamp((norm - 0.5) * 1.7, -0.85, 0.85);
+}
+
+/** Convert any HTMLElement to a pan value based on its on-screen center. */
+export function panFromElement(el: Element | null): number {
+  if (!el) return 0;
+  const r = (el as HTMLElement).getBoundingClientRect?.();
+  if (!r) return 0;
+  return panFromClientX(r.left + r.width / 2);
+}
+
 /**
  * Preload all sounds. Call once at app start.
  * Audio element instances are lazy-created and kept warm.
@@ -172,6 +263,11 @@ export function initSoundEngine() {
         /* ignore */
       }
     }
+    // Resume the AudioContext (autoplay policies require a user gesture).
+    const ctx = ensureAudioCtx();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => undefined);
+    }
     window.removeEventListener("pointerdown", tryUnlock);
     window.removeEventListener("keydown", tryUnlock);
     window.removeEventListener("touchstart", tryUnlock);
@@ -179,13 +275,32 @@ export function initSoundEngine() {
   window.addEventListener("pointerdown", tryUnlock, { once: true });
   window.addEventListener("keydown", tryUnlock, { once: true });
   window.addEventListener("touchstart", tryUnlock, { once: true });
+
+  // Track pointer position so ambient UI sounds can be subtly spatialized
+  // toward where the user just interacted.
+  const trackPointer = (e: PointerEvent | MouseEvent | TouchEvent) => {
+    let x: number | undefined;
+    if ("clientX" in e && typeof (e as MouseEvent).clientX === "number") {
+      x = (e as MouseEvent).clientX;
+    } else if ("touches" in e && (e as TouchEvent).touches[0]) {
+      x = (e as TouchEvent).touches[0].clientX;
+    }
+    if (typeof x === "number") {
+      lastPointerX = x;
+      lastPointerAt = performance.now();
+    }
+  };
+  window.addEventListener("pointerdown", trackPointer as EventListener, { capture: true });
+  window.addEventListener("touchstart", trackPointer as EventListener, { capture: true, passive: true });
 }
 
 /**
- * Play a sound. Returns a cancel function.
- * Respects user prefs and per-sound throttling. Never overlaps the same id.
+ * Play a sound. Respects user prefs and per-sound throttling.
+ *
+ * Optional `opts.pan` (-1..1) and `opts.depth` (0..1) apply subtle 3D feel
+ * via WebAudio. Falls back to flat HTMLAudio when WebAudio is unavailable.
  */
-export function playSound(id: SoundId): void {
+export function playSound(id: SoundId, opts?: SpatialOpts): void {
   if (!prefs.soundEnabled) return;
   const buf = buffers[id];
   if (!buf) return;
@@ -197,6 +312,52 @@ export function playSound(id: SoundId): void {
     if (now - last < minGap) return;
   }
   lastPlayedAt[id] = now;
+
+  // Auto-spatialize ambient UI sounds toward last pointer position when no
+  // explicit opts are provided. Keeps non-UI sounds (receive/notification) neutral.
+  let effectiveOpts = opts;
+  if (!effectiveOpts && (id === "tap" || id === "send")) {
+    const x = recentPointerX();
+    if (x != null) {
+      effectiveOpts = { pan: panFromClientX(x) * 0.6 };
+    }
+  }
+
+  // Apply spatial settings (pan + depth) if provided.
+  const spatial = effectiveOpts ? getSpatial(id) : null;
+  if (spatial && effectiveOpts && audioCtx) {
+    const t = audioCtx.currentTime;
+    if (typeof effectiveOpts.pan === "number") {
+      const pan = clamp(effectiveOpts.pan, -1, 1);
+      try {
+        spatial.panner.pan.cancelScheduledValues(t);
+        spatial.panner.pan.setValueAtTime(pan, t);
+      } catch {
+        spatial.panner.pan.value = pan;
+      }
+    }
+    if (typeof effectiveOpts.depth === "number") {
+      // depth: 0 (far, ~35%) → 1 (near, 100%)
+      const d = clamp(effectiveOpts.depth, 0, 1);
+      const g = 0.35 + d * 0.65;
+      try {
+        spatial.gain.gain.cancelScheduledValues(t);
+        spatial.gain.gain.setValueAtTime(g, t);
+      } catch {
+        spatial.gain.gain.value = g;
+      }
+    }
+  } else if (spatialNodes[id] && audioCtx) {
+    // Reset to neutral if previously panned and now called without opts.
+    const s = spatialNodes[id]!;
+    try {
+      s.panner.pan.setValueAtTime(0, audioCtx.currentTime);
+      s.gain.gain.setValueAtTime(1, audioCtx.currentTime);
+    } catch {
+      s.panner.pan.value = 0;
+      s.gain.gain.value = 1;
+    }
+  }
 
   try {
     buf.pause();
@@ -211,13 +372,54 @@ export function playSound(id: SoundId): void {
 
 // ---------------- Ringtone (looping) ----------------
 
-export function startRingtone() {
+/**
+ * Start the looping ringtone. With `opts.depthSweep` true (default) the call
+ * fades in from "far" to "near" over ~1.6s and gently pans L↔R while ringing,
+ * giving an incoming-call depth/spatial feel.
+ */
+export function startRingtone(opts?: { depthSweep?: boolean }) {
   if (!prefs.soundEnabled) return;
   stopRingtone();
   const a = new Audio(SOURCES.ringtone);
   a.loop = true;
+  a.crossOrigin = "anonymous";
   a.volume = effectiveVolume("ringtone");
   ringtoneEl = a;
+
+  // Wire ringtone through WebAudio for spatial effect.
+  const ctx = ensureAudioCtx();
+  const sweep = opts?.depthSweep ?? true;
+  if (ctx) {
+    try {
+      const source = ctx.createMediaElementSource(a);
+      const panner = ctx.createStereoPanner();
+      const gain = ctx.createGain();
+      source.connect(panner);
+      panner.connect(gain);
+      gain.connect(ctx.destination);
+      ringtoneNodes = { panner, gain };
+      const t0 = ctx.currentTime;
+      if (sweep) {
+        // Depth fade-in: far (0.25) → near (1.0) over 1.6s
+        gain.gain.setValueAtTime(0.25, t0);
+        gain.gain.linearRampToValueAtTime(1.0, t0 + 1.6);
+        // Subtle stereo sway matching ring cadence
+        panner.pan.setValueAtTime(-0.35, t0);
+        for (let i = 1; i < 30; i++) {
+          panner.pan.linearRampToValueAtTime(
+            i % 2 === 0 ? -0.35 : 0.35,
+            t0 + i * 2.2,
+          );
+        }
+      } else {
+        gain.gain.setValueAtTime(1, t0);
+        panner.pan.setValueAtTime(0, t0);
+      }
+    } catch {
+      /* WebAudio unavailable — fall back to flat ringtone */
+    }
+  }
+
   const p = a.play();
   if (p && typeof p.catch === "function") p.catch(() => undefined);
 
@@ -245,6 +447,7 @@ export function stopRingtone() {
     }
     ringtoneEl = null;
   }
+  ringtoneNodes = null;
   if (vibrationLoopId != null) {
     window.clearInterval(vibrationLoopId);
     vibrationLoopId = null;
@@ -278,10 +481,24 @@ export function vibrate(pattern: HapticPattern = "tap") {
   }
 }
 
-// Convenience: sound + haptic in one call.
-export function feedback(id: SoundId, hap: HapticPattern | null = "tap") {
-  playSound(id);
+// Convenience: sound + haptic in one call. Pass `opts` for spatial pan/depth.
+export function feedback(
+  id: SoundId,
+  hap: HapticPattern | null = "tap",
+  opts?: SpatialOpts,
+) {
+  playSound(id, opts);
   if (hap) vibrate(hap);
+}
+
+/** Helper: play a sound spatialized to a click/tap event. */
+export function feedbackFromEvent(
+  id: SoundId,
+  e: { clientX?: number } | null | undefined,
+  hap: HapticPattern | null = "tap",
+) {
+  const pan = e && typeof e.clientX === "number" ? panFromClientX(e.clientX) : 0;
+  feedback(id, hap, { pan });
 }
 
 // Mark unlocked (read-only)
