@@ -2,11 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
 import {
   ArrowLeft, Send, Mic, Square, Trash2, Play, Pause,
-  Plus, Image as ImageIcon, Video as VideoIcon, FileIcon, X, Download,
+  Plus, Image as ImageIcon, Video as VideoIcon, FileIcon, X, Download, Phone,
 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "@/components/Avatar";
+import { useCall } from "@/contexts/CallContext";
 
 export const Route = createFileRoute("/_app/chat/$id")({
   component: ChatPage,
@@ -111,6 +112,7 @@ function ChatPage() {
   const { t, user } = useApp();
   const { id: contactId } = Route.useParams();
   const myId = user?.id ?? null;
+  const { startCall, inCall } = useCall();
 
   const [contact, setContact] = useState<{
     display_name: string; username: string; avatar_url: string | null;
@@ -458,10 +460,20 @@ function ChatPage() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <Avatar url={contact?.avatar_url ?? null} name={contact?.display_name ?? "?"} size={40} />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{contact?.display_name ?? "…"}</p>
           <p className="truncate text-xs text-muted-foreground">@{contact?.username ?? "…"}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => { if (contact) void startCall(contactId); }}
+          disabled={!contact || inCall}
+          aria-label="Audio call"
+          className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card/40 text-primary disabled:opacity-40"
+          style={{ boxShadow: contact && !inCall ? "var(--shadow-glow)" : undefined }}
+        >
+          <Phone className="h-5 w-5" />
+        </button>
       </header>
 
       <div

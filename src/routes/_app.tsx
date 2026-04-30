@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { CallProvider } from "@/contexts/CallContext";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async () => {
@@ -11,11 +12,13 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   return (
-    <div className="app-shell">
-      <div className="app-frame">
-        <Outlet />
+    <CallProvider>
+      <div className="app-shell">
+        <div className="app-frame">
+          <Outlet />
+        </div>
       </div>
-    </div>
+    </CallProvider>
   );
 }
 
