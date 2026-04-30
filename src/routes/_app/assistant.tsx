@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {
   useAiMemory, detectMemoryCandidates,
   createConversation, appendMessage,
-  listConversations, loadMessages, deleteConversation, renameConversation,
+  listConversations, loadMessages, deleteConversation,
   type AiConversation,
 } from "@/hooks/useAiMemory";
 
