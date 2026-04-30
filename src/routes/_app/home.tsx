@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_app/home")({
 });
 
 function Home() {
-  const { profile } = useApp();
+  const { profile, t } = useApp();
   const navigate = useNavigate();
 
   // Swipe left → open Dashboard
@@ -156,10 +156,10 @@ function Home() {
             className="text-2xl font-light tracking-[0.04em] text-white"
             style={{ textShadow: "0 0 18px oklch(0.70 0.18 250 / 55%)" }}
           >
-            Safir Home Chat
+            {t("homeTagline")}
           </h1>
           <p className="text-xs font-light tracking-[0.3em] text-white/50 uppercase">
-            Private · Premium · Yours
+            {t("homeSubline")}
           </p>
         </div>
       </div>
@@ -179,11 +179,11 @@ function Home() {
               "0 0 24px oklch(0.70 0.18 250 / 65%), inset 0 1px 0 oklch(1 0 0 / 25%)",
           }}
         >
-          Enter App
+          {t("enterApp")}
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </button>
         <p className="text-[10px] font-light tracking-[0.25em] text-white/40 uppercase">
-          or swipe left
+          {t("orSwipeLeft")}
         </p>
       </div>
     </div>
