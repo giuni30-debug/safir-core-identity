@@ -161,21 +161,18 @@ export function VoiceMode({
 
   // Start session
   const start = useCallback(async () => {
-    const id = agentId?.trim();
-    if (!id) {
-      toast.error("Missing Agent ID — open Settings and paste your ElevenLabs Agent ID to start.", {
-        duration: 5000,
-      });
-      onOpenSettings();
-      return;
-    }
-    const isValid = /^agent_[A-Za-z0-9]{16,}$/.test(id) || /^[A-Za-z0-9]{20,}$/.test(id);
-    if (!isValid) {
-      toast.error("Invalid Agent ID format. Expected something like agent_xxxxxxxxxxxxxxxx", {
-        duration: 5000,
-      });
-      onOpenSettings();
-      return;
+    const id = agentId?.trim() || null;
+    // If user provided an ID, validate format. Otherwise the server falls
+    // back to the ELEVENLABS_AGENT_ID secret.
+    if (id) {
+      const isValid = /^agent_[A-Za-z0-9]{16,}$/.test(id) || /^[A-Za-z0-9]{20,}$/.test(id);
+      if (!isValid) {
+        toast.error("Invalid Agent ID format. Expected something like agent_xxxxxxxxxxxxxxxx", {
+          duration: 5000,
+        });
+        onOpenSettings();
+        return;
+      }
     }
     setConnecting(true);
     setOrbState("thinking");
@@ -184,8 +181,8 @@ export function VoiceMode({
       // 1. Mic permission (must be inside user gesture)
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // 2. Get short-lived WebRTC token from our server
-      const res = await getElevenLabsAgentToken({ data: { agentId: id } });
+      // 2. Get short-lived WebRTC token from our server (uses ELEVENLABS_AGENT_ID secret if id is null)
+      const res = await getElevenLabsAgentToken({ data: { agentId: id ?? undefined } });
       if (!res.token) throw new Error(res.error || "No token returned from server");
 
       // 3. Connect — try with overrides first, fall back without if the agent
@@ -213,7 +210,7 @@ export function VoiceMode({
           overrideErr,
         );
         // Need a fresh token (the previous one was consumed)
-        const res2 = await getElevenLabsAgentToken({ data: { agentId: id } });
+        const res2 = await getElevenLabsAgentToken({ data: { agentId: id ?? undefined } });
         if (!res2.token) throw new Error(res2.error || "No token (retry)");
         await conversation.startSession({
           ...baseOpts,
