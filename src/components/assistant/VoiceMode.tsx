@@ -3,7 +3,10 @@ import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { Mic, MicOff, X, Loader2, Settings as SettingsIcon, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { AssistantOrb, type OrbState } from "./AssistantOrb";
-import { getElevenLabsAgentToken } from "@/server/elevenlabs.functions";
+import {
+  getElevenLabsAgentSignedUrl,
+  getElevenLabsAgentToken,
+} from "@/server/elevenlabs.functions";
 import { feedback, playSound } from "@/lib/sound";
 import { useApp } from "@/contexts/AppContext";
 import { appendMessage, createConversation, type AiConversation } from "@/hooks/useAiMemory";
@@ -15,6 +18,8 @@ type ConversationExtras = {
   getOutputVolume?: () => number;
   sendUserMessage?: (message: string) => void;
 };
+
+type ElevenLabsStartOptions = Parameters<ReturnType<typeof useConversation>["startSession"]>[0];
 
 type WebkitAudioWindow = Window & {
   webkitAudioContext?: typeof AudioContext;
