@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { messages, model, system } = await req.json();
+    const { messages, model, system, memory } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(
@@ -54,7 +54,13 @@ Style: warm, smart, premium — like a real assistant, not a chatbot.`;
         },
         body: JSON.stringify({
           model: model || "google/gemini-2.5-flash",
-          messages: [{ role: "system", content: sys }, ...(messages || [])],
+          messages: [
+            { role: "system", content: sys },
+            ...(memory && typeof memory === "string" && memory.trim()
+              ? [{ role: "system", content: memory }]
+              : []),
+            ...(messages || []),
+          ],
           stream: true,
         }),
       },

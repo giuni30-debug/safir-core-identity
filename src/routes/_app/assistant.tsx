@@ -1,11 +1,18 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useApp } from "@/contexts/AppContext";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft, Send, Mic, Paperclip, Image as ImageIcon, Sparkles,
   Loader2, Plus, Volume2, VolumeX, Wand2, Square, Search, Brain,
+  History, Trash2, Settings as SettingsIcon, MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  useAiMemory, detectMemoryCandidates,
+  createConversation, appendMessage,
+  listConversations, loadMessages, deleteConversation,
+  type AiConversation,
+} from "@/hooks/useAiMemory";
 
 export const Route = createFileRoute("/_app/assistant")({
   component: AssistantPage,
@@ -39,7 +46,7 @@ const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-image`;
 const SUPA_KEY  = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 function AssistantPage() {
-  const { t } = useApp();
+  const { t, user } = useApp();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -47,11 +54,16 @@ function AssistantPage() {
   const [recording, setRecording] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [imageMode, setImageMode] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [conversations, setConversations] = useState<AiConversation[]>([]);
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const recogRef = useRef<unknown>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  const memory = useAiMemory();
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -82,6 +94,7 @@ function AssistantPage() {
         },
         body: JSON.stringify({
           messages: history.map((m) => ({ role: m.role, content: m.content })),
+          memory: memory.memoryPromptBlock(),
         }),
       });
       if (resp.status === 503) { toast.error(t("aiNotConnected")); setLoading(false); return; }
@@ -125,6 +138,10 @@ function AssistantPage() {
         }
       }
       if (autoSpeak && acc) speak(acc);
+      // Persist assistant reply (best effort, don't await)
+      if (user && activeConvId && acc) {
+        void appendMessage(user.id, activeConvId, "assistant", acc);
+      }
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
         console.error(e);
@@ -169,6 +186,24 @@ function AssistantPage() {
     }
   }
 
+  async function ensureConversation(firstUserText: string): Promise<string | null> {
+    if (!user) return null;
+    if (activeConvId) return activeConvId;
+    const title = firstUserText.slice(0, 50).replace(/\s+/g, " ").trim() || "New chat";
+    const id = await createConversation(user.id, title);
+    if (id) setActiveConvId(id);
+    return id;
+  }
+
+  async function autoSaveMemory(text: string) {
+    if (!memory.enabled || !user) return;
+    const cands = detectMemoryCandidates(text);
+    for (const c of cands) {
+      const saved = await memory.addMemory(c.category, c.content);
+      if (saved) toast.success(t("aiMemorySaved"), { description: c.content });
+    }
+  }
+
   function send(prefill?: string) {
     const text = (prefill ?? input).trim();
     if (!text || loading) return;
@@ -178,11 +213,22 @@ function AssistantPage() {
       setMessages(next);
       setImageMode(false);
       generateImage(text);
+      // persist user msg
+      void (async () => {
+        const cid = await ensureConversation(text);
+        if (cid && user) await appendMessage(user.id, cid, "user", text);
+      })();
       return;
     }
     const intent = detectIntent(text);
     const next: Msg[] = [...messages, { role: "user", content: text, intent }];
     setMessages(next);
+    // persist + memory side-effects (don't block UI)
+    void (async () => {
+      const cid = await ensureConversation(text);
+      if (cid && user) await appendMessage(user.id, cid, "user", text);
+      void autoSaveMemory(text);
+    })();
     streamReply(next);
   }
 
@@ -287,13 +333,100 @@ function AssistantPage() {
           {autoSpeak ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
         </button>
         <button
-          onClick={() => { setMessages([]); setImageMode(false); window.speechSynthesis?.cancel(); }}
+          onClick={async () => {
+            if (!user) return;
+            setHistoryOpen(true);
+            const list = await listConversations(user.id);
+            setConversations(list);
+          }}
+          className="press-glow grid h-10 w-10 place-items-center rounded-full border border-border/60 bg-card/40"
+          aria-label={t("aiHistoryTitle")}
+          title={t("aiHistoryTitle")}
+        >
+          <History className="h-5 w-5" />
+        </button>
+        <button
+          onClick={() => {
+            setMessages([]); setImageMode(false); setActiveConvId(null);
+            window.speechSynthesis?.cancel();
+          }}
           className="press-glow grid h-10 w-10 place-items-center rounded-full border border-border/60 bg-card/40"
           aria-label={t("aiNewChat")}
         >
           <Plus className="h-5 w-5" />
         </button>
       </header>
+
+      {/* History drawer */}
+      {historyOpen && (
+        <div className="fixed inset-0 z-50 flex" onClick={() => setHistoryOpen(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative ml-auto h-full w-[86%] max-w-sm overflow-y-auto bg-background/90 p-4 backdrop-blur-xl"
+            style={{ borderLeft: "1px solid color-mix(in oklab, var(--theme-accent) 30%, transparent)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-neon-title text-base flex items-center gap-2">
+                <History className="h-4 w-4" style={{ color: "var(--theme-accent)" }} />
+                {t("aiHistoryTitle")}
+              </h2>
+              <Link
+                to="/settings"
+                onClick={() => setHistoryOpen(false)}
+                className="press-glow inline-flex items-center gap-1 rounded-full border border-border/60 bg-card/40 px-2.5 py-1 text-[10px] font-semibold text-white"
+                title={t("aiMemoryTitle")}
+              >
+                <SettingsIcon className="h-3 w-3" /> {t("aiMemoryTitle")}
+              </Link>
+            </div>
+            {conversations.length === 0 ? (
+              <p className="text-soft text-xs">{t("aiHistoryEmpty")}</p>
+            ) : (
+              <ul className="space-y-2">
+                {conversations.map((c) => (
+                  <li key={c.id} className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        if (!user) return;
+                        const msgs = await loadMessages(user.id, c.id);
+                        setMessages(msgs.map((m) => ({
+                          role: m.role, content: m.content,
+                          imageUrl: m.image_url ?? undefined,
+                        })));
+                        setActiveConvId(c.id);
+                        setHistoryOpen(false);
+                      }}
+                      className="press-glow flex-1 rounded-xl px-3 py-2 text-left glass-card"
+                      style={{ border: "1px solid color-mix(in oklab, var(--theme-accent) 22%, transparent)" }}
+                    >
+                      <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                        <MessageSquare className="h-3.5 w-3.5" style={{ color: "var(--theme-accent)" }} />
+                        <span className="truncate">{c.title}</span>
+                      </div>
+                      <div className="text-soft mt-0.5 text-[10px]">
+                        {new Date(c.updated_at).toLocaleString()}
+                      </div>
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!user) return;
+                        await deleteConversation(user.id, c.id);
+                        setConversations((p) => p.filter((x) => x.id !== c.id));
+                        if (activeConvId === c.id) { setActiveConvId(null); setMessages([]); }
+                      }}
+                      className="press-glow grid h-9 w-9 place-items-center rounded-full border border-border/60 bg-card/40 text-red-400"
+                      aria-label="delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="relative flex-1 overflow-y-auto px-4 py-4">
