@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useLocation } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { CallProvider } from "@/contexts/CallContext";
 
@@ -11,11 +11,15 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppLayout() {
+  const location = useLocation();
   return (
     <CallProvider>
       <div className="app-shell">
         <div className="app-frame">
-          <Outlet />
+          {/* keyed wrapper triggers smooth page-enter on every navigation */}
+          <div key={location.pathname} className="page-enter flex min-h-0 flex-1 flex-col">
+            <Outlet />
+          </div>
         </div>
       </div>
     </CallProvider>
