@@ -162,6 +162,14 @@ function ChatPage() {
   const [activeGift, setActiveGift] = useState<Gift | null>(null);
   const lastSeenGiftId = useRef<string | null>(null);
 
+  // Reaction picker state
+  const [reactionFor, setReactionFor] = useState<string | null>(null);
+
+  // Real-time presence + typing + reactions
+  const presence = usePeerPresence(contactId);
+  const { peerTyping, notifyTyping, stopTyping } = useTypingIndicator(myId, contactId);
+  const { byMessage: reactionsByMsg, toggle: toggleReaction } = useReactions(myId, contactId);
+
   // Load contact profile
   useEffect(() => {
     (async () => {
@@ -174,7 +182,7 @@ function ChatPage() {
     })();
   }, [contactId]);
 
-  // Load messages + subscribe realtime
+  // Load messages + subscribe realtime (INSERT + UPDATE for read receipts)
   useEffect(() => {
     if (!myId || !contactId) return;
     let active = true;
@@ -204,6 +212,18 @@ function ChatPage() {
           setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          const m = payload.new as Message;
+          const inThread =
+            (m.sender_user_id === myId && m.receiver_user_id === contactId) ||
+            (m.sender_user_id === contactId && m.receiver_user_id === myId);
+          if (!inThread) return;
+          setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, ...m } : x)));
+        }
+      )
       .subscribe();
 
     return () => {
@@ -211,6 +231,28 @@ function ChatPage() {
       supabase.removeChannel(channel);
     };
   }, [myId, contactId]);
+
+  // Mark incoming messages as delivered + read whenever the chat is open
+  useEffect(() => {
+    if (!myId || !contactId || messages.length === 0) return;
+    if (document.visibilityState === "hidden") return;
+    const now = new Date().toISOString();
+    const toMark = messages.filter(
+      (m) => m.receiver_user_id === myId && m.sender_user_id === contactId && !m.read_at
+    );
+    if (toMark.length === 0) return;
+    const ids = toMark.map((m) => m.id);
+    // Optimistic local update
+    setMessages((prev) =>
+      prev.map((m) =>
+        ids.includes(m.id) ? { ...m, delivered_at: m.delivered_at ?? now, read_at: now } : m
+      )
+    );
+    void supabase
+      .from("messages")
+      .update({ delivered_at: now, read_at: now })
+      .in("id", ids);
+  }, [messages, myId, contactId]);
 
   // Auto-scroll to bottom
   useEffect(() => {
