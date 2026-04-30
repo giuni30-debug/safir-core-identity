@@ -466,11 +466,16 @@ function ChatPage() {
         ) : (
           grouped.map((m) => {
             const mine = m.sender_user_id === myId;
-            const isVoice = m.message_type === "voice" && m.audio_url;
+            const type = m.message_type;
+            const isVoice = type === "voice" && m.audio_url;
+            const isImage = type === "image" && m.media_url;
+            const isVideo = type === "video" && m.media_url;
+            const isFile = type === "file" && m.media_url;
+            const isMedia = isImage || isVideo;
             return (
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm shadow ${
+                  className={`max-w-[78%] ${isMedia ? "p-1" : "px-3 py-2"} rounded-2xl text-sm shadow ${
                     mine
                       ? "bg-primary/90 text-primary-foreground rounded-br-sm"
                       : "bg-card/60 border border-border rounded-bl-sm"
@@ -478,11 +483,54 @@ function ChatPage() {
                 >
                   {isVoice ? (
                     <VoicePlayer url={m.audio_url!} duration={m.duration_seconds} mine={mine} />
+                  ) : isImage ? (
+                    <a href={m.media_url!} target="_blank" rel="noreferrer" className="block">
+                      <img
+                        src={m.media_url!}
+                        alt={m.file_name ?? "image"}
+                        className="max-h-72 w-auto rounded-xl object-cover"
+                        loading="lazy"
+                      />
+                    </a>
+                  ) : isVideo ? (
+                    <video
+                      src={m.media_url!}
+                      controls
+                      preload="metadata"
+                      className="max-h-72 w-full rounded-xl"
+                    />
+                  ) : isFile ? (
+                    <a
+                      href={m.media_url!}
+                      target="_blank"
+                      rel="noreferrer"
+                      download={m.file_name ?? undefined}
+                      className={`flex items-center gap-2 rounded-xl px-2 py-1 ${
+                        mine ? "bg-primary-foreground/15" : "bg-muted/40"
+                      }`}
+                    >
+                      <span
+                        className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
+                          mine ? "bg-primary-foreground/20" : "bg-primary/80 text-primary-foreground"
+                        }`}
+                      >
+                        <FileIcon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-medium">
+                          {m.file_name ?? "File"}
+                        </span>
+                        <span className="block text-[10px] opacity-70">
+                          {m.file_size != null ? formatBytes(m.file_size) : ""}
+                        </span>
+                      </span>
+                      <Download className="h-4 w-4 opacity-80" />
+                    </a>
                   ) : (
                     <p className="whitespace-pre-wrap break-words">{m.message_text}</p>
                   )}
                   <p
-                    className={`mt-1 text-[10px] ${
+                    className={`${isMedia ? "px-2 pb-1 pt-1" : "mt-1"} text-[10px] ${
                       mine ? "text-primary-foreground/70" : "text-muted-foreground"
                     }`}
                   >
