@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
 import { Settings, Users, MessagesSquare, Calendar, NotebookPen, Wallet, ShoppingBag, Search } from "lucide-react";
+import { HomeInstallBanner } from "@/components/HomeInstallBanner";
 
 export const Route = createFileRoute("/_app/home")({
   component: Home,
