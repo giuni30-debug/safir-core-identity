@@ -83,6 +83,10 @@ function VoiceModeInner({
   const convoIdRef = useRef<string | null>(voiceConversationId ?? null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number | null>(null);
+  // True only after the user explicitly tapped Start. Prevents the cleanup
+  // effect from tearing down a session that was never started.
+  const sessionStartedRef = useRef(false);
+  const connectedOnceRef = useRef(false);
 
   const conversation = useConversation({
     onConnect: () => {
