@@ -2,50 +2,29 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { fetchConversationSignedUrl, fetchConversationToken } from "./elevenlabs.server";
 
-/**
- * Accept ElevenLabs agent ids in either of the two known shapes:
- *   - "agent_" + 16+ alphanumerics (current format)
- *   - 20+ alphanumerics (legacy format)
- * Anything else is rejected with a clear message instead of being forwarded
- * to ElevenLabs (which would 4xx with a confusing body).
- */
 const AGENT_ID_REGEX = /^(?:agent_[A-Za-z0-9]{16,}|[A-Za-z0-9]{20,})$/;
 
-const TokenInput = z.object({
-  agentId: z
-    .string()
-    .trim()
-    .min(8, "Agent ID is too short")
-    .max(128, "Agent ID is too long")
-    .regex(AGENT_ID_REGEX, "Invalid Agent ID format")
-    .optional()
-    .nullable(),
-});
+const EmptyInput = z.object({}).optional();
 
-/**
- * Resolve which agent id to use for a given request.
- * Always prefers the user-supplied id (validated above), and falls back to the
- * server-side ELEVENLABS_AGENT_ID secret only when nothing was provided.
- */
-function resolveAgentId(provided: string | null | undefined): string | null {
-  const trimmed = provided?.trim();
-  if (trimmed) return trimmed;
-  const fallback = process.env.ELEVENLABS_AGENT_ID?.trim();
-  return fallback || null;
+function resolveAgentId(): string | null {
+  const agentId = process.env.ELEVENLABS_AGENT_ID?.trim();
+  if (!agentId) return null;
+  if (!AGENT_ID_REGEX.test(agentId)) throw new Error("Invalid ELEVENLABS_AGENT_ID secret format");
+  return agentId;
 }
 
 /**
  * Returns a short-lived WebRTC token for the given ElevenLabs agent.
  */
 export const getElevenLabsAgentToken = createServerFn({ method: "POST" })
-  .inputValidator((input) => TokenInput.parse(input))
-  .handler(async ({ data }) => {
+  .inputValidator((input) => EmptyInput.parse(input))
+  .handler(async () => {
     try {
-      const agentId = resolveAgentId(data.agentId);
+      const agentId = resolveAgentId();
       if (!agentId) {
         return {
           token: null as string | null,
-          error: "No Agent ID configured. Set one in Voice Assistant Settings.",
+          error: "No Agent ID configured. Add ELEVENLABS_AGENT_ID as a backend secret.",
         };
       }
       const token = await fetchConversationToken(agentId);
@@ -62,14 +41,14 @@ export const getElevenLabsAgentToken = createServerFn({ method: "POST" })
  * Used as a fallback when WebRTC is blocked by the browser/network.
  */
 export const getElevenLabsAgentSignedUrl = createServerFn({ method: "POST" })
-  .inputValidator((input) => TokenInput.parse(input))
-  .handler(async ({ data }) => {
+  .inputValidator((input) => EmptyInput.parse(input))
+  .handler(async () => {
     try {
-      const agentId = resolveAgentId(data.agentId);
+      const agentId = resolveAgentId();
       if (!agentId) {
         return {
           signedUrl: null as string | null,
-          error: "No Agent ID configured. Set one in Voice Assistant Settings.",
+          error: "No Agent ID configured. Add ELEVENLABS_AGENT_ID as a backend secret.",
         };
       }
       const signedUrl = await fetchConversationSignedUrl(agentId);
