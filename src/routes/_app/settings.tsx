@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, ChevronRight, User, Palette, Languages, Bell, LogOut, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, ChevronRight, User, Palette, Languages, Bell, LogOut, Trash2, Download, CheckCircle2 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
+import { onInstallPromptChange, triggerInstall, isStandalone, isIOS } from "@/lib/pwa";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/settings")({
@@ -51,6 +53,8 @@ function SettingsPage() {
         <Row to="/notifications" icon={Bell} label={t("notifications")} />
       </div>
 
+      <InstallRow />
+
       <div className="mt-8 space-y-3">
         <button
           onClick={onLogout}
@@ -92,5 +96,67 @@ function Row({
       <span className="flex-1 text-sm font-medium">{label}</span>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </Link>
+  );
+}
+
+function InstallRow() {
+  const [available, setAvailable] = useState(false);
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    setInstalled(isStandalone());
+    return onInstallPromptChange(setAvailable);
+  }, []);
+
+  if (installed) {
+    return (
+      <div className="mt-6 glass-card flex items-center gap-3 p-4">
+        <div
+          className="grid h-9 w-9 place-items-center rounded-xl"
+          style={{
+            background: "color-mix(in oklab, var(--theme-accent) 15%, transparent)",
+            color: "var(--theme-accent)",
+          }}
+        >
+          <CheckCircle2 className="h-4 w-4" />
+        </div>
+        <span className="flex-1 text-sm font-medium">App installed</span>
+      </div>
+    );
+  }
+
+  const onInstall = async () => {
+    if (available) {
+      const outcome = await triggerInstall();
+      if (outcome === "unavailable") {
+        toast.message(isIOS()
+          ? "On iPhone: tap Share → Add to Home Screen."
+          : "Open this site in your browser to install.");
+      }
+    } else {
+      toast.message(isIOS()
+        ? "On iPhone: tap Share → Add to Home Screen."
+        : "Install option will appear when your browser is ready.");
+    }
+  };
+
+  return (
+    <button
+      onClick={onInstall}
+      className="mt-6 glass-card glass-card-hover flex w-full items-center gap-3 p-4 text-left"
+    >
+      <div
+        className="grid h-9 w-9 place-items-center rounded-xl"
+        style={{
+          background: "var(--gradient-primary)",
+          color: "var(--primary-foreground)",
+          boxShadow: "var(--shadow-glow)",
+        }}
+      >
+        <Download className="h-4 w-4" />
+      </div>
+      <span className="flex-1 text-sm font-medium">Install App</span>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </button>
   );
 }

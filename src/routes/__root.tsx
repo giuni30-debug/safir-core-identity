@@ -2,6 +2,7 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/r
 import appCss from "../styles.css?url";
 import { AppProvider } from "@/contexts/AppContext";
 import { BackgroundFX } from "@/components/BackgroundFX";
+import { PWAManager } from "@/components/PWAManager";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -30,10 +31,18 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" },
       { title: "Safir Private Life" },
       { name: "description", content: "A premium private life companion. Connect, chat, and organize your world." },
-      { name: "theme-color", content: "#0a0e14" },
+      { name: "theme-color", content: "#000000" },
+      { name: "color-scheme", content: "dark" },
+      // Apple PWA
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "Safir" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "format-detection", content: "telephone=no" },
+      // Open Graph
       { property: "og:title", content: "Safir Private Life" },
       { property: "og:description", content: "A premium private life companion. Connect, chat, and organize your world." },
       { property: "og:type", content: "website" },
@@ -43,7 +52,14 @@ export const Route = createRootRoute({
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4690378f-87f4-45e8-b069-0299df76a2b3/id-preview-ddda5fcb--c37270b2-ee89-406c-9f05-d457f52c1094.lovable.app-1777509627875.png" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", href: "/favicon.ico", sizes: "any" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/icon-192.png" },
+      { rel: "icon", type: "image/png", sizes: "512x512", href: "/icons/icon-512.png" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/icons/apple-touch-icon.png" },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -69,6 +85,7 @@ function RootComponent() {
     <AppProvider>
       <BackgroundFX />
       <Outlet />
+      <PWAManager />
       <Toaster />
     </AppProvider>
   );
