@@ -844,7 +844,7 @@ function CallOverlay({
                 className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card/60 backdrop-blur disabled:opacity-40"
                 aria-label="Speaker"
               >
-                {speakerOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                <Volume2 className={speakerOn ? "h-5 w-5 text-primary" : "h-5 w-5"} />
               </button>
             )}
           </>
