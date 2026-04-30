@@ -140,23 +140,56 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     source.start(0);
   }, []);
 
+  // Apply audio output routing without ever muting the remote stream.
+  // - speaker ON  → main loudspeaker (default media output, full volume)
+  // - speaker OFF → earpiece/communications device when supported,
+  //                 otherwise a softer volume as fallback (NEVER muted).
+  const applyAudioRouting = useCallback(async (on: boolean) => {
+    const a = remoteAudioRef.current;
+    if (!a) return;
+    // Always keep the element unmuted so the call voice stays audible.
+    a.muted = false;
+    a.volume = 1;
+    const anyA = a as HTMLAudioElement & {
+      setSinkId?: (id: string) => Promise<void>;
+    };
+    if (typeof anyA.setSinkId === "function") {
+      try {
+        // "" = default media output (loudspeaker on mobile)
+        // "communications" = earpiece/comm device when available
+        await anyA.setSinkId(on ? "" : "communications");
+      } catch (e) {
+        // setSinkId not permitted (e.g. iOS Safari) — fall back to volume only
+        console.warn("[call] setSinkId failed, falling back", e);
+        a.volume = on ? 1 : 0.55;
+      }
+    } else {
+      // No sink selection API — use volume as a soft routing approximation,
+      // but never below an audible level.
+      a.volume = on ? 1 : 0.55;
+    }
+  }, []);
+
   const playRemoteMedia = useCallback(() => {
     const stream = remoteStreamRef.current;
     if (!stream) return;
     if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = stream;
-      remoteAudioRef.current.muted = false;
-      remoteAudioRef.current.volume = 1;
-      remoteAudioRef.current.play().catch((e) => {
+      const a = remoteAudioRef.current;
+      if (a.srcObject !== stream) a.srcObject = stream;
+      a.muted = false;
+      a.volume = 1;
+      a.play().catch((e) => {
         console.warn("remote audio play blocked", e);
         setInfo("Tap speaker to enable audio");
       });
+      // Re-apply current routing whenever we (re)bind the stream.
+      void applyAudioRouting(speakerOnRef.current);
     }
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = stream;
       remoteVideoRef.current.play().catch(() => {});
     }
-  }, []);
+  }, [applyAudioRouting]);
 
   const buildPeer = useCallback(
     (callId: string, peerId: string) => {
