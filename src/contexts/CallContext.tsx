@@ -195,7 +195,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Clean speaker routing: keep the remote track alive, only switch output device.
-  const applyAudioRouting = useCallback(async (on: boolean) => {
+  const applyAudioRouting = useCallback(async () => {
     const earpieceAudio = remoteAudioRef.current as AudioSinkElement | null;
     const speakerAudio = speakerAudioRef.current as AudioSinkElement | null;
     if (!earpieceAudio && !speakerAudio) return;
@@ -226,7 +226,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         console.warn("remote audio play blocked", e);
         setInfo("Tap speaker to enable audio");
       });
-      void applyAudioRouting(speakerOnRef.current);
+      void applyAudioRouting();
     }
     if (speakerAudioRef.current) {
       const a = speakerAudioRef.current;
@@ -464,7 +464,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     // Reroute output WITHOUT muting the stream and WITHOUT touching the
     // peer connection / local mic. Voice keeps flowing throughout.
     void unlockCallAudio()
-      .then(() => applyAudioRouting(next))
+      .then(() => applyAudioRouting())
       .catch((e) => console.warn("[call] speaker toggle routing failed", e));
   };
 
