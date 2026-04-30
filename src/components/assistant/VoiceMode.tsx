@@ -289,7 +289,7 @@ function VoiceModeInner({
             window.clearTimeout(timeout);
             resolve();
           },
-          onError: (message, context) => {
+          onError: (message: string, context?: unknown) => {
             if (settled) return;
             settled = true;
             window.clearTimeout(timeout);
@@ -346,14 +346,20 @@ function VoiceModeInner({
     setOrbState("listening");
     feedback("tap", "tap");
     try {
-      await unlockAudioPlayback();
-      await requestMicStream();
+      await prepareAudioFromTap();
       try {
         await connectWithFallbackRetry();
       } catch (firstErr) {
-        console.warn("ElevenLabs first connection attempt failed; retrying once.", firstErr);
+        console.warn("Connection fail", firstErr);
         toast.error("Voice not connected. Retrying...");
-        await connectWithFallbackRetry();
+        setRetrying(true);
+        retryingRef.current = true;
+        try {
+          await conversation.endSession();
+        } catch {
+          /* ignore */
+        }
+        await connectWithWebSocketFallback();
       }
       console.log("Connection success");
       setPttHeld(true);
@@ -367,8 +373,10 @@ function VoiceModeInner({
       setTimeout(() => setOrbState("idle"), 1200);
     } finally {
       setConnecting(false);
+      setRetrying(false);
+      retryingRef.current = false;
     }
-  }, [connectWithFallbackRetry, requestMicStream, unlockAudioPlayback]);
+  }, [connectWithFallbackRetry, connectWithWebSocketFallback, conversation, prepareAudioFromTap]);
 
   const stop = useCallback(async () => {
     feedback("tap", "tap");
