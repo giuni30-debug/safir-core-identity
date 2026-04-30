@@ -243,17 +243,22 @@ function VoiceModeInner({
   }, [requestMicStream, unlockAudioPlayback]);
 
   const createSessionOptions = useCallback(
-    (connection: { conversationToken: string } | { signedUrl: string }, withOverrides: boolean) => {
+    (
+      connection: { conversationToken: string } | { signedUrl: string },
+      withOverrides: boolean,
+      callbacks: Pick<NonNullable<ElevenLabsStartOptions>, "onConnect" | "onError">,
+    ) => {
       const baseOpts: ElevenLabsStartOptions =
         "conversationToken" in connection
           ? { conversationToken: connection.conversationToken, connectionType: "webrtc" }
           : { signedUrl: connection.signedUrl, connectionType: "websocket" };
-      if (!withOverrides) return baseOpts;
+      if (!withOverrides) return { ...baseOpts, ...callbacks } as ElevenLabsStartOptions;
 
       const language = lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en";
 
       return {
         ...baseOpts,
+        ...callbacks,
         overrides: {
           agent: {
             prompt: { prompt: personalityPrompts[personality] },
@@ -266,19 +271,49 @@ function VoiceModeInner({
     [lang, personality, voiceId],
   );
 
+  const waitForSessionStart = useCallback(
+    (options: ElevenLabsStartOptions) =>
+      new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const timeout = window.setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          reject(new Error("ElevenLabs connection timed out"));
+        }, 18000);
+
+        conversation.startSession({
+          ...options,
+          onConnect: () => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timeout);
+            resolve();
+          },
+          onError: (message, context) => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timeout);
+            reject(context instanceof Error ? context : new Error(String(message || "ElevenLabs connection failed")));
+          },
+        } as ElevenLabsStartOptions);
+      }),
+    [conversation],
+  );
+
   const startElevenLabsSession = useCallback(
     async (transport: "webrtc" | "websocket", withOverrides: boolean) => {
-      const res = await getElevenLabsAgentToken({ data: { agentId: undefined } });
+      const callbacks = { onConnect: () => undefined, onError: () => undefined };
       if (transport === "webrtc") {
+        const res = await getElevenLabsAgentToken({ data: { agentId: undefined } });
         if (!res.token) throw new Error(res.error || "No token returned from server");
-        await conversation.startSession(createSessionOptions({ conversationToken: res.token }, withOverrides));
+        await waitForSessionStart(createSessionOptions({ conversationToken: res.token }, withOverrides, callbacks));
       } else {
         const signed = await getElevenLabsAgentSignedUrl({ data: { agentId: undefined } });
         if (!signed.signedUrl) throw new Error(signed.error || "No signed URL returned from server");
-        await conversation.startSession(createSessionOptions({ signedUrl: signed.signedUrl }, withOverrides));
+        await waitForSessionStart(createSessionOptions({ signedUrl: signed.signedUrl }, withOverrides, callbacks));
       }
     },
-    [conversation, createSessionOptions],
+    [createSessionOptions, waitForSessionStart],
   );
 
   const connectWithFallbackRetry = useCallback(async () => {
