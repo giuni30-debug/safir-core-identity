@@ -327,8 +327,8 @@ export function playSound(id: SoundId, opts?: SpatialOpts): void {
   const spatial = effectiveOpts ? getSpatial(id) : null;
   if (spatial && effectiveOpts && audioCtx) {
     const t = audioCtx.currentTime;
-    if (typeof opts.pan === "number") {
-      const pan = clamp(opts.pan, -1, 1);
+    if (typeof effectiveOpts.pan === "number") {
+      const pan = clamp(effectiveOpts.pan, -1, 1);
       try {
         spatial.panner.pan.cancelScheduledValues(t);
         spatial.panner.pan.setValueAtTime(pan, t);
@@ -336,9 +336,9 @@ export function playSound(id: SoundId, opts?: SpatialOpts): void {
         spatial.panner.pan.value = pan;
       }
     }
-    if (typeof opts.depth === "number") {
+    if (typeof effectiveOpts.depth === "number") {
       // depth: 0 (far, ~35%) → 1 (near, 100%)
-      const d = clamp(opts.depth, 0, 1);
+      const d = clamp(effectiveOpts.depth, 0, 1);
       const g = 0.35 + d * 0.65;
       try {
         spatial.gain.gain.cancelScheduledValues(t);
