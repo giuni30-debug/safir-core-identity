@@ -48,6 +48,11 @@ const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 300 * 1024 * 1024;
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
 const VIDEO_WARN_BYTES = 100 * 1024 * 1024;
+const VOICE_BUCKET = "voice-messages";
+
+type WebkitAudioWindow = Window & {
+  webkitAudioContext?: typeof AudioContext;
+};
 
 function formatBytes(b: number) {
   if (b < 1024) return `${b} B`;
@@ -62,29 +67,93 @@ function formatDuration(s: number) {
   return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
+function extractVoiceObjectPath(value: string) {
+  if (!value) return null;
+  const marker = `/${VOICE_BUCKET}/`;
+  const markerIndex = value.indexOf(marker);
+  if (markerIndex >= 0) {
+    const rawPath = value.slice(markerIndex + marker.length).split("?")[0];
+    try {
+      return decodeURIComponent(rawPath);
+    } catch {
+      return rawPath;
+    }
+  }
+  if (!value.startsWith("http://") && !value.startsWith("https://")) {
+    return value.replace(/^\/+/, "");
+  }
+  return null;
+}
+
+async function createPlayableVoiceUrl(storedUrl: string) {
+  const path = extractVoiceObjectPath(storedUrl);
+  if (!path) return storedUrl;
+  const { data, error } = await supabase.storage
+    .from(VOICE_BUCKET)
+    .createSignedUrl(path, 60 * 60 * 24);
+  if (error || !data?.signedUrl) {
+    console.error("voice signed url error", error);
+    return storedUrl;
+  }
+  return data.signedUrl;
+}
+
 function VoicePlayer({ url, duration, mine }: { url: string; duration: number | null; mine: boolean }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [playableUrl, setPlayableUrl] = useState(url);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPlayableUrl(url);
+    void createPlayableVoiceUrl(url).then((nextUrl) => {
+      if (!cancelled) setPlayableUrl(nextUrl);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
 
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
     const onEnd = () => { setPlaying(false); setProgress(0); };
     const onTime = () => setProgress(a.currentTime);
+    const onError = () => {
+      setPlaying(false);
+      void createPlayableVoiceUrl(url).then((nextUrl) => setPlayableUrl(nextUrl));
+    };
     a.addEventListener("ended", onEnd);
     a.addEventListener("timeupdate", onTime);
+    a.addEventListener("error", onError);
     return () => {
       a.removeEventListener("ended", onEnd);
       a.removeEventListener("timeupdate", onTime);
+      a.removeEventListener("error", onError);
     };
-  }, []);
+  }, [url]);
 
-  const toggle = () => {
+  const toggle = async () => {
     const a = audioRef.current;
     if (!a) return;
     if (playing) { a.pause(); setPlaying(false); }
-    else { a.play(); setPlaying(true); }
+    else {
+      try {
+        await a.play();
+        setPlaying(true);
+      } catch (err) {
+        console.error("voice play error", err);
+        const nextUrl = await createPlayableVoiceUrl(url);
+        setPlayableUrl(nextUrl);
+        window.setTimeout(() => {
+          audioRef.current?.play().then(() => setPlaying(true)).catch((e) => {
+            console.error("voice retry play error", e);
+            setPlaying(false);
+          });
+        }, 50);
+      }
+    }
   };
 
   const total = duration ?? 0;
@@ -113,7 +182,7 @@ function VoicePlayer({ url, duration, mine }: { url: string; duration: number | 
       <span className="text-[10px] tabular-nums opacity-80">
         {formatDuration(playing ? progress : total)}
       </span>
-      <audio ref={audioRef} src={url} preload="metadata" />
+      <audio ref={audioRef} src={playableUrl} preload="metadata" playsInline />
     </div>
   );
 }
@@ -138,6 +207,7 @@ function ChatPage() {
   const [voicePreview, setVoicePreview] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
@@ -293,6 +363,20 @@ function ChatPage() {
     mediaStreamRef.current = null;
   };
 
+  const unlockAudioPlayback = async () => {
+    const AudioContextCtor =
+      window.AudioContext || (window as WebkitAudioWindow).webkitAudioContext;
+    if (!AudioContextCtor) return;
+    const ctx = audioContextRef.current ?? new AudioContextCtor();
+    audioContextRef.current = ctx;
+    if (ctx.state === "suspended") await ctx.resume();
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+  };
+
   const onSend = async (e: FormEvent) => {
     e.preventDefault();
     const body = text.trim();
@@ -336,6 +420,7 @@ function ChatPage() {
   const startRecording = async () => {
     setPermissionError(null);
     try {
+      await unlockAudioPlayback();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
@@ -428,24 +513,18 @@ function ChatPage() {
       const ext = voicePreview.blob.type.includes("mp4") ? "m4a" : "webm";
       const path = `${myId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage
-        .from("voice-messages")
+        .from(VOICE_BUCKET)
         .upload(path, voicePreview.blob, {
           contentType: voicePreview.blob.type || "audio/webm",
           upsert: false,
         });
       if (upErr) throw upErr;
-      // Bucket is private — sign a long-lived URL (10 years).
-      const { data: signed, error: signErr } = await supabase.storage
-        .from("voice-messages")
-        .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-      if (signErr || !signed) throw signErr ?? new Error("sign failed");
-      const audioUrl = signed.signedUrl;
 
       const { error: insErr } = await supabase.from("messages").insert({
         sender_user_id: myId,
         receiver_user_id: contactId,
         message_type: "voice",
-        audio_url: audioUrl,
+        audio_url: `/${VOICE_BUCKET}/${path}`,
         duration_seconds: voicePreview.duration,
         message_text: null,
       });
@@ -720,8 +799,8 @@ function ChatPage() {
             return (
               <div key={m.id} className={`msg-in flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div className="group relative max-w-[78%]">
-                  <button
-                    type="button"
+                  <div
+                    role="group"
                     onContextMenu={(e) => {
                       e.preventDefault();
                       setReactionFor(isPickerOpen ? null : m.id);
@@ -809,7 +888,7 @@ function ChatPage() {
                         {mine && <MessageStatus message={m} />}
                       </div>
                     </div>
-                  </button>
+                  </div>
 
                   {/* Add-reaction trigger */}
                   <button

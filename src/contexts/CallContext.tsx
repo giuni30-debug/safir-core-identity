@@ -59,6 +59,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const callIdRef = useRef<string | null>(null);
   const peerIdRef = useRef<string | null>(null);
@@ -124,6 +125,39 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const unlockCallAudio = useCallback(async () => {
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) return;
+    const ctx = audioContextRef.current ?? new AudioContextCtor();
+    audioContextRef.current = ctx;
+    if (ctx.state === "suspended") await ctx.resume();
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+  }, []);
+
+  const playRemoteMedia = useCallback(() => {
+    const stream = remoteStreamRef.current;
+    if (!stream) return;
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = stream;
+      remoteAudioRef.current.muted = false;
+      remoteAudioRef.current.volume = 1;
+      remoteAudioRef.current.play().catch((e) => {
+        console.warn("remote audio play blocked", e);
+        setInfo("Tap speaker to enable audio");
+      });
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = stream;
+      remoteVideoRef.current.play().catch(() => {});
+    }
+  }, []);
+
   const buildPeer = useCallback(
     (callId: string, peerId: string) => {
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
@@ -142,14 +176,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           }
           if (t.kind === "video") setHasRemoteVideo(true);
         });
-        if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = remoteStream;
-          remoteAudioRef.current.play().catch(() => {});
-        }
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remoteStream;
-          remoteVideoRef.current.play().catch(() => {});
-        }
+        playRemoteMedia();
       };
       pc.onconnectionstatechange = () => {
         if (pc.connectionState === "failed") {
@@ -161,7 +188,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       return pc;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sendSignal],
+    [playRemoteMedia, sendSignal],
   );
 
   const handleEnd = useCallback(
@@ -217,6 +244,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       setInfo(null);
       facingRef.current = "user";
+      await unlockCallAudio();
 
       const { data: peer } = await supabase
         .from("profiles")
@@ -272,7 +300,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         media,
       });
     },
-    [myId, state.kind, buildPeer, sendSignal, getLocalMedia],
+    [myId, state.kind, buildPeer, sendSignal, getLocalMedia, unlockCallAudio],
   );
 
   const startCall = useCallback((id: string) => startCallInternal(id, "audio"), [startCallInternal]);
@@ -282,6 +310,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const acceptIncoming = useCallback(async () => {
     if (state.kind !== "incoming" || !myId) return;
     const { callId, peer, offer, media } = state;
+    await unlockCallAudio();
 
     const stream = await getLocalMedia(media);
     if (!stream) {
@@ -315,7 +344,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     await updateCallStatus(callId, "accepted");
 
     setState({ kind: "active", callId, peer, role: "callee", startedAt: Date.now(), media });
-  }, [state, myId, buildPeer, sendSignal, updateCallStatus, cleanup, getLocalMedia]);
+  }, [state, myId, buildPeer, sendSignal, updateCallStatus, cleanup, getLocalMedia, unlockCallAudio]);
 
   const declineIncoming = useCallback(async () => {
     if (state.kind !== "incoming") return;
@@ -340,6 +369,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (!a) return;
     const next = !speakerOn;
     a.muted = !next;
+    if (next) {
+      void unlockCallAudio().then(playRemoteMedia);
+    }
     setSpeakerOn(next);
   };
 
@@ -381,11 +413,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       localVideoRef.current.srcObject = localStreamRef.current;
       localVideoRef.current.play().catch(() => {});
     }
-    if (state.kind === "active" && remoteVideoRef.current && remoteStreamRef.current) {
-      remoteVideoRef.current.srcObject = remoteStreamRef.current;
-      remoteVideoRef.current.play().catch(() => {});
+    if (state.kind === "active") {
+      playRemoteMedia();
     }
-  }, [state]);
+  }, [state, playRemoteMedia]);
 
   // ---- Elapsed timer ----
   useEffect(() => {
