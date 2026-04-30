@@ -169,20 +169,39 @@ function AssistantPage() {
     }
   }
 
-  function send() {
-    const text = input.trim();
+  function send(prefill?: string) {
+    const text = (prefill ?? input).trim();
     if (!text || loading) return;
-    setInput("");
+    if (!prefill) setInput("");
     if (imageMode) {
-      const next: Msg[] = [...messages, { role: "user", content: text }];
+      const next: Msg[] = [...messages, { role: "user", content: text, intent: "image" }];
       setMessages(next);
       setImageMode(false);
       generateImage(text);
       return;
     }
-    const next: Msg[] = [...messages, { role: "user", content: text }];
+    const intent = detectIntent(text);
+    const next: Msg[] = [...messages, { role: "user", content: text, intent }];
     setMessages(next);
     streamReply(next);
+  }
+
+  function followUp(kind: "simpler" | "details" | "translate" | "summarize", anchor: string) {
+    const map = {
+      simpler:   `Explain the previous answer in simpler words. Original topic: """${anchor.slice(0, 400)}"""`,
+      details:   `Give more in-depth details and concrete examples about your previous answer. Topic: """${anchor.slice(0, 400)}"""`,
+      translate: `Translate your previous answer. If it was in English, translate to Romanian; otherwise translate to English. Original: """${anchor.slice(0, 600)}"""`,
+      summarize: `Summarize your previous answer in 5 short bullet points. Original: """${anchor.slice(0, 600)}"""`,
+    } as const;
+    send(map[kind]);
+  }
+
+  function searchDeeper() {
+    toast.message(t("aiLiveUnavailable"));
+  }
+
+  function toggleSources(idx: number) {
+    setMessages((p) => p.map((m, i) => (i === idx ? { ...m, showSources: !m.showSources } : m)));
   }
 
   function stop() {
