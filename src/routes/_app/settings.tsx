@@ -327,3 +327,71 @@ function InstallRow() {
     </button>
   );
 }
+
+function SoundSettingsPanel() {
+  const { t } = useApp();
+  const { prefs, setPrefs } = useSoundPrefs();
+  return (
+    <div className="space-y-4">
+      {/* Sounds toggle */}
+      <label className="flex items-center gap-3">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/5 text-[var(--theme-accent)]">
+          {prefs.soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+        </span>
+        <span className="flex-1 text-sm font-medium">{t("soundEnabled")}</span>
+        <input
+          type="checkbox"
+          checked={prefs.soundEnabled}
+          onChange={(e) => setPrefs({ soundEnabled: e.target.checked })}
+          className="h-5 w-9 cursor-pointer appearance-none rounded-full bg-white/10 transition-all checked:bg-[var(--theme-accent)] relative before:absolute before:left-0.5 before:top-0.5 before:h-4 before:w-4 before:rounded-full before:bg-white before:transition-transform checked:before:translate-x-4"
+        />
+      </label>
+
+      {/* Volume slider */}
+      <div className="flex items-center gap-3">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/5 text-[var(--theme-accent)]">
+          <Volume2 className="h-4 w-4" />
+        </span>
+        <span className="text-sm font-medium">{t("volume")}</span>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(prefs.volume * 100)}
+          onChange={(e) => setPrefs({ volume: Number(e.target.value) / 100 })}
+          disabled={!prefs.soundEnabled}
+          className="flex-1 accent-[var(--theme-accent)] disabled:opacity-40"
+        />
+        <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
+          {Math.round(prefs.volume * 100)}
+        </span>
+        <button
+          type="button"
+          onClick={() => playSound("notification")}
+          disabled={!prefs.soundEnabled}
+          aria-label={t("testSound")}
+          className="press-glow grid h-9 w-9 place-items-center rounded-xl bg-white/5 text-[var(--theme-accent)] disabled:opacity-40"
+        >
+          <Play className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Haptics toggle */}
+      <label className="flex items-center gap-3">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/5 text-[var(--theme-accent)]">
+          <Vibrate className="h-4 w-4" />
+        </span>
+        <span className="flex-1 text-sm font-medium">{t("hapticsEnabled")}</span>
+        <input
+          type="checkbox"
+          checked={prefs.hapticsEnabled}
+          onChange={(e) => {
+            setPrefs({ hapticsEnabled: e.target.checked });
+            if (e.target.checked) vibrate("medium");
+          }}
+          className="h-5 w-9 cursor-pointer appearance-none rounded-full bg-white/10 transition-all checked:bg-[var(--theme-accent)] relative before:absolute before:left-0.5 before:top-0.5 before:h-4 before:w-4 before:rounded-full before:bg-white before:transition-transform checked:before:translate-x-4"
+        />
+      </label>
+    </div>
+  );
+}
