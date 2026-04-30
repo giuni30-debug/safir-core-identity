@@ -232,7 +232,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       remoteVideoRef.current.srcObject = stream;
       remoteVideoRef.current.play().catch(() => {});
     }
-  }, [applyAudioRouting]);
+  }, [applyAudioRouting, getRemotePlaybackStream]);
 
   const buildPeer = useCallback(
     (callId: string, peerId: string) => {
