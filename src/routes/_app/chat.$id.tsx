@@ -358,6 +358,80 @@ function ChatPage() {
     }
   };
 
+  // ---- Attachments ----
+  const pickAttachment = (kind: "image" | "video" | "file") => {
+    setAttachError(null);
+    setAttachMenuOpen(false);
+    if (kind === "image") imageInputRef.current?.click();
+    else if (kind === "video") videoInputRef.current?.click();
+    else fileInputRef.current?.click();
+  };
+
+  const onAttachChange = (
+    kind: "image" | "video" | "file",
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const limit =
+      kind === "image" ? MAX_IMAGE_BYTES : kind === "video" ? MAX_VIDEO_BYTES : MAX_FILE_BYTES;
+    const limitLabel =
+      kind === "image" ? "10MB" : kind === "video" ? "100MB" : "50MB";
+    if (file.size > limit) {
+      setAttachError(`File too large. Max ${limitLabel}.`);
+      return;
+    }
+    if (attachment && "url" in attachment) URL.revokeObjectURL(attachment.url);
+    if (kind === "file") {
+      setAttachment({ kind: "file", file });
+    } else {
+      setAttachment({ kind, file, url: URL.createObjectURL(file) });
+    }
+  };
+
+  const discardAttachment = () => {
+    if (attachment && "url" in attachment) URL.revokeObjectURL(attachment.url);
+    setAttachment(null);
+    setAttachError(null);
+  };
+
+  const sendAttachment = async () => {
+    if (!attachment || !myId || sending) return;
+    setSending(true);
+    try {
+      const file = attachment.file;
+      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+      const path = `${myId}/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+      const { error: upErr } = await supabase.storage
+        .from("chat-media")
+        .upload(path, file, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("chat-media").getPublicUrl(path);
+      const url = pub.publicUrl;
+
+      const { error: insErr } = await supabase.from("messages").insert({
+        sender_user_id: myId,
+        receiver_user_id: contactId,
+        message_type: attachment.kind,
+        media_url: url,
+        file_name: file.name,
+        file_size: file.size,
+        message_text: null,
+      });
+      if (insErr) throw insErr;
+      discardAttachment();
+    } catch (err) {
+      console.error("attachment send error", err);
+      setAttachError("Failed to send. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const fmtTime = (iso: string) =>
     new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
