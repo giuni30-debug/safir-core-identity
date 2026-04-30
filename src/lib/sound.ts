@@ -145,6 +145,18 @@ let initialized = false;
 let ringtoneEl: HTMLAudioElement | null = null;
 let vibrationLoopId: number | null = null;
 
+// Last known pointer X (viewport coords). Used to subtly pan ambient UI sounds
+// like "tap" so audio cues feel like they originate from the touched location.
+let lastPointerX: number | null = null;
+let lastPointerAt = 0;
+
+/** Read the most recent pointer X (or null if too stale / never set). */
+function recentPointerX(maxAgeMs = 1500): number | null {
+  if (lastPointerX == null) return null;
+  if (performance.now() - lastPointerAt > maxAgeMs) return null;
+  return lastPointerX;
+}
+
 // ---------------- Spatial audio (WebAudio) ----------------
 // We route HTMLAudio through a MediaElementSource → Panner → Gain → destination.
 // This gives us cheap stereo panning + a "depth" gain so callers can imply
