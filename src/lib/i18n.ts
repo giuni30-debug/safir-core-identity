@@ -235,6 +235,22 @@ const en = {
   trUploadPhoto: "Upload photo",
   trUploadDocument: "Upload document",
   trDetect: "Auto detect",
+  // Assistant premium
+  aiSugExplain: "Explain this",
+  aiSugSummarize: "Summarize",
+  aiSugTranslate: "Translate",
+  aiSugPlan: "Make a plan",
+  aiCreateImage: "Create image",
+  aiAutoSpeak: "Auto speak",
+  aiAdvancedSoon: "Advanced mode coming soon",
+  aiImagePrompt: "Describe the image to generate…",
+  aiGenerating: "Generating image…",
+  aiStop: "Stop",
+  // Translator premium
+  trConvHint: "Tap a side to speak",
+  trAutoSpeak: "Auto speak",
+  trYou: "You",
+  trPartner: "Partner",
 } as const;
 
 const ro: Record<keyof typeof en, string> = {
@@ -454,6 +470,20 @@ const ro: Record<keyof typeof en, string> = {
   trUploadPhoto: "Încarcă poză",
   trUploadDocument: "Încarcă document",
   trDetect: "Detectare automată",
+  aiSugExplain: "Explică asta",
+  aiSugSummarize: "Rezumă",
+  aiSugTranslate: "Traduce",
+  aiSugPlan: "Fă un plan",
+  aiCreateImage: "Creează imagine",
+  aiAutoSpeak: "Citește răspunsul",
+  aiAdvancedSoon: "Modul avansat în curând",
+  aiImagePrompt: "Descrie imaginea pe care vrei să o generezi…",
+  aiGenerating: "Se generează imaginea…",
+  aiStop: "Oprește",
+  trConvHint: "Atinge o parte ca să vorbești",
+  trAutoSpeak: "Citește traducerea",
+  trYou: "Tu",
+  trPartner: "Partener",
 };
 
 const tr: Record<keyof typeof en, string> = {
@@ -673,6 +703,20 @@ const tr: Record<keyof typeof en, string> = {
   trUploadPhoto: "Fotoğraf yükle",
   trUploadDocument: "Belge yükle",
   trDetect: "Otomatik algıla",
+  aiSugExplain: "Bunu açıkla",
+  aiSugSummarize: "Özetle",
+  aiSugTranslate: "Çevir",
+  aiSugPlan: "Plan yap",
+  aiCreateImage: "Görsel oluştur",
+  aiAutoSpeak: "Sesli oku",
+  aiAdvancedSoon: "Gelişmiş mod yakında",
+  aiImagePrompt: "Oluşturulacak görseli tarif et…",
+  aiGenerating: "Görsel oluşturuluyor…",
+  aiStop: "Durdur",
+  trConvHint: "Konuşmak için bir tarafa dokun",
+  trAutoSpeak: "Çeviriyi seslendir",
+  trYou: "Sen",
+  trPartner: "Partner",
 };
 
 const de: Record<keyof typeof en, string> = {
@@ -892,6 +936,20 @@ const de: Record<keyof typeof en, string> = {
   trUploadPhoto: "Foto hochladen",
   trUploadDocument: "Dokument hochladen",
   trDetect: "Auto-erkennen",
+  aiSugExplain: "Das erklären",
+  aiSugSummarize: "Zusammenfassen",
+  aiSugTranslate: "Übersetzen",
+  aiSugPlan: "Plan erstellen",
+  aiCreateImage: "Bild erstellen",
+  aiAutoSpeak: "Vorlesen",
+  aiAdvancedSoon: "Erweiterter Modus bald verfügbar",
+  aiImagePrompt: "Beschreibe das zu erzeugende Bild…",
+  aiGenerating: "Bild wird erstellt…",
+  aiStop: "Stopp",
+  trConvHint: "Tippe eine Seite an, um zu sprechen",
+  trAutoSpeak: "Übersetzung vorlesen",
+  trYou: "Du",
+  trPartner: "Partner",
 };
 
 export const translations = { en, ro, tr, de } as const;
