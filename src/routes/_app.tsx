@@ -1,8 +1,10 @@
 import { createFileRoute, Link, Outlet, redirect, useLocation } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CallProvider } from "@/contexts/CallContext";
 import { useApp } from "@/contexts/AppContext";
 import { usePresenceHeartbeat } from "@/hooks/usePresence";
+import { initSoundEngine } from "@/lib/sound";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async () => {
@@ -17,6 +19,11 @@ function AppLayout() {
   const { user } = useApp();
   // Broadcast online presence while signed in & inside the app
   usePresenceHeartbeat(user?.id ?? null);
+
+  // Preload premium sound pack once on app entry
+  useEffect(() => {
+    initSoundEngine();
+  }, []);
 
   return (
     <CallProvider>

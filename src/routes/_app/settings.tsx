@@ -3,11 +3,14 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft, ChevronRight, User, Languages, Bell, LogOut, Trash2,
   Download, CheckCircle2, Palette, Image as ImageIcon, Sparkles, Sun, Zap, CircleOff, Brain,
+  Volume2, VolumeX, Vibrate, Play,
 } from "lucide-react";
 import { useApp, type ThemeColor, type BgKind, type AnimKind } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { onInstallPromptChange, triggerInstall, isStandalone, isIOS } from "@/lib/pwa";
 import { toast } from "sonner";
+import { useSoundPrefs } from "@/hooks/useSoundPrefs";
+import { playSound, vibrate } from "@/lib/sound";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -135,7 +138,16 @@ function SettingsPage() {
         />
       </Section>
 
-      {/* ===== Account ===== */}
+      {/* ===== Sounds & Haptics ===== */}
+      <Section
+        title={t("soundsTitle")}
+        subtitle={t("soundsSubtitle")}
+        icon={Volume2}
+      >
+        <SoundSettingsPanel />
+      </Section>
+
+
       <p className="mt-8 mb-3 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {t("account")}
       </p>
@@ -313,5 +325,73 @@ function InstallRow() {
       <span className="flex-1 text-sm font-medium">{t("installApp")}</span>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </button>
+  );
+}
+
+function SoundSettingsPanel() {
+  const { t } = useApp();
+  const { prefs, setPrefs } = useSoundPrefs();
+  return (
+    <div className="space-y-4">
+      {/* Sounds toggle */}
+      <label className="flex items-center gap-3">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/5 text-[var(--theme-accent)]">
+          {prefs.soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+        </span>
+        <span className="flex-1 text-sm font-medium">{t("soundEnabled")}</span>
+        <input
+          type="checkbox"
+          checked={prefs.soundEnabled}
+          onChange={(e) => setPrefs({ soundEnabled: e.target.checked })}
+          className="h-5 w-9 cursor-pointer appearance-none rounded-full bg-white/10 transition-all checked:bg-[var(--theme-accent)] relative before:absolute before:left-0.5 before:top-0.5 before:h-4 before:w-4 before:rounded-full before:bg-white before:transition-transform checked:before:translate-x-4"
+        />
+      </label>
+
+      {/* Volume slider */}
+      <div className="flex items-center gap-3">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/5 text-[var(--theme-accent)]">
+          <Volume2 className="h-4 w-4" />
+        </span>
+        <span className="text-sm font-medium">{t("volume")}</span>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(prefs.volume * 100)}
+          onChange={(e) => setPrefs({ volume: Number(e.target.value) / 100 })}
+          disabled={!prefs.soundEnabled}
+          className="flex-1 accent-[var(--theme-accent)] disabled:opacity-40"
+        />
+        <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
+          {Math.round(prefs.volume * 100)}
+        </span>
+        <button
+          type="button"
+          onClick={() => playSound("notification")}
+          disabled={!prefs.soundEnabled}
+          aria-label={t("testSound")}
+          className="press-glow grid h-9 w-9 place-items-center rounded-xl bg-white/5 text-[var(--theme-accent)] disabled:opacity-40"
+        >
+          <Play className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Haptics toggle */}
+      <label className="flex items-center gap-3">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/5 text-[var(--theme-accent)]">
+          <Vibrate className="h-4 w-4" />
+        </span>
+        <span className="flex-1 text-sm font-medium">{t("hapticsEnabled")}</span>
+        <input
+          type="checkbox"
+          checked={prefs.hapticsEnabled}
+          onChange={(e) => {
+            setPrefs({ hapticsEnabled: e.target.checked });
+            if (e.target.checked) vibrate("medium");
+          }}
+          className="h-5 w-9 cursor-pointer appearance-none rounded-full bg-white/10 transition-all checked:bg-[var(--theme-accent)] relative before:absolute before:left-0.5 before:top-0.5 before:h-4 before:w-4 before:rounded-full before:bg-white before:transition-transform checked:before:translate-x-4"
+        />
+      </label>
+    </div>
   );
 }

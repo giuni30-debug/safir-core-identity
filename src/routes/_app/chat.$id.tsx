@@ -15,6 +15,7 @@ import { decodeGiftMessage, encodeGiftMessage, type Gift } from "@/components/ch
 import { usePeerPresence, formatLastSeen } from "@/hooks/usePresence";
 import { useTypingIndicator } from "@/hooks/useTyping";
 import { useReactions } from "@/hooks/useReactions";
+import { playSound, vibrate } from "@/lib/sound";
 
 export const Route = createFileRoute("/_app/chat/$id")({
   component: ChatPage,
@@ -209,7 +210,15 @@ function ChatPage() {
             (m.sender_user_id === myId && m.receiver_user_id === contactId) ||
             (m.sender_user_id === contactId && m.receiver_user_id === myId);
           if (!inThread) return;
-          setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+          setMessages((prev) => {
+            if (prev.some((x) => x.id === m.id)) return prev;
+            // Play receive sound only for incoming messages from peer
+            if (m.sender_user_id === contactId) {
+              playSound("receive");
+              vibrate("light");
+            }
+            return [...prev, m];
+          });
         }
       )
       .on(
@@ -291,6 +300,8 @@ function ChatPage() {
     setSending(true);
     setText("");
     stopTyping();
+    playSound("send");
+    vibrate("light");
     const { error } = await supabase
       .from("messages")
       .insert({
