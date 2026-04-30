@@ -3,6 +3,7 @@ import { useApp } from "@/contexts/AppContext";
 import {
   ArrowLeft, Settings, Users, MessagesSquare, Calendar,
   NotebookPen, Wallet, ShoppingBag, Search, CalendarClock,
+  CreditCard,
 } from "lucide-react";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 
@@ -32,6 +33,7 @@ function Dashboard() {
     { to: "/expenses" as const,     icon: Wallet,         label: t("expenses"),   color: "oklch(0.70 0.22 25)"  },
     { to: "/appointments" as const, icon: CalendarClock,  label: t("appointments"),  color: "oklch(0.82 0.16 200)" },
     { to: "/shopping" as const,     icon: ShoppingBag,    label: t("shopping"),   color: "oklch(0.78 0.18 55)"  },
+    { to: "/wallet" as const,       icon: CreditCard,     label: t("wallet"),     color: "oklch(0.75 0.18 160)" },
   ];
 
   // Translate the whole view as the user swipes right

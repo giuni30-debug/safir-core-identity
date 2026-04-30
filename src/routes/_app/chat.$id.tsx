@@ -485,54 +485,106 @@ function ChatPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-3rem)] flex-col animate-[fade-in_0.4s_ease-out]">
-      <header className="flex items-center gap-3">
+      <header
+        className="relative flex items-center gap-2.5 rounded-3xl border px-3 py-2.5"
+        style={{
+          borderColor: "color-mix(in oklab, var(--theme-accent) 30%, transparent)",
+          background:
+            "linear-gradient(135deg, color-mix(in oklab, var(--theme-accent) 10%, transparent), oklch(1 0 0 / 3%))",
+          backdropFilter: "blur(28px) saturate(160%)",
+          WebkitBackdropFilter: "blur(28px) saturate(160%)",
+          boxShadow:
+            "0 0 18px color-mix(in oklab, var(--theme-accent) 22%, transparent), inset 0 1px 0 oklch(1 0 0 / 8%), 0 8px 28px oklch(0 0 0 / 45%)",
+        }}
+      >
+        {/* Soft moving glass reflection across the header */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl"
+          style={{
+            background:
+              "linear-gradient(120deg, transparent 30%, oklch(1 0 0 / 10%) 50%, transparent 70%)",
+            backgroundSize: "200% 100%",
+            animation: "wave-drift 6s linear infinite",
+            mixBlendMode: "screen",
+          }}
+        />
+
         <Link
           to="/contacts"
           aria-label="Back"
-          className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card/40"
+          className="press-glow relative grid h-10 w-10 place-items-center rounded-2xl border border-border bg-card/40"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <Avatar url={contact?.avatar_url ?? null} name={contact?.display_name ?? "?"} size={40} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{contact?.display_name ?? "…"}</p>
-          <p className="truncate text-xs text-muted-foreground">@{contact?.username ?? "…"}</p>
+
+        {/* Avatar with animated neon ring + online dot */}
+        <div className="relative shrink-0">
+          <span
+            aria-hidden
+            className="absolute inset-[-3px] rounded-full"
+            style={{
+              background:
+                "conic-gradient(from var(--neon-angle, 0deg), var(--theme-accent), color-mix(in oklab, var(--theme-accent) 30%, transparent), var(--theme-accent))",
+              animation: "neon-rotate 6s linear infinite",
+              padding: 2,
+              WebkitMask:
+                "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+              WebkitMaskComposite: "xor",
+              mask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+              maskComposite: "exclude",
+              filter: "drop-shadow(0 0 6px var(--theme-accent))",
+            }}
+          />
+          <Avatar url={contact?.avatar_url ?? null} name={contact?.display_name ?? "?"} size={40} />
+          {/* Online dot */}
+          <span
+            aria-hidden
+            className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2"
+            style={{
+              background: contact ? "#22c55e" : "#6b7280",
+              boxShadow: contact ? "0 0 8px #22c55e" : "none",
+              ["--tw-ring-color" as any]: "var(--background)",
+              animation: contact ? "neon-pulse 2.4s ease-in-out infinite" : undefined,
+            }}
+          />
         </div>
-        <button
-          type="button"
+
+        <div className="relative min-w-0 flex-1">
+          <p
+            className="truncate text-sm font-semibold"
+            style={{
+              color: "#fff",
+              textShadow: "0 0 10px color-mix(in oklab, var(--theme-accent) 45%, transparent)",
+            }}
+          >
+            {contact?.display_name ?? "…"}
+          </p>
+          <p className="text-soft truncate text-xs">@{contact?.username ?? "…"}</p>
+        </div>
+
+        <FloatingHeaderButton
           onClick={() => { if (contact) void startCall(contactId); }}
           disabled={!contact || inCall}
-          aria-label="Audio call"
-          className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card/40 text-primary disabled:opacity-40"
-          style={{ boxShadow: contact && !inCall ? "var(--shadow-glow)" : undefined }}
+          ariaLabel="Audio call"
         >
           <Phone className="h-5 w-5" />
-        </button>
-        <button
-          type="button"
+        </FloatingHeaderButton>
+        <FloatingHeaderButton
           onClick={() => { if (contact) void startVideoCall(contactId); }}
           disabled={!contact || inCall}
-          aria-label="Video call"
-          className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card/40 text-primary disabled:opacity-40"
-          style={{ boxShadow: contact && !inCall ? "var(--shadow-glow)" : undefined }}
+          ariaLabel="Video call"
         >
           <VideoIcon className="h-5 w-5" />
-        </button>
-        <button
-          type="button"
+        </FloatingHeaderButton>
+        <FloatingHeaderButton
           onClick={() => setGiftOpen(true)}
           disabled={!contact}
-          aria-label="Send gift"
-          className="press-glow grid h-11 w-11 place-items-center rounded-2xl border bg-card/40 disabled:opacity-40"
-          style={{
-            color: "var(--theme-accent)",
-            borderColor: "color-mix(in oklab, var(--theme-accent) 60%, transparent)",
-            boxShadow:
-              "0 0 16px color-mix(in oklab, var(--theme-accent) 45%, transparent), inset 0 0 8px color-mix(in oklab, var(--theme-accent) 18%, transparent)",
-          }}
+          ariaLabel="Send gift"
+          intense
         >
           <GiftIcon className="h-5 w-5" />
-        </button>
+        </FloatingHeaderButton>
       </header>
 
       <div
@@ -898,5 +950,37 @@ function ChatPage() {
       <GiftSheet open={giftOpen} onClose={() => setGiftOpen(false)} onSend={(g) => void sendGift(g)} />
       {activeGift && <GiftFX gift={activeGift} onDone={() => setActiveGift(null)} />}
     </div>
+  );
+}
+
+function FloatingHeaderButton({
+  children, onClick, disabled, ariaLabel, intense,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  ariaLabel: string;
+  intense?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      className="press-glow relative grid h-10 w-10 place-items-center rounded-full transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
+      style={{
+        background: intense
+          ? "linear-gradient(135deg, color-mix(in oklab, var(--theme-accent) 35%, transparent), color-mix(in oklab, var(--theme-accent) 8%, transparent))"
+          : "linear-gradient(135deg, oklch(1 0 0 / 8%), oklch(1 0 0 / 3%))",
+        border: `1.5px solid color-mix(in oklab, var(--theme-accent) ${intense ? 75 : 50}%, transparent)`,
+        color: "var(--theme-accent)",
+        boxShadow: intense
+          ? "0 0 18px color-mix(in oklab, var(--theme-accent) 60%, transparent), inset 0 0 10px color-mix(in oklab, var(--theme-accent) 25%, transparent)"
+          : "0 0 12px color-mix(in oklab, var(--theme-accent) 35%, transparent), inset 0 1px 0 oklch(1 0 0 / 12%)",
+      }}
+    >
+      {children}
+    </button>
   );
 }
