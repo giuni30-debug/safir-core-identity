@@ -302,8 +302,14 @@ function VoiceModeInner({
         throw tokenErr;
       }
 
-      // STEP 4 — single WebRTC attempt → wait for onConnect, fallback to WebSocket once.
-      const tryConnect = (opts: Parameters<typeof conversation.startSession>[0]) =>
+      console.log("[voice] session created");
+
+      // STEP 4 — single WebRTC attempt with short timeout → fallback to WebSocket.
+      const tryConnect = (
+        opts: Parameters<typeof conversation.startSession>[0],
+        timeoutMs: number,
+        label: string,
+      ) =>
         new Promise<void>((resolve, reject) => {
           let settled = false;
           const onConnectOnce = () => {
@@ -321,8 +327,8 @@ function VoiceModeInner({
           const timer = window.setTimeout(() => {
             if (settled) return;
             settled = true;
-            reject(new Error("ElevenLabs connection timed out"));
-          }, 15000);
+            reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+          }, timeoutMs);
           try {
             const ret = conversation.startSession({
               ...opts,
