@@ -194,21 +194,35 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [releaseLocalAudioProcessing]);
 
   const applyAudioRouting = useCallback(async () => {
-    const audio = remoteAudioRef.current as AudioSinkElement | null;
-    if (!audio) return;
-    prepareCallAudioElement(audio);
-    audio.muted = false;
-    if (typeof audio.setSinkId !== "function") return;
+    forceNativeCallAudioSession();
+    const targets = [remoteAudioRef.current, remoteVideoRef.current].filter(Boolean) as AudioSinkElement[];
+    if (remoteAudioRef.current) {
+      prepareCallAudioElement(remoteAudioRef.current);
+      remoteAudioRef.current.muted = false;
+    }
     try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
+      const devices = await navigator.mediaDevices?.enumerateDevices?.();
       const outputs = devices.filter((d) => d.kind === "audiooutput");
       const normalize = (v: string) => v.toLowerCase();
-      const earpiece = outputs.find((d) => /earpiece|receiver|phone|communication|comunicare|cască|casca/.test(normalize(d.label)))?.deviceId;
-      await audio.setSinkId(earpiece || "communications");
+      const loudspeakerPattern = /speaker|loudspeaker|difuzor|media|handsfree|external|bluetooth|airplay|hdmi|usb|cast|default/;
+      const earpiece = outputs.find((d) => {
+        const label = normalize(d.label);
+        return /earpiece|receiver|phone|communication|communications|comunicare|cască|casca|telefon|auricular/.test(label)
+          && !loudspeakerPattern.test(label);
+      })?.deviceId;
+      const sinkId = earpiece || "communications";
+      await Promise.all(targets.map(async (target) => {
+        if (typeof target.setSinkId !== "function") return;
+        try {
+          await target.setSinkId(sinkId);
+        } catch {
+          if (sinkId !== "communications") await target.setSinkId("communications");
+        }
+      }));
     } catch (e) {
       console.warn("[call] earpiece routing unavailable", e);
     }
-  }, []);
+  }, [forceNativeCallAudioSession, prepareCallAudioElement]);
 
   const playRemoteMedia = useCallback(() => {
     const stream = remoteStreamRef.current;
