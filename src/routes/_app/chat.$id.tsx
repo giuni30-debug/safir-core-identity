@@ -258,6 +258,21 @@ function ChatPage() {
     setSending(false);
   };
 
+  const sendGift = async (g: Gift) => {
+    if (!myId || sending) return;
+    setSending(true);
+    // Optimistic local FX so sender sees it immediately
+    setActiveGift(g);
+    const { error } = await supabase.from("messages").insert({
+      sender_user_id: myId,
+      receiver_user_id: contactId,
+      message_text: encodeGiftMessage(g),
+      message_type: "text",
+    });
+    if (error) console.error("gift send error", error);
+    setSending(false);
+  };
+
   // ---- Voice recording ----
   const startRecording = async () => {
     setPermissionError(null);
