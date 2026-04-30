@@ -193,11 +193,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     return stream;
   }, [releaseLocalAudioProcessing]);
 
-  const setSpeakerphoneOff = useCallback(() => {
-    forceNativeCallAudioSession();
-    void applyAudioRouting();
-  }, [applyAudioRouting, forceNativeCallAudioSession]);
-
   const applyAudioRouting = useCallback(async () => {
     forceNativeCallAudioSession();
     const targets = [remoteAudioRef.current, remoteVideoRef.current].filter(Boolean) as AudioSinkElement[];
@@ -228,6 +223,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       console.warn("[call] earpiece routing unavailable", e);
     }
   }, [forceNativeCallAudioSession, prepareCallAudioElement]);
+
+  const setSpeakerphoneOff = useCallback(() => {
+    forceNativeCallAudioSession();
+    void applyAudioRouting();
+  }, [applyAudioRouting, forceNativeCallAudioSession]);
 
   const playRemoteMedia = useCallback(() => {
     const stream = remoteStreamRef.current;
