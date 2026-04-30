@@ -112,6 +112,13 @@ const en = {
   statusDelivered: "Delivered",
   statusSeen: "Seen",
   seenAt: "Seen at",
+  // Sounds & Haptics
+  soundsTitle: "Sounds & Haptics",
+  soundsSubtitle: "Premium audio feedback across the app",
+  soundEnabled: "Sounds",
+  hapticsEnabled: "Vibration",
+  volume: "Volume",
+  testSound: "Test sound",
   // Notes
   searchNotes: "Search notes",
   noNotes: "No notes yet",
@@ -411,6 +418,13 @@ const ro: Record<keyof typeof en, string> = {
   statusDelivered: "Livrat",
   statusSeen: "Văzut",
   seenAt: "Văzut la",
+  // Sounds & Haptics
+  soundsTitle: "Sunete și vibrații",
+  soundsSubtitle: "Feedback audio premium în toată aplicația",
+  soundEnabled: "Sunete",
+  hapticsEnabled: "Vibrații",
+  volume: "Volum",
+  testSound: "Testează sunetul",
   searchNotes: "Caută notițe",
   noNotes: "Nicio notiță încă",
   untitled: "Fără titlu",
