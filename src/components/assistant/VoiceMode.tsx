@@ -63,7 +63,7 @@ export function VoiceMode({
   const conversation = useConversation({
     onConnect: () => {
       setOrbState("idle");
-      playSound("notification", { volume: 0.4 });
+      playSound("notification");
     },
     onDisconnect: () => {
       setOrbState("idle");
@@ -73,7 +73,7 @@ export function VoiceMode({
     onError: (e) => {
       console.error("ElevenLabs convo error:", e);
       setOrbState("error");
-      playSound("error", { volume: 0.5 });
+      playSound("error");
       toast.error("Voice connection error");
       setTimeout(() => setOrbState("idle"), 1200);
     },
@@ -168,7 +168,7 @@ export function VoiceMode({
     }
     setConnecting(true);
     setOrbState("thinking");
-    feedback("tap", { intensity: "soft" });
+    feedback("tap", "tap");
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
       const res = await getElevenLabsAgentToken({ data: { agentId } });
@@ -186,7 +186,7 @@ export function VoiceMode({
         },
       } as any);
 
-      playSound("voice-start", { volume: 0.5 });
+      playSound("voice-start");
     } catch (e) {
       console.error("start voice failed", e);
       toast.error(e instanceof Error ? e.message : "Failed to start");
@@ -198,8 +198,8 @@ export function VoiceMode({
   }, [agentId, conversation, personality, voiceId, lang, onOpenSettings]);
 
   const stop = useCallback(async () => {
-    feedback("tap", { intensity: "soft" });
-    playSound("voice-stop", { volume: 0.4 });
+    feedback("tap", "tap");
+    playSound("voice-stop");
     try { await conversation.endSession(); } catch { /* ignore */ }
     setTranscript([]);
     setPartial("");
@@ -211,7 +211,7 @@ export function VoiceMode({
   const onPttDown = useCallback(() => {
     if (conversation.status !== "connected") return;
     setPttHeld(true);
-    feedback("tap", { intensity: "soft" });
+    feedback("tap", "tap");
   }, [conversation.status]);
   const onPttUp = useCallback(() => {
     setPttHeld(false);
@@ -379,7 +379,7 @@ export function VoiceMode({
         </button>
 
         <button
-          onClick={() => playSound("notification", { volume: 0.4 })}
+          onClick={() => playSound("notification")}
           className="grid h-12 w-12 place-items-center rounded-full bg-white/5 ring-1 ring-white/10 hover:bg-white/10"
           aria-label="Test sound"
         >
