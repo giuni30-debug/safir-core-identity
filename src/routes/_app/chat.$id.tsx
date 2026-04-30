@@ -519,8 +519,11 @@ function ChatPage() {
           upsert: false,
         });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("chat-media").getPublicUrl(path);
-      const url = pub.publicUrl;
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("chat-media")
+        .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+      if (signErr || !signed) throw signErr ?? new Error("sign failed");
+      const url = signed.signedUrl;
 
       const { error: insErr } = await supabase.from("messages").insert({
         sender_user_id: myId,
