@@ -894,6 +894,9 @@ function ChatPage() {
         className="hidden"
         onChange={(e) => onAttachChange("file", e)}
       />
+
+      <GiftSheet open={giftOpen} onClose={() => setGiftOpen(false)} onSend={(g) => void sendGift(g)} />
+      {activeGift && <GiftFX gift={activeGift} onDone={() => setActiveGift(null)} />}
     </div>
   );
 }
