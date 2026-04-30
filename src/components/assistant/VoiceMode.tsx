@@ -302,8 +302,14 @@ function VoiceModeInner({
         throw tokenErr;
       }
 
-      // STEP 4 — single WebRTC attempt → wait for onConnect, fallback to WebSocket once.
-      const tryConnect = (opts: Parameters<typeof conversation.startSession>[0]) =>
+      console.log("[voice] session created");
+
+      // STEP 4 — single WebRTC attempt with short timeout → fallback to WebSocket.
+      const tryConnect = (
+        opts: Parameters<typeof conversation.startSession>[0],
+        timeoutMs: number,
+        label: string,
+      ) =>
         new Promise<void>((resolve, reject) => {
           let settled = false;
           const onConnectOnce = () => {
@@ -321,8 +327,8 @@ function VoiceModeInner({
           const timer = window.setTimeout(() => {
             if (settled) return;
             settled = true;
-            reject(new Error("ElevenLabs connection timed out"));
-          }, 15000);
+            reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+          }, timeoutMs);
           try {
             const ret = conversation.startSession({
               ...opts,
@@ -346,13 +352,17 @@ function VoiceModeInner({
         });
 
       try {
-        await tryConnect({
-          conversationToken: token,
-          connectionType: "webrtc",
-          overrides,
-        });
+        await tryConnect(
+          {
+            conversationToken: token,
+            connectionType: "webrtc",
+            overrides,
+          },
+          3000,
+          "WebRTC",
+        );
       } catch (webrtcErr) {
-        console.error("[voice] WebRTC fail, falling back to WebSocket:", webrtcErr);
+        console.warn("[voice] fallback triggered (WebRTC → WebSocket):", webrtcErr);
         try {
           await conversation.endSession();
         } catch {
@@ -367,11 +377,15 @@ function VoiceModeInner({
           console.error("[voice] signed-url error:", signed.error);
           throw new Error(signed.error || "No signed URL returned from server");
         }
-        await tryConnect({
-          signedUrl: signed.signedUrl,
-          connectionType: "websocket",
-          overrides,
-        });
+        await tryConnect(
+          {
+            signedUrl: signed.signedUrl,
+            connectionType: "websocket",
+            overrides,
+          },
+          5000,
+          "WebSocket",
+        );
       }
 
       // Connected — route audio to speaker now that elements exist
