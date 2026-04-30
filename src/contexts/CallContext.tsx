@@ -1,7 +1,7 @@
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from "react";
-import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX, Video as VideoIcon, VideoOff, SwitchCamera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
@@ -13,14 +13,17 @@ type ContactProfile = {
   avatar_url: string | null;
 };
 
+type CallMedia = "audio" | "video";
+
 type CallState =
   | { kind: "idle" }
-  | { kind: "outgoing"; callId: string; peer: ContactProfile; status: "calling" | "ringing" }
-  | { kind: "incoming"; callId: string; peer: ContactProfile; offer: RTCSessionDescriptionInit }
-  | { kind: "active"; callId: string; peer: ContactProfile; role: "caller" | "callee"; startedAt: number };
+  | { kind: "outgoing"; callId: string; peer: ContactProfile; status: "calling" | "ringing"; media: CallMedia }
+  | { kind: "incoming"; callId: string; peer: ContactProfile; offer: RTCSessionDescriptionInit; media: CallMedia }
+  | { kind: "active"; callId: string; peer: ContactProfile; role: "caller" | "callee"; startedAt: number; media: CallMedia };
 
 type CallApi = {
   startCall: (contactId: string) => Promise<void>;
+  startVideoCall: (contactId: string) => Promise<void>;
   inCall: boolean;
 };
 
@@ -43,19 +46,25 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   const [state, setState] = useState<CallState>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [speakerOn, setSpeakerOn] = useState(true);
+  const [cameraOn, setCameraOn] = useState(true);
   const [elapsed, setElapsed] = useState(0);
+  const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const callIdRef = useRef<string | null>(null);
   const peerIdRef = useRef<string | null>(null);
   const remoteDescSetRef = useRef(false);
   const elapsedTimerRef = useRef<number | null>(null);
-  const ringtoneRef = useRef<HTMLAudioElement | null>(null);
+  const facingRef = useRef<"user" | "environment">("user");
 
   const cleanup = useCallback(() => {
     pcRef.current?.getSenders().forEach((s) => s.track?.stop());
@@ -63,9 +72,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = null;
-    }
+    remoteStreamRef.current = null;
+    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
     pendingIceRef.current = [];
     callIdRef.current = null;
     peerIdRef.current = null;
@@ -75,6 +85,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setElapsed(0);
     setMuted(false);
     setSpeakerOn(true);
+    setCameraOn(true);
+    setHasRemoteVideo(false);
+    facingRef.current = "user";
   }, []);
 
   const sendSignal = useCallback(
@@ -114,28 +127,34 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const buildPeer = useCallback(
     (callId: string, peerId: string) => {
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      const remoteStream = new MediaStream();
+      remoteStreamRef.current = remoteStream;
+
       pc.onicecandidate = (ev) => {
         if (ev.candidate) {
           sendSignal(callId, peerId, "ice", ev.candidate.toJSON());
         }
       };
       pc.ontrack = (ev) => {
-        const [stream] = ev.streams;
-        if (remoteAudioRef.current && stream) {
-          remoteAudioRef.current.srcObject = stream;
+        ev.streams[0]?.getTracks().forEach((t) => {
+          if (!remoteStream.getTracks().find((x) => x.id === t.id)) {
+            remoteStream.addTrack(t);
+          }
+          if (t.kind === "video") setHasRemoteVideo(true);
+        });
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = remoteStream;
           remoteAudioRef.current.play().catch(() => {});
+        }
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+          remoteVideoRef.current.play().catch(() => {});
         }
       };
       pc.onconnectionstatechange = () => {
-        if (
-          pc.connectionState === "failed" ||
-          pc.connectionState === "disconnected" ||
-          pc.connectionState === "closed"
-        ) {
-          if (pc.connectionState === "failed") {
-            setError("Call failed");
-            handleEnd("failed");
-          }
+        if (pc.connectionState === "failed") {
+          setError("Call failed");
+          handleEnd("failed");
         }
       };
       pcRef.current = pc;
@@ -159,14 +178,46 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     [cleanup, sendSignal, updateCallStatus],
   );
 
+  // ---- Get local media (audio or audio+video with fallback) ----
+  const getLocalMedia = useCallback(async (media: CallMedia): Promise<MediaStream | null> => {
+    try {
+      if (media === "video") {
+        try {
+          const s = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: { facingMode: facingRef.current },
+          });
+          return s;
+        } catch (e) {
+          console.warn("video+audio failed, trying audio only", e);
+          try {
+            const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+            setInfo("Video unavailable, audio still connected");
+            return s;
+          } catch {
+            setError("Camera and microphone permission are required for video calls.");
+            return null;
+          }
+        }
+      }
+      return await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setError(media === "video"
+        ? "Camera and microphone permission are required for video calls."
+        : "Microphone permission is required for calls.");
+      return null;
+    }
+  }, []);
+
   // ---- Caller flow ----
-  const startCall = useCallback(
-    async (contactId: string) => {
+  const startCallInternal = useCallback(
+    async (contactId: string, media: CallMedia) => {
       if (!myId) return;
       if (state.kind !== "idle") return;
       setError(null);
+      setInfo(null);
+      facingRef.current = "user";
 
-      // Load contact profile
       const { data: peer } = await supabase
         .from("profiles")
         .select("id, display_name, username, avatar_url")
@@ -177,23 +228,16 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Mic
-      let stream: MediaStream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch {
-        setError("Microphone permission is required for calls.");
-        return;
-      }
+      const stream = await getLocalMedia(media);
+      if (!stream) return;
       localStreamRef.current = stream;
 
-      // Create call row
       const { data: call, error: callErr } = await supabase
         .from("calls")
         .insert({
           caller_id: myId,
           callee_id: contactId,
-          call_type: "audio",
+          call_type: media,
           status: "ringing",
         })
         .select("id")
@@ -210,31 +254,37 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const pc = buildPeer(call.id, contactId);
       stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
-      const offer = await pc.createOffer({ offerToReceiveAudio: true });
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: media === "video",
+      });
       await pc.setLocalDescription(offer);
 
-      await sendSignal(call.id, contactId, "offer", offer);
+      // include media kind in payload via wrapper? signal_type is fixed.
+      // We embed in payload itself by augmenting offer object.
+      await sendSignal(call.id, contactId, "offer", { ...offer, _media: media });
 
       setState({
         kind: "outgoing",
         callId: call.id,
         peer: peer as ContactProfile,
         status: "calling",
+        media,
       });
     },
-    [myId, state.kind, buildPeer, sendSignal],
+    [myId, state.kind, buildPeer, sendSignal, getLocalMedia],
   );
+
+  const startCall = useCallback((id: string) => startCallInternal(id, "audio"), [startCallInternal]);
+  const startVideoCall = useCallback((id: string) => startCallInternal(id, "video"), [startCallInternal]);
 
   // ---- Receiver: accept ----
   const acceptIncoming = useCallback(async () => {
     if (state.kind !== "incoming" || !myId) return;
-    const { callId, peer, offer } = state;
+    const { callId, peer, offer, media } = state;
 
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      setError("Microphone permission is required for calls.");
+    const stream = await getLocalMedia(media);
+    if (!stream) {
       await sendSignal(callId, peer.id, "decline", {});
       await updateCallStatus(callId, "declined");
       cleanup();
@@ -252,7 +302,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     await pc.setRemoteDescription(offer);
     remoteDescSetRef.current = true;
 
-    // flush queued ICE
     for (const c of pendingIceRef.current) {
       try { await pc.addIceCandidate(c); } catch (e) { console.warn("ice add failed", e); }
     }
@@ -265,8 +314,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     await sendSignal(callId, peer.id, "accept", {});
     await updateCallStatus(callId, "accepted");
 
-    setState({ kind: "active", callId, peer, role: "callee", startedAt: Date.now() });
-  }, [state, myId, buildPeer, sendSignal, updateCallStatus, cleanup]);
+    setState({ kind: "active", callId, peer, role: "callee", startedAt: Date.now(), media });
+  }, [state, myId, buildPeer, sendSignal, updateCallStatus, cleanup, getLocalMedia]);
 
   const declineIncoming = useCallback(async () => {
     if (state.kind !== "incoming") return;
@@ -277,7 +326,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setState({ kind: "idle" });
   }, [state, sendSignal, updateCallStatus, cleanup]);
 
-  // ---- Toggle mute / speaker ----
+  // ---- Toggles ----
   const toggleMute = () => {
     const stream = localStreamRef.current;
     if (!stream) return;
@@ -294,7 +343,51 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setSpeakerOn(next);
   };
 
-  // ---- Elapsed timer when active ----
+  const toggleCamera = () => {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    const next = !cameraOn;
+    stream.getVideoTracks().forEach((t) => (t.enabled = next));
+    setCameraOn(next);
+  };
+
+  const switchCamera = useCallback(async () => {
+    const pc = pcRef.current;
+    const stream = localStreamRef.current;
+    if (!pc || !stream) return;
+    const newFacing = facingRef.current === "user" ? "environment" : "user";
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: newFacing },
+        audio: false,
+      });
+      const newTrack = newStream.getVideoTracks()[0];
+      if (!newTrack) return;
+      const sender = pc.getSenders().find((s) => s.track?.kind === "video");
+      if (sender) await sender.replaceTrack(newTrack);
+      // swap on local stream
+      stream.getVideoTracks().forEach((t) => { t.stop(); stream.removeTrack(t); });
+      stream.addTrack(newTrack);
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      facingRef.current = newFacing;
+    } catch (e) {
+      console.warn("switch camera failed", e);
+    }
+  }, []);
+
+  // ---- Bind local video element when stream available ----
+  useEffect(() => {
+    if (state.kind === "active" && state.media === "video" && localVideoRef.current && localStreamRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+      localVideoRef.current.play().catch(() => {});
+    }
+    if (state.kind === "active" && remoteVideoRef.current && remoteStreamRef.current) {
+      remoteVideoRef.current.srcObject = remoteStreamRef.current;
+      remoteVideoRef.current.play().catch(() => {});
+    }
+  }, [state]);
+
+  // ---- Elapsed timer ----
   useEffect(() => {
     if (state.kind === "active") {
       const start = state.startedAt;
@@ -327,13 +420,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             call_id: string;
             from_user_id: string;
             signal_type: string;
-            payload: unknown;
+            payload: Record<string, unknown>;
           };
 
-          // Incoming OFFER → show ringing UI (only if idle)
           if (sig.signal_type === "offer") {
             if (state.kind !== "idle" || pcRef.current) {
-              // busy — auto-decline
               await sendSignal(sig.call_id, sig.from_user_id, "decline", {});
               await updateCallStatus(sig.call_id, "declined");
               return;
@@ -344,16 +435,18 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
               .eq("id", sig.from_user_id)
               .maybeSingle();
             if (!peer) return;
+            const media: CallMedia = (sig.payload?._media as CallMedia) === "video" ? "video" : "audio";
+            const offer = { type: sig.payload.type, sdp: sig.payload.sdp } as RTCSessionDescriptionInit;
             setState({
               kind: "incoming",
               callId: sig.call_id,
               peer: peer as ContactProfile,
-              offer: sig.payload as RTCSessionDescriptionInit,
+              offer,
+              media,
             });
             return;
           }
 
-          // ANSWER from callee → caller sets remote desc
           if (sig.signal_type === "answer") {
             const pc = pcRef.current;
             if (!pc) return;
@@ -370,17 +463,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             return;
           }
 
-          // ACCEPT confirmation → caller transitions to active
           if (sig.signal_type === "accept") {
             setState((cur) =>
               cur.kind === "outgoing"
-                ? { kind: "active", callId: cur.callId, peer: cur.peer, role: "caller", startedAt: Date.now() }
+                ? { kind: "active", callId: cur.callId, peer: cur.peer, role: "caller", startedAt: Date.now(), media: cur.media }
                 : cur,
             );
             return;
           }
 
-          // ICE candidate
           if (sig.signal_type === "ice") {
             const pc = pcRef.current;
             const cand = sig.payload as RTCIceCandidateInit;
@@ -392,7 +483,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             return;
           }
 
-          // DECLINE / HANGUP from peer
           if (sig.signal_type === "decline" || sig.signal_type === "hangup") {
             const wasActive = state.kind === "active" || pcRef.current;
             cleanup();
@@ -412,17 +502,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myId, state.kind]);
 
-  // Auto-clear error after 4s
   useEffect(() => {
     if (!error) return;
     const t = window.setTimeout(() => setError(null), 4000);
     return () => window.clearTimeout(t);
   }, [error]);
 
-  // Ringtone for incoming
+  useEffect(() => {
+    if (!info) return;
+    const t = window.setTimeout(() => setInfo(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [info]);
+
+  // Ringtone
   useEffect(() => {
     if (state.kind !== "incoming") return;
-    // Simple beep loop using oscillator
     const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     let stopped = false;
     const playBeep = () => {
@@ -445,38 +539,41 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [state.kind]);
 
   const api = useMemo<CallApi>(
-    () => ({ startCall, inCall: state.kind !== "idle" }),
-    [startCall, state.kind],
+    () => ({ startCall, startVideoCall, inCall: state.kind !== "idle" }),
+    [startCall, startVideoCall, state.kind],
   );
 
   return (
     <CallCtx.Provider value={api}>
       {children}
 
-      {/* Hidden remote audio element */}
       <audio ref={remoteAudioRef} autoPlay playsInline />
-      <audio ref={ringtoneRef} />
 
-      {/* Error toast */}
       {error && state.kind === "idle" && (
         <div className="fixed left-1/2 top-4 z-[100] -translate-x-1/2 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-2 text-xs text-destructive backdrop-blur">
           {error}
         </div>
       )}
 
-      {/* Outgoing / Incoming / Active overlay */}
       {state.kind !== "idle" && (
         <CallOverlay
           state={state}
           elapsed={elapsed}
           muted={muted}
           speakerOn={speakerOn}
+          cameraOn={cameraOn}
+          hasRemoteVideo={hasRemoteVideo}
           error={error}
+          info={info}
+          remoteVideoRef={remoteVideoRef}
+          localVideoRef={localVideoRef}
           onAccept={acceptIncoming}
           onDecline={declineIncoming}
           onEnd={() => handleEnd("ended")}
           onToggleMute={toggleMute}
           onToggleSpeaker={toggleSpeaker}
+          onToggleCamera={toggleCamera}
+          onSwitchCamera={switchCamera}
         />
       )}
     </CallCtx.Provider>
@@ -490,49 +587,93 @@ function fmtElapsed(s: number) {
 }
 
 function CallOverlay({
-  state, elapsed, muted, speakerOn, error,
-  onAccept, onDecline, onEnd, onToggleMute, onToggleSpeaker,
+  state, elapsed, muted, speakerOn, cameraOn, hasRemoteVideo, error, info,
+  remoteVideoRef, localVideoRef,
+  onAccept, onDecline, onEnd, onToggleMute, onToggleSpeaker, onToggleCamera, onSwitchCamera,
 }: {
   state: Exclude<CallState, { kind: "idle" }>;
   elapsed: number;
   muted: boolean;
   speakerOn: boolean;
+  cameraOn: boolean;
+  hasRemoteVideo: boolean;
   error: string | null;
+  info: string | null;
+  remoteVideoRef: React.RefObject<HTMLVideoElement>;
+  localVideoRef: React.RefObject<HTMLVideoElement>;
   onAccept: () => void;
   onDecline: () => void;
   onEnd: () => void;
   onToggleMute: () => void;
   onToggleSpeaker: () => void;
+  onToggleCamera: () => void;
+  onSwitchCamera: () => void;
 }) {
   const peer = state.peer;
+  const isVideo = state.media === "video";
   const statusLabel =
     state.kind === "incoming"
-      ? "Incoming call"
+      ? `Incoming ${isVideo ? "video" : "audio"} call`
       : state.kind === "outgoing"
       ? "Calling…"
       : fmtElapsed(elapsed);
 
   return (
     <div className="fixed inset-0 z-[90] flex flex-col items-center justify-between bg-background/95 px-6 py-12 backdrop-blur-xl">
-      <div className="flex flex-col items-center gap-4">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">
-          {state.kind === "incoming" ? "Incoming audio call" : "Audio call"}
-        </p>
-        <Avatar
-          url={peer.avatar_url}
-          name={peer.display_name}
-          size={120}
-          className={state.kind !== "active" ? "animate-pulse" : ""}
+      {/* Remote video (full bg) when active video call */}
+      {isVideo && state.kind === "active" && (
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className="absolute inset-0 z-0 h-full w-full object-cover"
+          style={{ background: "#000" }}
         />
-        <div className="text-center">
+      )}
+      {isVideo && state.kind === "active" && !hasRemoteVideo && (
+        <div className="absolute inset-0 z-0 flex items-center justify-center bg-background/80">
+          <Avatar url={peer.avatar_url} name={peer.display_name} size={160} />
+        </div>
+      )}
+
+      {/* Local PiP */}
+      {isVideo && state.kind === "active" && (
+        <video
+          ref={localVideoRef}
+          autoPlay
+          playsInline
+          muted
+          className="absolute right-4 top-4 z-10 h-40 w-28 rounded-2xl border border-border object-cover shadow-lg"
+          style={{ background: "#000", transform: "scaleX(-1)" }}
+        />
+      )}
+
+      {/* Top header info */}
+      <div className="relative z-20 flex flex-col items-center gap-4">
+        {!(isVideo && state.kind === "active") && (
+          <>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              {isVideo ? "Video call" : "Audio call"}
+            </p>
+            <Avatar
+              url={peer.avatar_url}
+              name={peer.display_name}
+              size={120}
+              className={state.kind !== "active" ? "animate-pulse" : ""}
+            />
+          </>
+        )}
+        <div className="text-center" style={isVideo && state.kind === "active" ? { textShadow: "0 1px 4px rgba(0,0,0,0.8)" } : undefined}>
           <p className="text-xl font-semibold">{peer.display_name}</p>
           <p className="text-sm text-muted-foreground">@{peer.username}</p>
         </div>
         <p className="mt-2 text-sm tabular-nums text-primary">{statusLabel}</p>
+        {info && <p className="text-xs text-muted-foreground">{info}</p>}
         {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
 
-      <div className="flex w-full max-w-sm items-center justify-around">
+      {/* Controls */}
+      <div className="relative z-20 flex w-full max-w-sm items-center justify-around">
         {state.kind === "incoming" ? (
           <>
             <button
@@ -548,7 +689,7 @@ function CallOverlay({
               aria-label="Accept"
               style={{ boxShadow: "var(--shadow-glow)" }}
             >
-              <Phone className="h-7 w-7" />
+              {isVideo ? <VideoIcon className="h-7 w-7" /> : <Phone className="h-7 w-7" />}
             </button>
           </>
         ) : (
@@ -556,11 +697,21 @@ function CallOverlay({
             <button
               onClick={onToggleMute}
               disabled={state.kind !== "active"}
-              className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card/60 disabled:opacity-40"
+              className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card/60 backdrop-blur disabled:opacity-40"
               aria-label="Mute"
             >
               {muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
             </button>
+            {isVideo ? (
+              <button
+                onClick={onToggleCamera}
+                disabled={state.kind !== "active"}
+                className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card/60 backdrop-blur disabled:opacity-40"
+                aria-label="Camera"
+              >
+                {cameraOn ? <VideoIcon className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+              </button>
+            ) : null}
             <button
               onClick={onEnd}
               className="grid h-16 w-16 place-items-center rounded-full bg-destructive text-destructive-foreground shadow-lg"
@@ -568,14 +719,25 @@ function CallOverlay({
             >
               <PhoneOff className="h-7 w-7" />
             </button>
-            <button
-              onClick={onToggleSpeaker}
-              disabled={state.kind !== "active"}
-              className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card/60 disabled:opacity-40"
-              aria-label="Speaker"
-            >
-              {speakerOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-            </button>
+            {isVideo ? (
+              <button
+                onClick={onSwitchCamera}
+                disabled={state.kind !== "active"}
+                className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card/60 backdrop-blur disabled:opacity-40"
+                aria-label="Switch camera"
+              >
+                <SwitchCamera className="h-5 w-5" />
+              </button>
+            ) : (
+              <button
+                onClick={onToggleSpeaker}
+                disabled={state.kind !== "active"}
+                className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card/60 backdrop-blur disabled:opacity-40"
+                aria-label="Speaker"
+              >
+                {speakerOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+              </button>
+            )}
           </>
         )}
       </div>
