@@ -46,6 +46,8 @@ const LS = {
   theme: "spl_theme",
   bg: "spl_bg",
   anim: "spl_anim",
+  neon: "spl_neon",
+  neonAnim: "spl_neon_anim",
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
