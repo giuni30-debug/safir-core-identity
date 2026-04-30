@@ -359,22 +359,6 @@ export function VoiceMode({
         </button>
       </header>
 
-      {/* Missing Agent ID banner */}
-      {!agentId?.trim() && (
-        <div className="relative z-10 mx-3 mb-2 flex items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-amber-100">
-          <div className="text-xs">
-            <span className="font-semibold">Agent ID missing.</span>{" "}
-            Add your ElevenLabs Agent ID to start a voice session.
-          </div>
-          <button
-            onClick={onOpenSettings}
-            className="shrink-0 rounded-lg bg-amber-400/20 px-3 py-1 text-xs font-medium ring-1 ring-amber-300/40 hover:bg-amber-400/30"
-          >
-            Open settings
-          </button>
-        </div>
-      )}
-
       {/* Orb */}
       <div className="relative z-10 flex flex-1 items-center justify-center px-4">
         <AssistantOrb
@@ -446,7 +430,11 @@ export function VoiceMode({
           onClick={!isConnected ? start : autoMode ? stop : undefined}
           disabled={connecting}
           className={`relative grid h-20 w-20 place-items-center rounded-full transition-transform active:scale-[0.97] ${
-            isConnected
+            conversation.isSpeaking
+              ? "animate-bounce bg-gradient-to-br from-cyan-300 to-sky-500 shadow-[0_0_70px_rgba(34,211,238,0.75)]"
+              : pttHeld || (isConnected && autoMode)
+              ? "animate-pulse bg-gradient-to-br from-emerald-400 to-cyan-500 shadow-[0_0_65px_rgba(45,212,191,0.65)]"
+              : isConnected
               ? "bg-gradient-to-br from-cyan-400 to-indigo-500 shadow-[0_0_60px_rgba(99,102,241,0.6)]"
               : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-[0_0_50px_rgba(124,58,237,0.55)]"
           }`}
@@ -459,7 +447,13 @@ export function VoiceMode({
           ) : (
             <Mic className="h-8 w-8 text-white" />
           )}
-          {(pttHeld || conversation.isSpeaking) && (
+          {conversation.isSpeaking && (
+            <>
+              <span className="absolute inset-0 animate-ping rounded-full bg-white/20" />
+              <span className="absolute inset-[-10px] animate-pulse rounded-full border border-cyan-200/40" />
+            </>
+          )}
+          {!conversation.isSpeaking && (pttHeld || (isConnected && autoMode)) && (
             <span className="absolute inset-0 animate-ping rounded-full bg-white/20" />
           )}
         </button>
