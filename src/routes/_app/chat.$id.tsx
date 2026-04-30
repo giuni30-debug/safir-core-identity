@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
-import { ArrowLeft, Send, Mic, Square, Trash2, Play, Pause } from "lucide-react";
+import {
+  ArrowLeft, Send, Mic, Square, Trash2, Play, Pause,
+  Plus, Image as ImageIcon, Video as VideoIcon, FileIcon, X, Download,
+} from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "@/components/Avatar";
@@ -23,10 +26,23 @@ type Message = {
   message_type: string;
   audio_url: string | null;
   duration_seconds: number | null;
+  media_url: string | null;
+  file_name: string | null;
+  file_size: number | null;
   created_at: string;
 };
 
 const MAX_RECORDING_SECONDS = 120;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+const MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+function formatBytes(b: number) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  if (b < 1024 * 1024 * 1024) return `${(b / 1024 / 1024).toFixed(1)} MB`;
+  return `${(b / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
 
 function formatDuration(s: number) {
   const m = Math.floor(s / 60);
@@ -116,6 +132,18 @@ function ChatPage() {
   const recordStartRef = useRef<number>(0);
   const cancelRecordRef = useRef<boolean>(false);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Attachment state
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const [attachError, setAttachError] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<
+    | { kind: "image" | "video"; file: File; url: string }
+    | { kind: "file"; file: File }
+    | null
+  >(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Load contact profile
   useEffect(() => {
@@ -330,6 +358,80 @@ function ChatPage() {
     }
   };
 
+  // ---- Attachments ----
+  const pickAttachment = (kind: "image" | "video" | "file") => {
+    setAttachError(null);
+    setAttachMenuOpen(false);
+    if (kind === "image") imageInputRef.current?.click();
+    else if (kind === "video") videoInputRef.current?.click();
+    else fileInputRef.current?.click();
+  };
+
+  const onAttachChange = (
+    kind: "image" | "video" | "file",
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const limit =
+      kind === "image" ? MAX_IMAGE_BYTES : kind === "video" ? MAX_VIDEO_BYTES : MAX_FILE_BYTES;
+    const limitLabel =
+      kind === "image" ? "10MB" : kind === "video" ? "100MB" : "50MB";
+    if (file.size > limit) {
+      setAttachError(`File too large. Max ${limitLabel}.`);
+      return;
+    }
+    if (attachment && "url" in attachment) URL.revokeObjectURL(attachment.url);
+    if (kind === "file") {
+      setAttachment({ kind: "file", file });
+    } else {
+      setAttachment({ kind, file, url: URL.createObjectURL(file) });
+    }
+  };
+
+  const discardAttachment = () => {
+    if (attachment && "url" in attachment) URL.revokeObjectURL(attachment.url);
+    setAttachment(null);
+    setAttachError(null);
+  };
+
+  const sendAttachment = async () => {
+    if (!attachment || !myId || sending) return;
+    setSending(true);
+    try {
+      const file = attachment.file;
+      const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+      const path = `${myId}/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+      const { error: upErr } = await supabase.storage
+        .from("chat-media")
+        .upload(path, file, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("chat-media").getPublicUrl(path);
+      const url = pub.publicUrl;
+
+      const { error: insErr } = await supabase.from("messages").insert({
+        sender_user_id: myId,
+        receiver_user_id: contactId,
+        message_type: attachment.kind,
+        media_url: url,
+        file_name: file.name,
+        file_size: file.size,
+        message_text: null,
+      });
+      if (insErr) throw insErr;
+      discardAttachment();
+    } catch (err) {
+      console.error("attachment send error", err);
+      setAttachError("Failed to send. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  };
+
   const fmtTime = (iso: string) =>
     new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -364,11 +466,16 @@ function ChatPage() {
         ) : (
           grouped.map((m) => {
             const mine = m.sender_user_id === myId;
-            const isVoice = m.message_type === "voice" && m.audio_url;
+            const type = m.message_type;
+            const isVoice = type === "voice" && m.audio_url;
+            const isImage = type === "image" && m.media_url;
+            const isVideo = type === "video" && m.media_url;
+            const isFile = type === "file" && m.media_url;
+            const isMedia = isImage || isVideo;
             return (
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm shadow ${
+                  className={`max-w-[78%] ${isMedia ? "p-1" : "px-3 py-2"} rounded-2xl text-sm shadow ${
                     mine
                       ? "bg-primary/90 text-primary-foreground rounded-br-sm"
                       : "bg-card/60 border border-border rounded-bl-sm"
@@ -376,11 +483,54 @@ function ChatPage() {
                 >
                   {isVoice ? (
                     <VoicePlayer url={m.audio_url!} duration={m.duration_seconds} mine={mine} />
+                  ) : isImage ? (
+                    <a href={m.media_url!} target="_blank" rel="noreferrer" className="block">
+                      <img
+                        src={m.media_url!}
+                        alt={m.file_name ?? "image"}
+                        className="max-h-72 w-auto rounded-xl object-cover"
+                        loading="lazy"
+                      />
+                    </a>
+                  ) : isVideo ? (
+                    <video
+                      src={m.media_url!}
+                      controls
+                      preload="metadata"
+                      className="max-h-72 w-full rounded-xl"
+                    />
+                  ) : isFile ? (
+                    <a
+                      href={m.media_url!}
+                      target="_blank"
+                      rel="noreferrer"
+                      download={m.file_name ?? undefined}
+                      className={`flex items-center gap-2 rounded-xl px-2 py-1 ${
+                        mine ? "bg-primary-foreground/15" : "bg-muted/40"
+                      }`}
+                    >
+                      <span
+                        className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
+                          mine ? "bg-primary-foreground/20" : "bg-primary/80 text-primary-foreground"
+                        }`}
+                      >
+                        <FileIcon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-medium">
+                          {m.file_name ?? "File"}
+                        </span>
+                        <span className="block text-[10px] opacity-70">
+                          {m.file_size != null ? formatBytes(m.file_size) : ""}
+                        </span>
+                      </span>
+                      <Download className="h-4 w-4 opacity-80" />
+                    </a>
                   ) : (
                     <p className="whitespace-pre-wrap break-words">{m.message_text}</p>
                   )}
                   <p
-                    className={`mt-1 text-[10px] ${
+                    className={`${isMedia ? "px-2 pb-1 pt-1" : "mt-1"} text-[10px] ${
                       mine ? "text-primary-foreground/70" : "text-muted-foreground"
                     }`}
                   >
@@ -439,6 +589,66 @@ function ChatPage() {
         </div>
       )}
 
+      {attachError && (
+        <div className="mb-2 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {attachError}
+        </div>
+      )}
+
+      {attachment && (
+        <div className="mb-2 rounded-2xl border border-border bg-card/40 p-2">
+          <div className="flex items-start gap-2">
+            <div className="flex-1 overflow-hidden">
+              {attachment.kind === "image" ? (
+                <img
+                  src={attachment.url}
+                  alt={attachment.file.name}
+                  className="max-h-48 w-auto rounded-xl object-cover"
+                />
+              ) : attachment.kind === "video" ? (
+                <video
+                  src={attachment.url}
+                  controls
+                  preload="metadata"
+                  className="max-h-48 w-full rounded-xl"
+                />
+              ) : (
+                <div className="flex items-center gap-2 rounded-xl bg-muted/30 p-2">
+                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/80 text-primary-foreground">
+                    <FileIcon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium">{attachment.file.name}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatBytes(attachment.file.size)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={discardAttachment}
+                className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card/40 text-destructive"
+                aria-label="Cancel"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={sendAttachment}
+                disabled={sending}
+                className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+                aria-label="Send"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {recording ? (
         <div className="flex items-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/10 px-3 py-3">
           <span className="grid h-3 w-3 place-items-center">
@@ -466,11 +676,55 @@ function ChatPage() {
         </div>
       ) : (
         <form onSubmit={onSend} className="flex items-center gap-2">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setAttachMenuOpen((v) => !v)}
+              disabled={!!voicePreview || !!attachment}
+              aria-label="Attach"
+              className="grid h-12 w-12 place-items-center rounded-2xl border border-border bg-card/40 disabled:opacity-40"
+            >
+              <Plus className={`h-5 w-5 transition-transform ${attachMenuOpen ? "rotate-45" : ""}`} />
+            </button>
+            {attachMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  aria-hidden
+                  onClick={() => setAttachMenuOpen(false)}
+                  className="fixed inset-0 z-10 cursor-default bg-transparent"
+                />
+                <div className="absolute bottom-14 left-0 z-20 w-44 overflow-hidden rounded-2xl border border-border bg-card/95 shadow-xl backdrop-blur">
+                  <button
+                    type="button"
+                    onClick={() => pickAttachment("image")}
+                    className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted/40"
+                  >
+                    <ImageIcon className="h-4 w-4 text-primary" /> Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => pickAttachment("video")}
+                    className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted/40"
+                  >
+                    <VideoIcon className="h-4 w-4 text-primary" /> Video
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => pickAttachment("file")}
+                    className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted/40"
+                  >
+                    <FileIcon className="h-4 w-4 text-primary" /> File
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={t("typeMessage")}
-            disabled={!!voicePreview}
+            disabled={!!voicePreview || !!attachment}
             className="flex-1 rounded-2xl border border-input bg-card/30 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
           />
           {text.trim() ? (
@@ -486,7 +740,7 @@ function ChatPage() {
             <button
               type="button"
               onClick={startRecording}
-              disabled={!!voicePreview}
+              disabled={!!voicePreview || !!attachment}
               aria-label="Record voice message"
               className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-primary-foreground disabled:opacity-40"
             >
@@ -495,6 +749,28 @@ function ChatPage() {
           )}
         </form>
       )}
+
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => onAttachChange("image", e)}
+      />
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={(e) => onAttachChange("video", e)}
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.txt,.zip,.rar,.7z,.xls,.xlsx,.ppt,.pptx,.csv,.json,application/pdf,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+        className="hidden"
+        onChange={(e) => onAttachChange("file", e)}
+      />
     </div>
   );
 }
