@@ -34,11 +34,26 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
 
   if (!open) return null;
 
+  const trimmedId = agentId.trim();
+  // ElevenLabs agent IDs: usually "agent_" + 20-40 alphanumeric, or legacy alphanumeric (>= 16 chars)
+  const agentIdValid =
+    trimmedId.length === 0 ||
+    /^agent_[A-Za-z0-9]{16,}$/.test(trimmedId) ||
+    /^[A-Za-z0-9]{20,}$/.test(trimmedId);
+  const agentIdError =
+    trimmedId.length > 0 && !agentIdValid
+      ? "Invalid format. Expected something like agent_xxxxxxxxxxxxxxxx"
+      : null;
+
   const submit = async () => {
+    if (agentIdError) {
+      toast.error(agentIdError);
+      return;
+    }
     setSaving(true);
     try {
       await onSave({
-        agentId: agentId.trim() || null,
+        agentId: trimmedId || null,
         voiceId,
         personality,
         autoMode,
@@ -70,12 +85,23 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
           <input
             value={agentId}
             onChange={(e) => setAgentId(e.target.value)}
-            placeholder="agent_xxxxxxxxxxxx"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan-400/60"
+            placeholder="agent_xxxxxxxxxxxxxxxx"
+            aria-invalid={!!agentIdError}
+            className={`w-full rounded-xl border bg-white/5 px-3 py-2 text-sm outline-none transition ${
+              agentIdError
+                ? "border-red-400/70 focus:border-red-400"
+                : agentIdValid && trimmedId
+                ? "border-emerald-400/60 focus:border-emerald-400"
+                : "border-white/10 focus:border-cyan-400/60"
+            }`}
           />
-          <p className="mt-1 text-[11px] text-white/40">
-            Create a Conversational AI agent at elevenlabs.io → Conversational AI → Create Agent, then paste its ID here.
-          </p>
+          {agentIdError ? (
+            <p className="mt-1 text-[11px] text-red-300">{agentIdError}</p>
+          ) : (
+            <p className="mt-1 text-[11px] text-white/40">
+              Create a Conversational AI agent at elevenlabs.io → Conversational AI → Create Agent, then paste its ID here.
+            </p>
+          )}
         </div>
 
         {/* Voice */}
@@ -136,7 +162,7 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
 
         <button
           onClick={submit}
-          disabled={saving}
+          disabled={saving || !!agentIdError}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-500 px-4 py-3 font-medium text-white shadow-lg disabled:opacity-50"
         >
           <Save className="h-4 w-4" />

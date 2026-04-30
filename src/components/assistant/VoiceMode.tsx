@@ -161,8 +161,19 @@ export function VoiceMode({
 
   // Start session
   const start = useCallback(async () => {
-    if (!agentId) {
-      toast.error("Set your ElevenLabs Agent ID in settings");
+    const id = agentId?.trim();
+    if (!id) {
+      toast.error("Missing Agent ID — open Settings and paste your ElevenLabs Agent ID to start.", {
+        duration: 5000,
+      });
+      onOpenSettings();
+      return;
+    }
+    const isValid = /^agent_[A-Za-z0-9]{16,}$/.test(id) || /^[A-Za-z0-9]{20,}$/.test(id);
+    if (!isValid) {
+      toast.error("Invalid Agent ID format. Expected something like agent_xxxxxxxxxxxxxxxx", {
+        duration: 5000,
+      });
       onOpenSettings();
       return;
     }
@@ -288,6 +299,22 @@ export function VoiceMode({
           <SettingsIcon className="h-5 w-5" />
         </button>
       </header>
+
+      {/* Missing Agent ID banner */}
+      {!agentId?.trim() && (
+        <div className="relative z-10 mx-3 mb-2 flex items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-amber-100">
+          <div className="text-xs">
+            <span className="font-semibold">Agent ID missing.</span>{" "}
+            Add your ElevenLabs Agent ID to start a voice session.
+          </div>
+          <button
+            onClick={onOpenSettings}
+            className="shrink-0 rounded-lg bg-amber-400/20 px-3 py-1 text-xs font-medium ring-1 ring-amber-300/40 hover:bg-amber-400/30"
+          >
+            Open settings
+          </button>
+        </div>
+      )}
 
       {/* Orb */}
       <div className="relative z-10 flex flex-1 items-center justify-center px-4">
