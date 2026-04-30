@@ -142,6 +142,21 @@ const en = {
   notifPush: "Push",
   notifEmail: "Email",
   notifSound: "Sound",
+  // Shopping
+  shopWishlist: "Wishlist",
+  shopCart: "Cart",
+  shopCheckout: "Checkout",
+  shopAddToCart: "Add to cart",
+  shopAdded: "Added to cart",
+  shopRemoved: "Removed",
+  shopEmptyCart: "Your cart is empty",
+  shopEmptyWishlist: "Wishlist is empty",
+  shopTotal: "Total",
+  shopPay: "Pay now",
+  shopPaid: "Order placed ✨",
+  shopAll: "All",
+  shopFeatured: "Featured",
+  shopBrowse: "Browse premium products",
 } as const;
 
 const ro: Record<keyof typeof en, string> = {
@@ -273,6 +288,20 @@ const ro: Record<keyof typeof en, string> = {
   notifPush: "Notificări push",
   notifEmail: "Email",
   notifSound: "Sunet",
+  shopWishlist: "Favorite",
+  shopCart: "Coș",
+  shopCheckout: "Finalizare",
+  shopAddToCart: "Adaugă în coș",
+  shopAdded: "Adăugat în coș",
+  shopRemoved: "Șters",
+  shopEmptyCart: "Coșul este gol",
+  shopEmptyWishlist: "Lista de favorite este goală",
+  shopTotal: "Total",
+  shopPay: "Plătește acum",
+  shopPaid: "Comandă plasată ✨",
+  shopAll: "Toate",
+  shopFeatured: "Recomandate",
+  shopBrowse: "Răsfoiește produse premium",
 };
 
 const tr: Record<keyof typeof en, string> = {
@@ -404,6 +433,20 @@ const tr: Record<keyof typeof en, string> = {
   notifPush: "Bildirim",
   notifEmail: "E-posta",
   notifSound: "Ses",
+  shopWishlist: "Favoriler",
+  shopCart: "Sepet",
+  shopCheckout: "Ödeme",
+  shopAddToCart: "Sepete ekle",
+  shopAdded: "Sepete eklendi",
+  shopRemoved: "Kaldırıldı",
+  shopEmptyCart: "Sepetiniz boş",
+  shopEmptyWishlist: "Favoriler boş",
+  shopTotal: "Toplam",
+  shopPay: "Şimdi öde",
+  shopPaid: "Sipariş verildi ✨",
+  shopAll: "Tümü",
+  shopFeatured: "Öne çıkan",
+  shopBrowse: "Premium ürünlere göz at",
 };
 
 const de: Record<keyof typeof en, string> = {
@@ -535,6 +578,20 @@ const de: Record<keyof typeof en, string> = {
   notifPush: "Push",
   notifEmail: "E-Mail",
   notifSound: "Ton",
+  shopWishlist: "Favoriten",
+  shopCart: "Warenkorb",
+  shopCheckout: "Kasse",
+  shopAddToCart: "In den Warenkorb",
+  shopAdded: "Hinzugefügt",
+  shopRemoved: "Entfernt",
+  shopEmptyCart: "Warenkorb ist leer",
+  shopEmptyWishlist: "Favoriten sind leer",
+  shopTotal: "Gesamt",
+  shopPay: "Jetzt bezahlen",
+  shopPaid: "Bestellung aufgegeben ✨",
+  shopAll: "Alle",
+  shopFeatured: "Empfohlen",
+  shopBrowse: "Premium-Produkte entdecken",
 };
 
 export const translations = { en, ro, tr, de } as const;

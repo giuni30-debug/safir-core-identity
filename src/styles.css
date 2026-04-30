@@ -520,7 +520,101 @@
   100% { transform: translateY(-30vh) scale(0.9); opacity: 0.85; }
 }
 
+/* ============================================================
+   PREMIUM TEXT SYSTEM (Tesla + iPhone feel)
+   - High contrast, alive, cinematic
+   - No flat grey text anywhere
+   ============================================================ */
+@layer base {
+  /* Base text = pure white, never washed out */
+  body, .app-frame {
+    color: #ffffff;
+  }
+  /* Remove "dead grey" muted look — promote to a soft theme-tinted glow */
+  .text-muted-foreground {
+    color: color-mix(in oklab, var(--theme-accent) 32%, #ffffff) !important;
+    text-shadow: 0 0 10px color-mix(in oklab, var(--theme-accent) 22%, transparent);
+  }
+  /* Headings — bold, slight tracking, glass light reflection */
+  h1, h2, h3, h4 {
+    color: #ffffff;
+    letter-spacing: 0.01em;
+    text-shadow:
+      0 1px 0 oklch(1 0 0 / 14%),
+      0 0 18px color-mix(in oklab, var(--theme-accent) 24%, transparent),
+      0 2px 12px oklch(0 0 0 / 45%);
+  }
+  h1 { letter-spacing: 0.02em; }
+  /* Buttons inherit pure white */
+  button { color: #ffffff; }
+  /* Links — alive, glow on hover */
+  a { color: #ffffff; transition: color 0.2s ease, text-shadow 0.2s ease; }
+  a:hover { text-shadow: 0 0 12px var(--theme-glow); }
+}
+
 @layer components {
+  /* Premium label — used for module names, important UI labels */
+  .text-premium {
+    color: #ffffff;
+    letter-spacing: 0.02em;
+    text-shadow:
+      0 1px 0 oklch(1 0 0 / 18%),
+      0 0 16px color-mix(in oklab, var(--theme-accent) 30%, transparent),
+      0 2px 10px oklch(0 0 0 / 50%);
+  }
+  /* Title with strong neon aura — for module headers */
+  .text-neon-title {
+    color: #ffffff;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-shadow:
+      0 0 8px color-mix(in oklab, var(--theme-accent) 60%, transparent),
+      0 0 22px color-mix(in oklab, var(--theme-accent) 35%, transparent),
+      0 2px 14px oklch(0 0 0 / 55%);
+  }
+  /* Soft secondary text — never grey, glows in theme */
+  .text-soft {
+    color: color-mix(in oklab, var(--theme-accent) 30%, #ffffff);
+    text-shadow: 0 0 10px color-mix(in oklab, var(--theme-accent) 25%, transparent);
+  }
+  /* Glass label — floats above background */
+  .text-glass {
+    color: #ffffff;
+    text-shadow:
+      0 1px 0 oklch(1 0 0 / 22%),
+      0 2px 12px oklch(0 0 0 / 55%);
+  }
+  /* Tile labels (dashboard etc.) — slight glow + crisp white */
+  .glass-card span,
+  .glass-card .tile-label {
+    color: #ffffff;
+    text-shadow:
+      0 1px 0 oklch(1 0 0 / 14%),
+      0 0 12px color-mix(in oklab, var(--theme-accent) 45%, transparent);
+  }
+  /* Inputs/placeholders — readable, soft theme tint */
+  input, textarea, select { color: #ffffff !important; }
+  ::placeholder {
+    color: color-mix(in oklab, var(--theme-accent) 20%, #ffffff) !important;
+    opacity: 0.7;
+  }
+  /* Active/selected text gets full neon aura */
+  [aria-current="page"], .active-text {
+    color: #ffffff;
+    text-shadow:
+      0 0 10px var(--theme-accent),
+      0 0 22px color-mix(in oklab, var(--theme-accent) 60%, transparent);
+  }
+  /* Hover/tap brightness lift */
+  .text-alive {
+    transition: filter 0.2s ease, text-shadow 0.2s ease;
+  }
+  .text-alive:hover, .text-alive:active {
+    filter: brightness(1.15);
+    text-shadow:
+      0 0 12px var(--theme-accent),
+      0 0 24px color-mix(in oklab, var(--theme-accent) 60%, transparent);
+  }
   /* Inputs: neon focus glow */
   input:focus, textarea:focus { outline: none; }
   input:focus-visible, textarea:focus-visible {
