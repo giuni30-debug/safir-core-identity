@@ -59,7 +59,7 @@ function ContactsPage() {
         {loading && <p className="text-center text-xs text-muted-foreground">…</p>}
         {!loading && contacts.length === 0 && (
           <div className="glass-card p-8 text-center">
-            <p className="text-sm text-muted-foreground">No contacts yet.</p>
+            <p className="text-sm text-muted-foreground">{t("noContacts")}</p>
             <Link to="/connect" className="mt-3 inline-block text-sm font-semibold text-primary">
               {t("connect")} →
             </Link>

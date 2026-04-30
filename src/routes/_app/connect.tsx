@@ -98,7 +98,7 @@ function ConnectPage() {
       <div className="mt-4 space-y-3">
         {busy && <p className="text-center text-xs text-muted-foreground">…</p>}
         {!busy && q && results.length === 0 && (
-          <p className="text-center text-xs text-muted-foreground">No matches</p>
+          <p className="text-center text-xs text-muted-foreground">{t("noMatches")}</p>
         )}
         {results.map((p) => (
           <div

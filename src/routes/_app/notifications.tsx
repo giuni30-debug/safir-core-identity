@@ -29,9 +29,9 @@ function NotifPage() {
       </header>
 
       <div className="mt-6 space-y-3">
-        <Toggle label="Push" value={push} onChange={setPush} />
-        <Toggle label="Email" value={email} onChange={setEmail} />
-        <Toggle label="Sound" value={sound} onChange={setSound} />
+        <Toggle label={t("notifPush")} value={push} onChange={setPush} />
+        <Toggle label={t("notifEmail")} value={email} onChange={setEmail} />
+        <Toggle label={t("notifSound")} value={sound} onChange={setSound} />
       </div>
     </div>
   );
