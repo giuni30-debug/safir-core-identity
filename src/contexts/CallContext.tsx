@@ -413,11 +413,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       localVideoRef.current.srcObject = localStreamRef.current;
       localVideoRef.current.play().catch(() => {});
     }
-    if (state.kind === "active" && remoteVideoRef.current && remoteStreamRef.current) {
-      remoteVideoRef.current.srcObject = remoteStreamRef.current;
-      remoteVideoRef.current.play().catch(() => {});
+    if (state.kind === "active") {
+      playRemoteMedia();
     }
-  }, [state]);
+  }, [state, playRemoteMedia]);
 
   // ---- Elapsed timer ----
   useEffect(() => {
