@@ -420,6 +420,7 @@ function ChatPage() {
   const startRecording = async () => {
     setPermissionError(null);
     try {
+      await unlockAudioPlayback();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
