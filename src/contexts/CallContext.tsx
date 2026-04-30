@@ -344,27 +344,28 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             audio: CALL_AUDIO_CONSTRAINTS,
             video: { facingMode: facingRef.current },
           });
-          return s;
+          return normalizeLocalMicrophone(s);
         } catch (e) {
           console.warn("video+audio failed, trying audio only", e);
           try {
             const s = await navigator.mediaDevices.getUserMedia({ audio: CALL_AUDIO_CONSTRAINTS });
             setInfo("Video unavailable, audio still connected");
-            return s;
+            return normalizeLocalMicrophone(s);
           } catch {
             setError("Camera and microphone permission are required for video calls.");
             return null;
           }
         }
       }
-      return await navigator.mediaDevices.getUserMedia({ audio: CALL_AUDIO_CONSTRAINTS });
+      const s = await navigator.mediaDevices.getUserMedia({ audio: CALL_AUDIO_CONSTRAINTS });
+      return normalizeLocalMicrophone(s);
     } catch {
       setError(media === "video"
         ? "Camera and microphone permission are required for video calls."
         : "Microphone permission is required for calls.");
       return null;
     }
-  }, []);
+  }, [normalizeLocalMicrophone]);
 
   // ---- Caller flow ----
   const startCallInternal = useCallback(
