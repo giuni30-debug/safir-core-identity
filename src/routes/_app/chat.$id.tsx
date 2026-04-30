@@ -209,7 +209,15 @@ function ChatPage() {
             (m.sender_user_id === myId && m.receiver_user_id === contactId) ||
             (m.sender_user_id === contactId && m.receiver_user_id === myId);
           if (!inThread) return;
-          setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+          setMessages((prev) => {
+            if (prev.some((x) => x.id === m.id)) return prev;
+            // Play receive sound only for incoming messages from peer
+            if (m.sender_user_id === contactId) {
+              playSound("receive");
+              vibrate("light");
+            }
+            return [...prev, m];
+          });
         }
       )
       .on(
