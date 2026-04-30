@@ -87,6 +87,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setElapsed(0);
     setMuted(false);
     setSpeakerOn(true);
+    speakerOnRef.current = true;
     setCameraOn(true);
     setHasRemoteVideo(false);
     facingRef.current = "user";
