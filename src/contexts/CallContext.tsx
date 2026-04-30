@@ -341,6 +341,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setInfo(null);
       facingRef.current = "user";
       await unlockCallAudio();
+      setSpeakerphoneOff();
 
       const { data: peer } = await supabase
         .from("profiles")
@@ -377,6 +378,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
       const pc = buildPeer(call.id, contactId);
       stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+      setSpeakerphoneOff();
 
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
