@@ -238,8 +238,9 @@ function VoiceModeInner({
   }, []);
 
   const prepareAudioFromTap = useCallback(async () => {
-    await unlockAudioPlayback();
-    await requestMicStream();
+    const audioUnlock = unlockAudioPlayback();
+    const micPermission = requestMicStream();
+    await Promise.all([audioUnlock, micPermission]);
   }, [requestMicStream, unlockAudioPlayback]);
 
   const createSessionOptions = useCallback(
