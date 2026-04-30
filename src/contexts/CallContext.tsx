@@ -599,8 +599,8 @@ function CallOverlay({
   hasRemoteVideo: boolean;
   error: string | null;
   info: string | null;
-  remoteVideoRef: React.RefObject<HTMLVideoElement>;
-  localVideoRef: React.RefObject<HTMLVideoElement>;
+  remoteVideoRef: React.RefObject<HTMLVideoElement | null>;
+  localVideoRef: React.RefObject<HTMLVideoElement | null>;
   onAccept: () => void;
   onDecline: () => void;
   onEnd: () => void;
