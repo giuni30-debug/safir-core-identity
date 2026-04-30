@@ -850,20 +850,22 @@ function AssistantPage() {
           <input ref={fileInputRef} type="file" hidden onChange={(e) => onPickFile(e, "file")} />
           <input ref={imgInputRef} type="file" accept="image/*" hidden onChange={(e) => onPickFile(e, "image")} />
 
-          {/* Tap-to-talk microphone: tap once → record; auto-sends on silence. Tap again to cancel. */}
+          {/* Tap-to-talk microphone: tap → record; tap again → stop & send. Right-click/long-press to cancel. */}
           <button
             type="button"
             onClick={toggleRecording}
-            className="press-glow grid h-9 w-9 place-items-center rounded-full select-none"
+            onContextMenu={onMicContextMenu}
+            disabled={transcribing}
+            className="press-glow grid h-9 w-9 place-items-center rounded-full select-none disabled:opacity-60"
             style={recording ? {
               background: "color-mix(in oklab, var(--theme-accent) 30%, transparent)",
               color: "var(--theme-accent)",
               boxShadow: "0 0 16px color-mix(in oklab, var(--theme-accent) 60%, transparent)",
             } : { color: "var(--theme-accent)" }}
-            aria-label={recording ? "Recording — tap to cancel" : "Tap to talk"}
-            title={recording ? "Listening… tap to cancel" : "Tap to talk"}
+            aria-label={recording ? "Recording — tap to stop & send" : transcribing ? "Transcribing…" : "Tap to talk"}
+            title={recording ? "Listening… tap to stop & send" : transcribing ? "Transcribing…" : "Tap to talk"}
           >
-            <Mic className={`h-4 w-4 ${recording ? "animate-pulse" : ""}`} />
+            <Mic className={`h-4 w-4 ${recording || transcribing ? "animate-pulse" : ""}`} />
           </button>
 
           <textarea
