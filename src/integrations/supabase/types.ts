@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_voice: boolean
           title: string
           updated_at: string
           user_id: string
@@ -25,6 +26,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_voice?: boolean
           title?: string
           updated_at?: string
           user_id: string
@@ -32,6 +34,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_voice?: boolean
           title?: string
           updated_at?: string
           user_id?: string
@@ -278,9 +281,13 @@ export type Database = {
       profiles: {
         Row: {
           ai_memory_enabled: boolean
+          assistant_auto_mode: boolean
+          assistant_personality: string
+          assistant_voice_id: string
           avatar_url: string | null
           created_at: string
           display_name: string
+          elevenlabs_agent_id: string | null
           email: string | null
           id: string
           updated_at: string
@@ -288,9 +295,13 @@ export type Database = {
         }
         Insert: {
           ai_memory_enabled?: boolean
+          assistant_auto_mode?: boolean
+          assistant_personality?: string
+          assistant_voice_id?: string
           avatar_url?: string | null
           created_at?: string
           display_name: string
+          elevenlabs_agent_id?: string | null
           email?: string | null
           id: string
           updated_at?: string
@@ -298,9 +309,13 @@ export type Database = {
         }
         Update: {
           ai_memory_enabled?: boolean
+          assistant_auto_mode?: boolean
+          assistant_personality?: string
+          assistant_voice_id?: string
           avatar_url?: string | null
           created_at?: string
           display_name?: string
+          elevenlabs_agent_id?: string | null
           email?: string | null
           id?: string
           updated_at?: string
