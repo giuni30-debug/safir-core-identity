@@ -18,15 +18,16 @@ function Home() {
   const { profile, t } = useApp();
   const navigate = useNavigate();
 
+  // Per-module neon color (oklch for premium glow)
   const tiles = [
-    { to: "/connect" as const, icon: Search, label: t("connect") },
-    { to: "/contacts" as const, icon: Users, label: t("contacts") },
-    { to: "/contacts" as const, icon: MessagesSquare, label: t("chat") },
-    { to: "/calendar" as const, icon: Calendar, label: t("calendar") },
-    { to: "/notes" as const, icon: NotebookPen, label: t("notes") },
-    { to: "/expenses" as const, icon: Wallet, label: t("expenses") },
-    { to: "/appointments" as const, icon: CalendarClock, label: "Appointments" },
-    { to: "/coming-soon" as const, icon: ShoppingBag, label: t("shopping") },
+    { to: "/connect" as const, icon: Search, label: t("connect"), color: "oklch(0.82 0.16 200)" }, // cyan
+    { to: "/contacts" as const, icon: Users, label: t("contacts"), color: "oklch(0.70 0.18 250)" }, // blue
+    { to: "/contacts" as const, icon: MessagesSquare, label: t("chat"), color: "oklch(0.70 0.20 300)" }, // purple
+    { to: "/calendar" as const, icon: Calendar, label: t("calendar"), color: "oklch(0.88 0.17 95)" }, // yellow
+    { to: "/notes" as const, icon: NotebookPen, label: t("notes"), color: "oklch(0.78 0.18 150)" }, // green
+    { to: "/expenses" as const, icon: Wallet, label: t("expenses"), color: "oklch(0.70 0.22 25)" }, // red
+    { to: "/appointments" as const, icon: CalendarClock, label: "Appointments", color: "oklch(0.82 0.16 200)" },
+    { to: "/coming-soon" as const, icon: ShoppingBag, label: t("shopping"), color: "oklch(0.78 0.18 55)" }, // orange
   ];
 
   return (
