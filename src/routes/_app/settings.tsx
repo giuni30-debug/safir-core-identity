@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft, ChevronRight, User, Languages, Bell, LogOut, Trash2,
-  Download, CheckCircle2, Palette, Image as ImageIcon, Sparkles, Sun, Zap, CircleOff,
+  Download, CheckCircle2, Palette, Image as ImageIcon, Sparkles, Sun, Zap, CircleOff, Brain,
 } from "lucide-react";
 import { useApp, type ThemeColor, type BgKind, type AnimKind } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -143,6 +143,7 @@ function SettingsPage() {
         <Row to="/profile"       icon={User}      label={t("profile")} />
         <Row to="/language"      icon={Languages} label={t("language")} />
         <Row to="/notifications" icon={Bell}      label={t("notifications")} />
+        <Row to="/ai-memory"     icon={Brain}     label={t("aiMemoryTitle")} />
       </div>
 
       <InstallRow />
