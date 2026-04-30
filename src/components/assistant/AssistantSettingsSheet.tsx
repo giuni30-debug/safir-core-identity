@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Save } from "lucide-react";
 import { toast } from "sonner";
 import type { AssistantPersonality, AssistantPrefs } from "@/hooks/useAssistantPrefs";
