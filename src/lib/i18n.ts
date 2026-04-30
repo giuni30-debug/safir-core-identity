@@ -746,6 +746,20 @@ const tr: Record<keyof typeof en, string> = {
   trAutoSpeak: "Çeviriyi seslendir",
   trYou: "Sen",
   trPartner: "Partner",
+  aiSources: "Kaynaklar",
+  aiNoSources: "AI bilgisine dayanır — canlı web kaynağı kullanılmadı.",
+  aiSearchDeeper: "Daha derin ara",
+  aiLiveUnavailable: "Canlı veri şu anda kullanılamıyor",
+  aiFollowExplainSimpler: "Daha basit açıkla",
+  aiFollowMoreDetails: "Daha fazla detay",
+  aiFollowTranslate: "Çevir",
+  aiFollowSummarize: "Özetle",
+  aiIntentChat: "Sohbet",
+  aiIntentAnalyzeDoc: "Belge analiz ediliyor",
+  aiIntentAnalyzeImage: "Görsel analiz ediliyor",
+  aiIntentTranslate: "Çeviri",
+  aiIntentCode: "Kod",
+  aiUnsureNote: "Tam emin değilim ama bulduklarım şunlar.",
 };
 
 const de: Record<keyof typeof en, string> = {
