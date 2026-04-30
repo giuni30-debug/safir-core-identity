@@ -217,6 +217,11 @@ function VoiceModeInner({
     source.start(0);
   }, []);
 
+  const prepareAudioFromTap = useCallback(async () => {
+    await unlockAudioPlayback();
+    await requestMicStream();
+  }, [requestMicStream, unlockAudioPlayback]);
+
   const requestMicStream = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("Microphone is not available in this browser.");
@@ -237,25 +242,17 @@ function VoiceModeInner({
     stream.getTracks().forEach((track) => track.stop());
   }, []);
 
-  const startElevenLabsSession = useCallback(
-    async (withOverrides: boolean) => {
-      const res = await getElevenLabsAgentToken({ data: { agentId: undefined } });
-      if (!res.token) throw new Error(res.error || "No token returned from server");
+  const createSessionOptions = useCallback(
+    (connection: { conversationToken: string } | { signedUrl: string }, withOverrides: boolean) => {
+      const baseOpts: ElevenLabsStartOptions =
+        "conversationToken" in connection
+          ? { conversationToken: connection.conversationToken, connectionType: "webrtc" }
+          : { signedUrl: connection.signedUrl, connectionType: "websocket" };
+      if (!withOverrides) return baseOpts;
 
-      const baseOpts = {
-        conversationToken: res.token,
-        connectionType: "webrtc" as const,
-      };
       const language = lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en";
 
-      if (!withOverrides) {
-        await conversation.startSession(
-          baseOpts as unknown as Parameters<typeof conversation.startSession>[0],
-        );
-        return;
-      }
-
-      await conversation.startSession({
+      return {
         ...baseOpts,
         overrides: {
           agent: {
@@ -264,21 +261,45 @@ function VoiceModeInner({
           },
           tts: { voiceId },
         },
-      } as unknown as Parameters<typeof conversation.startSession>[0]);
+      } as ElevenLabsStartOptions;
     },
-    [conversation, lang, personality, voiceId],
+    [lang, personality, voiceId],
+  );
+
+  const startElevenLabsSession = useCallback(
+    async (transport: "webrtc" | "websocket", withOverrides: boolean) => {
+      const res = await getElevenLabsAgentToken({ data: { agentId: undefined } });
+      if (transport === "webrtc") {
+        if (!res.token) throw new Error(res.error || "No token returned from server");
+        await conversation.startSession(createSessionOptions({ conversationToken: res.token }, withOverrides));
+      } else {
+        const signed = await getElevenLabsAgentSignedUrl({ data: { agentId: undefined } });
+        if (!signed.signedUrl) throw new Error(signed.error || "No signed URL returned from server");
+        await conversation.startSession(createSessionOptions({ signedUrl: signed.signedUrl }, withOverrides));
+      }
+    },
+    [conversation, createSessionOptions],
   );
 
   const connectWithFallbackRetry = useCallback(async () => {
     try {
-      await startElevenLabsSession(true);
+      await startElevenLabsSession("webrtc", true);
     } catch (overrideErr) {
       console.warn(
         "ElevenLabs startSession failed with overrides — retrying without. " +
           "Enable 'Security → Overrides' in your agent dashboard to customize voice/prompt.",
         overrideErr,
       );
-      await startElevenLabsSession(false);
+      await startElevenLabsSession("webrtc", false);
+    }
+  }, [startElevenLabsSession]);
+
+  const connectWithWebSocketFallback = useCallback(async () => {
+    try {
+      await startElevenLabsSession("websocket", true);
+    } catch (overrideErr) {
+      console.warn("ElevenLabs WebSocket startSession failed with overrides — retrying without.", overrideErr);
+      await startElevenLabsSession("websocket", false);
     }
   }, [startElevenLabsSession]);
 
