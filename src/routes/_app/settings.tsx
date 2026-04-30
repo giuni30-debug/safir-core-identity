@@ -55,7 +55,7 @@ function SettingsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) await supabase.from("profiles").delete().eq("id", user.id);
     await supabase.auth.signOut();
-    toast.success("Account removed.");
+    toast.success(t("accountRemoved"));
     navigate({ to: "/login" });
   };
 
@@ -71,14 +71,14 @@ function SettingsPage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-xl font-semibold">{t("settings")}</h1>
-          <p className="text-xs text-muted-foreground">Premium control panel</p>
+          <p className="text-xs text-muted-foreground">{t("premiumPanel")}</p>
         </div>
       </header>
 
       {/* ===== Customization ===== */}
       <Section
-        title="Theme color"
-        subtitle="Pick a neon accent — applied instantly across the app"
+        title={t("themeColor")}
+        subtitle={t("themeColorSubtitle")}
         icon={Palette}
       >
         <div className="grid grid-cols-6 gap-3">
@@ -87,7 +87,7 @@ function SettingsPage() {
             return (
               <button
                 key={c.id}
-                onClick={() => { setTheme(c.id); toast.success(`${c.label} theme`); }}
+                onClick={() => { setTheme(c.id); toast.success(t("themeApplied").replace("{name}", c.label)); }}
                 aria-label={c.label}
                 aria-pressed={active}
                 className={`press-glow relative aspect-square rounded-2xl transition-transform duration-300 ${
@@ -112,32 +112,32 @@ function SettingsPage() {
       </Section>
 
       <Section
-        title="Background"
-        subtitle="Live preview — switches as you tap"
+        title={t("background")}
+        subtitle={t("backgroundSubtitle")}
         icon={ImageIcon}
       >
         <OptionGrid
-          options={BG_OPTIONS}
+          options={BG_OPTIONS.map(o => ({ ...o, label: t(o.id === "gradient" ? "gradient" : o.id === "image" ? "image" : "neonBackground") }))}
           value={bg}
-          onChange={(v) => { setBg(v); toast.success(`Background: ${v}`); }}
+          onChange={(v) => { setBg(v); toast.success(t("bgApplied").replace("{name}", v)); }}
         />
       </Section>
 
       <Section
-        title="Animations"
-        subtitle="Choose the level of background motion"
+        title={t("animations")}
+        subtitle={t("animationsSubtitle")}
         icon={Sparkles}
       >
         <OptionGrid
-          options={ANIM_OPTIONS}
+          options={ANIM_OPTIONS.map(o => ({ ...o, label: t(o.id === "none" ? "none" : o.id === "glow" ? "glow" : o.id === "particles" ? "particles" : "stars") }))}
           value={anim}
-          onChange={(v) => { setAnim(v); toast.success(`Animation: ${v}`); }}
+          onChange={(v) => { setAnim(v); toast.success(t("animApplied").replace("{name}", v)); }}
         />
       </Section>
 
       {/* ===== Account ===== */}
       <p className="mt-8 mb-3 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        Account
+        {t("account")}
       </p>
       <div className="space-y-3">
         <Row to="/profile"       icon={User}      label={t("profile")} />
