@@ -85,12 +85,23 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
           <input
             value={agentId}
             onChange={(e) => setAgentId(e.target.value)}
-            placeholder="agent_xxxxxxxxxxxx"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-cyan-400/60"
+            placeholder="agent_xxxxxxxxxxxxxxxx"
+            aria-invalid={!!agentIdError}
+            className={`w-full rounded-xl border bg-white/5 px-3 py-2 text-sm outline-none transition ${
+              agentIdError
+                ? "border-red-400/70 focus:border-red-400"
+                : agentIdValid && trimmedId
+                ? "border-emerald-400/60 focus:border-emerald-400"
+                : "border-white/10 focus:border-cyan-400/60"
+            }`}
           />
-          <p className="mt-1 text-[11px] text-white/40">
-            Create a Conversational AI agent at elevenlabs.io → Conversational AI → Create Agent, then paste its ID here.
-          </p>
+          {agentIdError ? (
+            <p className="mt-1 text-[11px] text-red-300">{agentIdError}</p>
+          ) : (
+            <p className="mt-1 text-[11px] text-white/40">
+              Create a Conversational AI agent at elevenlabs.io → Conversational AI → Create Agent, then paste its ID here.
+            </p>
+          )}
         </div>
 
         {/* Voice */}
