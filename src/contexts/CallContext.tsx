@@ -76,6 +76,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const remoteAudioGraphRef = useRef<RemoteAudioGraph | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const callIdRef = useRef<string | null>(null);
   const peerIdRef = useRef<string | null>(null);
@@ -90,6 +91,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
+    remoteAudioGraphRef.current?.source.disconnect();
+    remoteAudioGraphRef.current?.compressor.disconnect();
+    remoteAudioGraphRef.current?.gain.disconnect();
+    remoteAudioGraphRef.current = null;
     remoteStreamRef.current = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
