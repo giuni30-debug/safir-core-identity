@@ -376,20 +376,27 @@ function VoiceModeInner({
     }
   }, [startElevenLabsSession]);
 
-  // Start session
+  // Start session — invoked directly from a user tap.
   const start = useCallback(async () => {
-    console.log("Connecting to ElevenLabs...");
-    console.log("Agent ID used: (masked)");
+    if (connecting || conversation.status === "connected") return;
+    console.log("[voice] connecting…");
+    feedback("tap", "tap");
+
+    // STEP 1 — synchronous, inside the user gesture (no awaits before this):
+    unlockAudioPlayback();
+
     setConnecting(true);
     setOrbState("listening");
-    feedback("tap", "tap");
+
     try {
-      await prepareAudioFromTap();
+      // STEP 2 — first await must be getUserMedia, otherwise iOS/Safari deny it.
+      await requestMicStream();
+
+      // STEP 3 — try WebRTC first (with overrides, then without if blocked).
       try {
         await connectWithFallbackRetry();
-      } catch (firstErr) {
-        console.warn("Connection fail", firstErr);
-        toast.error("Voice not connected. Retrying...");
+      } catch (webrtcErr) {
+        console.warn("[voice] WebRTC failed, falling back to WebSocket:", webrtcErr);
         setRetrying(true);
         retryingRef.current = true;
         try {
@@ -397,24 +404,39 @@ function VoiceModeInner({
         } catch {
           /* ignore */
         }
+        // STEP 4 — single WebSocket fallback attempt. No infinite retry loop.
         await connectWithWebSocketFallback();
       }
-      console.log("Connection success");
+
+      console.log("[voice] session started");
       setPttHeld(true);
       playSound("voice-start");
     } catch (e) {
-      console.log("Connection fail");
-      console.error("start voice failed", e);
-      toast.error("Voice not connected. Retrying...");
+      console.error("[voice] start failed", e);
+      const msg = errorText(e);
+      toast.error(msg.length < 120 ? msg : "Voice not connected. Try again.");
       setOrbState("error");
       setPttHeld(false);
+      playSound("error");
       setTimeout(() => setOrbState("idle"), 1200);
+      try {
+        await conversation.endSession();
+      } catch {
+        /* ignore */
+      }
     } finally {
       setConnecting(false);
       setRetrying(false);
       retryingRef.current = false;
     }
-  }, [connectWithFallbackRetry, connectWithWebSocketFallback, conversation, prepareAudioFromTap]);
+  }, [
+    connecting,
+    conversation,
+    connectWithFallbackRetry,
+    connectWithWebSocketFallback,
+    requestMicStream,
+    unlockAudioPlayback,
+  ]);
 
   const stop = useCallback(async () => {
     feedback("tap", "tap");
