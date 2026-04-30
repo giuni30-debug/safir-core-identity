@@ -125,7 +125,7 @@ function AssistantPage() {
           }
         }
       }
-      if (autoSpeak && acc) speak(acc);
+      
       // Persist assistant reply (best effort, don't await)
       if (user && activeConvId && acc) {
         void appendMessage(user.id, activeConvId, "assistant", acc);
@@ -243,34 +243,6 @@ function AssistantPage() {
     setLoading(false);
   }
 
-  function startVoice() {
-    const Win = window as unknown as { SpeechRecognition?: new () => unknown; webkitSpeechRecognition?: new () => unknown };
-    const SR = Win.SpeechRecognition || Win.webkitSpeechRecognition;
-    if (!SR) { toast.error("Voice not supported on this browser"); return; }
-    const rec = new (SR as new () => {
-      lang: string; interimResults: boolean; continuous: boolean;
-      onresult: (e: { results: { 0: { transcript: string } }[] }) => void;
-      onend: () => void; onerror: () => void;
-      start: () => void; stop: () => void;
-    })();
-    rec.lang = navigator.language || "en-US";
-    rec.interimResults = false;
-    rec.continuous = false;
-    rec.onresult = (e) => {
-      const text = Array.from(e.results).map((r) => r[0].transcript).join(" ");
-      setInput((p) => (p ? p + " " : "") + text);
-    };
-    rec.onend = () => setRecording(false);
-    rec.onerror = () => { setRecording(false); toast.error("Voice error"); };
-    recogRef.current = rec;
-    setRecording(true);
-    rec.start();
-  }
-  function stopVoice() {
-    const r = recogRef.current as { stop: () => void } | null;
-    r?.stop();
-    setRecording(false);
-  }
 
   function onPickFile(e: React.ChangeEvent<HTMLInputElement>, kind: "file" | "image") {
     const file = e.target.files?.[0];
@@ -308,27 +280,6 @@ function AssistantPage() {
           <p className="text-soft text-[11px]">{t("aiSubtitle")}</p>
         </div>
         <button
-          onClick={() => setVoiceOpen(true)}
-          className="press-glow flex h-10 items-center gap-1.5 rounded-full border border-cyan-400/40 bg-gradient-to-r from-cyan-400/15 to-indigo-500/15 px-3 text-xs font-medium text-cyan-200"
-          aria-label="Open voice mode"
-        >
-          <Radio className="h-4 w-4" />
-          Talk
-        </button>
-        <button
-          onClick={() => setAutoSpeak((v) => !v)}
-          className="press-glow grid h-10 w-10 place-items-center rounded-full border border-border/60 bg-card/40"
-          aria-label={t("aiAutoSpeak")}
-          title={t("aiAutoSpeak")}
-          style={autoSpeak ? {
-            borderColor: "var(--theme-accent)",
-            boxShadow: "0 0 14px color-mix(in oklab, var(--theme-accent) 50%, transparent)",
-            color: "var(--theme-accent)",
-          } : undefined}
-        >
-          {autoSpeak ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-        </button>
-        <button
           onClick={async () => {
             if (!user) return;
             setHistoryOpen(true);
@@ -344,7 +295,6 @@ function AssistantPage() {
         <button
           onClick={() => {
             setMessages([]); setImageMode(false); setActiveConvId(null);
-            window.speechSynthesis?.cancel();
           }}
           className="press-glow grid h-10 w-10 place-items-center rounded-full border border-border/60 bg-card/40"
           aria-label={t("aiNewChat")}
@@ -663,17 +613,6 @@ function AssistantPage() {
             className="flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none max-h-32"
           />
 
-          <button
-            onClick={recording ? stopVoice : startVoice}
-            className={`press-glow grid h-9 w-9 place-items-center rounded-full ${recording ? "mic-pulse" : ""}`}
-            style={{
-              background: recording ? "var(--theme-accent)" : "transparent",
-              color: recording ? "#fff" : "var(--theme-accent)",
-            }}
-            aria-label={t("aiVoice")}
-          >
-            <Mic className="h-4 w-4" />
-          </button>
           {loading ? (
             <button
               onClick={stop}
@@ -696,21 +635,6 @@ function AssistantPage() {
         </div>
       </div>
 
-      {/* Voice mode overlay */}
-      <VoiceMode
-        open={voiceOpen}
-        onClose={() => setVoiceOpen(false)}
-        voiceId={assistantPrefs.voiceId}
-        personality={assistantPrefs.personality}
-        autoMode={assistantPrefs.autoMode}
-        onOpenSettings={() => setVoiceSettingsOpen(true)}
-      />
-      <AssistantSettingsSheet
-        open={voiceSettingsOpen}
-        onClose={() => setVoiceSettingsOpen(false)}
-        prefs={assistantPrefs}
-        onSave={updateAssistantPrefs}
-      />
     </div>
   );
 }
