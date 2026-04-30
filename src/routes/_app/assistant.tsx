@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft, Send, Mic, Paperclip, Image as ImageIcon, Sparkles,
   Loader2, Plus, Volume2, VolumeX, Wand2, Square, Search, Brain,
-  History, Trash2, Settings as SettingsIcon, MessageSquare,
+  History, Trash2, Settings as SettingsIcon, MessageSquare, Radio,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -13,6 +13,9 @@ import {
   listConversations, loadMessages, deleteConversation,
   type AiConversation,
 } from "@/hooks/useAiMemory";
+import { useAssistantPrefs } from "@/hooks/useAssistantPrefs";
+import { VoiceMode } from "@/components/assistant/VoiceMode";
+import { AssistantSettingsSheet } from "@/components/assistant/AssistantSettingsSheet";
 
 export const Route = createFileRoute("/_app/assistant")({
   component: AssistantPage,
@@ -64,6 +67,9 @@ function AssistantPage() {
   const abortRef = useRef<AbortController | null>(null);
 
   const memory = useAiMemory();
+  const { prefs: assistantPrefs, update: updateAssistantPrefs } = useAssistantPrefs(user?.id);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -319,6 +325,14 @@ function AssistantPage() {
           </h1>
           <p className="text-soft text-[11px]">{t("aiSubtitle")}</p>
         </div>
+        <button
+          onClick={() => setVoiceOpen(true)}
+          className="press-glow flex h-10 items-center gap-1.5 rounded-full border border-cyan-400/40 bg-gradient-to-r from-cyan-400/15 to-indigo-500/15 px-3 text-xs font-medium text-cyan-200"
+          aria-label="Open voice mode"
+        >
+          <Radio className="h-4 w-4" />
+          Talk
+        </button>
         <button
           onClick={() => setAutoSpeak((v) => !v)}
           className="press-glow grid h-10 w-10 place-items-center rounded-full border border-border/60 bg-card/40"
@@ -699,6 +713,23 @@ function AssistantPage() {
           )}
         </div>
       </div>
+
+      {/* Voice mode overlay */}
+      <VoiceMode
+        open={voiceOpen}
+        onClose={() => setVoiceOpen(false)}
+        agentId={assistantPrefs.agentId}
+        voiceId={assistantPrefs.voiceId}
+        personality={assistantPrefs.personality}
+        autoMode={assistantPrefs.autoMode}
+        onOpenSettings={() => setVoiceSettingsOpen(true)}
+      />
+      <AssistantSettingsSheet
+        open={voiceSettingsOpen}
+        onClose={() => setVoiceSettingsOpen(false)}
+        prefs={assistantPrefs}
+        onSave={updateAssistantPrefs}
+      />
     </div>
   );
 }
