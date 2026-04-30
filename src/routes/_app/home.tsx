@@ -19,8 +19,32 @@ export const Route = createFileRoute("/_app/home")({
 });
 
 function Home() {
-  const { profile, t } = useApp();
+  const { profile, t, user } = useApp();
   const navigate = useNavigate();
+  const { startCall, startVideoCall } = useCall();
+
+  // Recent quick contacts (top 3)
+  const [quickContacts, setQuickContacts] = useState<
+    { id: string; display_name: string; avatar_url: string | null }[]
+  >([]);
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data: conns } = await supabase
+        .from("connections")
+        .select("contact_id")
+        .eq("owner_id", user.id)
+        .limit(3);
+      const ids = (conns ?? []).map((c) => c.contact_id);
+      if (!ids.length) return;
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url")
+        .in("id", ids);
+      setQuickContacts(profs ?? []);
+    })();
+  }, [user]);
+
 
   // Swipe left → open Dashboard
   const { dx, isSwiping } = useSwipeNav({ onSwipeLeft: "/dashboard" });
