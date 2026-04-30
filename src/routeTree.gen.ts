@@ -22,6 +22,7 @@ import { Route as AppNotesRouteImport } from './routes/_app/notes'
 import { Route as AppLanguageRouteImport } from './routes/_app/language'
 import { Route as AppHomeRouteImport } from './routes/_app/home'
 import { Route as AppExpensesRouteImport } from './routes/_app/expenses'
+import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppContactsRouteImport } from './routes/_app/contacts'
 import { Route as AppConnectRouteImport } from './routes/_app/connect'
 import { Route as AppComingSoonRouteImport } from './routes/_app/coming-soon'
@@ -94,6 +95,11 @@ const AppExpensesRoute = AppExpensesRouteImport.update({
   path: '/expenses',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppContactsRoute = AppContactsRouteImport.update({
   id: '/contacts',
   path: '/contacts',
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/coming-soon': typeof AppComingSoonRoute
   '/connect': typeof AppConnectRoute
   '/contacts': typeof AppContactsRoute
+  '/dashboard': typeof AppDashboardRoute
   '/expenses': typeof AppExpensesRoute
   '/home': typeof AppHomeRoute
   '/language': typeof AppLanguageRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/coming-soon': typeof AppComingSoonRoute
   '/connect': typeof AppConnectRoute
   '/contacts': typeof AppContactsRoute
+  '/dashboard': typeof AppDashboardRoute
   '/expenses': typeof AppExpensesRoute
   '/home': typeof AppHomeRoute
   '/language': typeof AppLanguageRoute
@@ -186,6 +194,7 @@ export interface FileRoutesById {
   '/_app/coming-soon': typeof AppComingSoonRoute
   '/_app/connect': typeof AppConnectRoute
   '/_app/contacts': typeof AppContactsRoute
+  '/_app/dashboard': typeof AppDashboardRoute
   '/_app/expenses': typeof AppExpensesRoute
   '/_app/home': typeof AppHomeRoute
   '/_app/language': typeof AppLanguageRoute
@@ -209,6 +218,7 @@ export interface FileRouteTypes {
     | '/coming-soon'
     | '/connect'
     | '/contacts'
+    | '/dashboard'
     | '/expenses'
     | '/home'
     | '/language'
@@ -230,6 +240,7 @@ export interface FileRouteTypes {
     | '/coming-soon'
     | '/connect'
     | '/contacts'
+    | '/dashboard'
     | '/expenses'
     | '/home'
     | '/language'
@@ -252,6 +263,7 @@ export interface FileRouteTypes {
     | '/_app/coming-soon'
     | '/_app/connect'
     | '/_app/contacts'
+    | '/_app/dashboard'
     | '/_app/expenses'
     | '/_app/home'
     | '/_app/language'
@@ -364,6 +376,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppExpensesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/contacts': {
       id: '/_app/contacts'
       path: '/contacts'
@@ -423,6 +442,7 @@ interface AppRouteChildren {
   AppComingSoonRoute: typeof AppComingSoonRoute
   AppConnectRoute: typeof AppConnectRoute
   AppContactsRoute: typeof AppContactsRoute
+  AppDashboardRoute: typeof AppDashboardRoute
   AppExpensesRoute: typeof AppExpensesRoute
   AppHomeRoute: typeof AppHomeRoute
   AppLanguageRoute: typeof AppLanguageRoute
@@ -440,6 +460,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppComingSoonRoute: AppComingSoonRoute,
   AppConnectRoute: AppConnectRoute,
   AppContactsRoute: AppContactsRoute,
+  AppDashboardRoute: AppDashboardRoute,
   AppExpensesRoute: AppExpensesRoute,
   AppHomeRoute: AppHomeRoute,
   AppLanguageRoute: AppLanguageRoute,
