@@ -14,14 +14,16 @@ function requireKey(): string {
 export async function fetchConversationToken(agentId: string): Promise<string> {
   const apiKey = requireKey();
   const url = `${ELEVEN_BASE}/convai/conversation/token?agent_id=${encodeURIComponent(agentId)}`;
+  console.log("[elevenlabs] requesting WebRTC token for agent", agentId);
   const res = await fetch(url, { headers: { "xi-api-key": apiKey } });
   if (!res.ok) {
     const body = await res.text();
-    console.error("ElevenLabs token error", res.status, body);
-    throw new Error(`ElevenLabs token request failed (${res.status})`);
+    console.error("[elevenlabs] token error", res.status, body);
+    throw new Error(`ElevenLabs token request failed (${res.status}): ${body.slice(0, 200)}`);
   }
   const json = (await res.json()) as { token?: string };
   if (!json?.token) throw new Error("No token in ElevenLabs response");
+  console.log("[elevenlabs] WebRTC token issued ok");
   return json.token;
 }
 
@@ -32,13 +34,15 @@ export async function fetchConversationToken(agentId: string): Promise<string> {
 export async function fetchConversationSignedUrl(agentId: string): Promise<string> {
   const apiKey = requireKey();
   const url = `${ELEVEN_BASE}/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agentId)}`;
+  console.log("[elevenlabs] requesting signed URL for agent", agentId);
   const res = await fetch(url, { headers: { "xi-api-key": apiKey } });
   if (!res.ok) {
     const body = await res.text();
-    console.error("ElevenLabs signed URL error", res.status, body);
-    throw new Error(`ElevenLabs signed URL request failed (${res.status})`);
+    console.error("[elevenlabs] signed URL error", res.status, body);
+    throw new Error(`ElevenLabs signed URL request failed (${res.status}): ${body.slice(0, 200)}`);
   }
   const json = (await res.json()) as { signed_url?: string };
   if (!json?.signed_url) throw new Error("No signed URL in ElevenLabs response");
+  console.log("[elevenlabs] signed URL issued ok");
   return json.signed_url;
 }
