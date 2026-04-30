@@ -15,6 +15,7 @@ export function HomeInstallBanner() {
   const [installed, setInstalled] = useState(false);
   const [dismissed, setDismissed] = useState(true); // start hidden, decide in effect
   const [showIosHelp, setShowIosHelp] = useState(false);
+  const [showAndroidHelp, setShowAndroidHelp] = useState(false);
 
   useEffect(() => {
     setInstalled(isStandalone());
@@ -28,8 +29,8 @@ export function HomeInstallBanner() {
   if (installed || dismissed) return null;
 
   const ios = isIOS();
-  // Show banner if we have a native prompt OR if iOS (manual install instructions)
-  if (!installAvailable && !ios) return null;
+  // Always show banner if not installed/dismissed — fall back to manual instructions
+  // when no native prompt is available (covers Android Chrome edge cases too).
 
   const onLater = () => {
     localStorage.setItem(LS_HOME_DISMISSED_AT, Date.now().toString());
@@ -43,11 +44,14 @@ export function HomeInstallBanner() {
         setInstalled(true);
       } else if (outcome === "dismissed") {
         onLater();
-      } else if (outcome === "unavailable" && ios) {
-        setShowIosHelp(true);
+      } else if (outcome === "unavailable") {
+        if (ios) setShowIosHelp(true);
+        else setShowAndroidHelp(true);
       }
     } else if (ios) {
       setShowIosHelp(true);
+    } else {
+      setShowAndroidHelp(true);
     }
   };
 
@@ -83,6 +87,11 @@ export function HomeInstallBanner() {
         {showIosHelp && ios && (
           <p className="mt-3 rounded-xl border border-border bg-card/40 p-3 text-xs text-muted-foreground">
             Tap <Share className="inline h-3 w-3" /> Share, then “Add to Home Screen”.
+          </p>
+        )}
+        {showAndroidHelp && !ios && (
+          <p className="mt-3 rounded-xl border border-border bg-card/40 p-3 text-xs text-muted-foreground">
+            Open this app in Chrome, tap ⋮, then tap “Add to Home screen”.
           </p>
         )}
 
