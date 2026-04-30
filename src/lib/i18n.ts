@@ -186,6 +186,12 @@ const en = {
   catBaby: "Baby",
   catPets: "Pets",
   catOther: "Other",
+  shopSuggestions: "Suggestions",
+  shopEditItem: "Edit item",
+  shopBudgetExceeded: "Budget exceeded",
+  shopEmptyHero: "Add your first product",
+  shopEmptyHint: "Tap + to start your premium shopping list",
+  shopAddSuggestion: "Add",
 } as const;
 
 const ro: Record<keyof typeof en, string> = {
@@ -359,6 +365,12 @@ const ro: Record<keyof typeof en, string> = {
   catBaby: "Bebe",
   catPets: "Animale",
   catOther: "Altele",
+  shopSuggestions: "Sugestii",
+  shopEditItem: "Editează produs",
+  shopBudgetExceeded: "Buget depășit",
+  shopEmptyHero: "Adaugă primul produs",
+  shopEmptyHint: "Apasă + pentru a începe lista ta premium",
+  shopAddSuggestion: "Adaugă",
 };
 
 const tr: Record<keyof typeof en, string> = {
@@ -532,6 +544,12 @@ const tr: Record<keyof typeof en, string> = {
   catBaby: "Bebek",
   catPets: "Evcil",
   catOther: "Diğer",
+  shopSuggestions: "Öneriler",
+  shopEditItem: "Ürünü düzenle",
+  shopBudgetExceeded: "Bütçe aşıldı",
+  shopEmptyHero: "İlk ürününü ekle",
+  shopEmptyHint: "Premium listene başlamak için + simgesine dokun",
+  shopAddSuggestion: "Ekle",
 };
 
 const de: Record<keyof typeof en, string> = {
@@ -705,6 +723,12 @@ const de: Record<keyof typeof en, string> = {
   catBaby: "Baby",
   catPets: "Haustiere",
   catOther: "Sonstiges",
+  shopSuggestions: "Vorschläge",
+  shopEditItem: "Artikel bearbeiten",
+  shopBudgetExceeded: "Budget überschritten",
+  shopEmptyHero: "Füge dein erstes Produkt hinzu",
+  shopEmptyHint: "Tippe auf +, um deine Premium-Liste zu starten",
+  shopAddSuggestion: "Hinzufügen",
 };
 
 export const translations = { en, ro, tr, de } as const;

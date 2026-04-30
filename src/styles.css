@@ -729,3 +729,37 @@
   0%, 100% { transform: translateY(0) translateX(0); opacity: 0.55; }
   50%      { transform: translateY(-30px) translateX(8px); opacity: 0.9; }
 }
+
+/* ============================================================
+   Shopping module — premium animations
+   ============================================================ */
+@keyframes count-pop {
+  0%   { transform: translateY(8px); opacity: 0; }
+  60%  { transform: translateY(-2px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes item-drop {
+  0%   { transform: translateY(-24px) scale(0.96); opacity: 0; filter: blur(4px); }
+  60%  { transform: translateY(4px) scale(1.02); opacity: 1; filter: blur(0); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes complete-burst {
+  0%   { transform: translate(-50%, -50%) scale(0.2); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+}
+@keyframes spark-fly {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx, 30px), var(--dy, -30px)) scale(0); opacity: 0; }
+}
+@keyframes danger-pulse {
+  0%, 100% { box-shadow: 0 0 14px oklch(0.7 0.22 25 / 50%), inset 0 0 0 1px oklch(0.7 0.22 25 / 60%); }
+  50%      { box-shadow: 0 0 28px oklch(0.7 0.22 25 / 80%), inset 0 0 0 1px oklch(0.7 0.22 25 / 90%); }
+}
+@keyframes sheet-slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.animate-count-pop  { animation: count-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-item-drop  { animation: item-drop 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.animate-sheet-up   { animation: sheet-slide-up 0.36s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.danger-glow        { animation: danger-pulse 1.6s ease-in-out infinite; }
