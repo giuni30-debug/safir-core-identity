@@ -33,9 +33,10 @@ type Message = {
 };
 
 const MAX_RECORDING_SECONDS = 120;
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
-const MAX_FILE_BYTES = 50 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 300 * 1024 * 1024;
+const MAX_FILE_BYTES = 100 * 1024 * 1024;
+const VIDEO_WARN_BYTES = 100 * 1024 * 1024;
 
 function formatBytes(b: number) {
   if (b < 1024) return `${b} B`;
