@@ -403,11 +403,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const a = remoteAudioRef.current;
     if (!a) return;
     const next = !speakerOn;
-    a.muted = !next;
-    if (next) {
-      void unlockCallAudio().then(playRemoteMedia);
-    }
+    speakerOnRef.current = next;
     setSpeakerOn(next);
+    // Reroute output WITHOUT muting the stream and WITHOUT touching the
+    // peer connection / local mic. Voice keeps flowing throughout.
+    void unlockCallAudio()
+      .then(() => applyAudioRouting(next))
+      .catch((e) => console.warn("[call] speaker toggle routing failed", e));
   };
 
   const toggleCamera = () => {
