@@ -478,7 +478,7 @@ function AssistantPage() {
             </button>
           ) : (
             <button
-              onClick={send}
+              onClick={() => send()}
               disabled={!input.trim()}
               className="neon-circle press-glow grid h-10 w-10 place-items-center rounded-full disabled:opacity-50"
               aria-label="send"
