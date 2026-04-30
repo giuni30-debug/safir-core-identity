@@ -2,8 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useApp } from "@/contexts/AppContext";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowLeft, ShoppingBag, Heart, Trash2, Plus, Minus,
-  CreditCard, Sparkles, X, Star,
+  ArrowLeft, Plus, Check, Trash2, X, Wallet as WalletIcon,
+  ShoppingBasket, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,619 +11,420 @@ export const Route = createFileRoute("/_app/shopping")({
   component: ShoppingPage,
   head: () => ({
     meta: [
-      { title: "Shopping — Safir Private Life" },
-      { name: "description", content: "Premium shopping experience inside Safir." },
+      { title: "Shopping List — Safir Private Life" },
+      { name: "description", content: "Plan your shopping and track spending." },
     ],
   }),
 });
 
-type Product = {
+type Category = "groceries" | "household" | "pharmacy" | "baby" | "pets" | "other";
+
+type Item = {
   id: string;
   name: string;
-  price: number;
-  emoji: string;
-  category: "tech" | "fashion" | "home" | "beauty";
-  rating: number;
-  featured?: boolean;
+  qty: number;
+  unitPrice: number;
+  category: Category;
+  note?: string;
+  bought: boolean;
+  createdAt: number;
 };
 
-const PRODUCTS: Product[] = [
-  { id: "p1", name: "Aurora Headphones", price: 249, emoji: "🎧", category: "tech",    rating: 4.9, featured: true },
-  { id: "p2", name: "Neon Smartwatch",   price: 329, emoji: "⌚", category: "tech",    rating: 4.8, featured: true },
-  { id: "p3", name: "Sapphire Sneakers", price: 189, emoji: "👟", category: "fashion", rating: 4.7 },
-  { id: "p4", name: "Velvet Jacket",     price: 219, emoji: "🧥", category: "fashion", rating: 4.6 },
-  { id: "p5", name: "Crystal Lamp",      price:  89, emoji: "💡", category: "home",    rating: 4.5, featured: true },
-  { id: "p6", name: "Aroma Diffuser",    price:  59, emoji: "🕯️", category: "home",    rating: 4.4 },
-  { id: "p7", name: "Glow Serum",        price:  45, emoji: "✨", category: "beauty",  rating: 4.9 },
-  { id: "p8", name: "Silk Eye Mask",     price:  29, emoji: "👁️", category: "beauty",  rating: 4.6 },
-  { id: "p9", name: "Wireless Charger",  price:  39, emoji: "🔋", category: "tech",    rating: 4.5 },
-];
+const ITEMS_KEY = "spl_shop_list_v1";
+const BUDGET_KEY = "spl_shop_budget_v1";
 
-type Section = "browse" | "wishlist" | "cart";
-type CartItem = { id: string; qty: number };
+const CAT_EMOJI: Record<Category, string> = {
+  groceries: "🛒",
+  household: "🏠",
+  pharmacy: "💊",
+  baby: "🍼",
+  pets: "🐾",
+  other: "✨",
+};
 
-const LS_CART = "spl_shop_cart";
-const LS_WISH = "spl_shop_wish";
+function loadItems(): Item[] {
+  try { return JSON.parse(localStorage.getItem(ITEMS_KEY) || "[]"); } catch { return []; }
+}
+function saveItems(items: Item[]) {
+  localStorage.setItem(ITEMS_KEY, JSON.stringify(items));
+}
 
 function ShoppingPage() {
   const { t } = useApp();
   const navigate = useNavigate();
+  const [items, setItems] = useState<Item[]>([]);
+  const [budget, setBudget] = useState<number>(0);
+  const [showAdd, setShowAdd] = useState(false);
+  const [editing, setEditing] = useState<Item | null>(null);
+  const [showBudget, setShowBudget] = useState(false);
 
-  const [section, setSection] = useState<Section>("browse");
-  const [cat, setCat] = useState<"all" | Product["category"]>("all");
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [wish, setWish] = useState<string[]>([]);
-  const [preview, setPreview] = useState<Product | null>(null);
-  const [bumpKey, setBumpKey] = useState(0);
-
-  // Load
   useEffect(() => {
-    try {
-      setCart(JSON.parse(localStorage.getItem(LS_CART) || "[]"));
-      setWish(JSON.parse(localStorage.getItem(LS_WISH) || "[]"));
-    } catch { /* ignore */ }
+    setItems(loadItems());
+    const b = parseFloat(localStorage.getItem(BUDGET_KEY) || "0");
+    setBudget(isNaN(b) ? 0 : b);
   }, []);
-  useEffect(() => { localStorage.setItem(LS_CART, JSON.stringify(cart)); }, [cart]);
-  useEffect(() => { localStorage.setItem(LS_WISH, JSON.stringify(wish)); }, [wish]);
 
-  const cartCount = cart.reduce((n, i) => n + i.qty, 0);
-  const cartTotal = useMemo(
-    () => cart.reduce((s, i) => {
-      const p = PRODUCTS.find(x => x.id === i.id);
-      return s + (p ? p.price * i.qty : 0);
-    }, 0),
-    [cart]
-  );
+  const update = (next: Item[]) => { setItems(next); saveItems(next); };
 
-  const addToCart = (p: Product) => {
-    setCart(prev => {
-      const found = prev.find(i => i.id === p.id);
-      if (found) return prev.map(i => i.id === p.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { id: p.id, qty: 1 }];
-    });
-    setBumpKey(k => k + 1);
-    toast.success(`${p.emoji} ${t("shopAdded")}`);
-  };
-  const incQty = (id: string) =>
-    setCart(prev => prev.map(i => i.id === id ? { ...i, qty: i.qty + 1 } : i));
-  const decQty = (id: string) =>
-    setCart(prev => prev.flatMap(i => i.id === id ? (i.qty > 1 ? [{ ...i, qty: i.qty - 1 }] : []) : [i]));
-  const removeFromCart = (id: string) => setCart(prev => prev.filter(i => i.id !== id));
+  const toBuy = useMemo(() => items.filter((i) => !i.bought), [items]);
+  const bought = useMemo(() => items.filter((i) => i.bought), [items]);
+  const estimated = useMemo(() => toBuy.reduce((s, i) => s + i.qty * i.unitPrice, 0), [toBuy]);
+  const spent = useMemo(() => bought.reduce((s, i) => s + i.qty * i.unitPrice, 0), [bought]);
 
-  const toggleWish = (id: string) => {
-    setWish(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
+  const catLabel = (c: Category) => ({
+    groceries: t("catGroceries"), household: t("catHousehold"),
+    pharmacy: t("catPharmacy"), baby: t("catBaby"),
+    pets: t("catPets"), other: t("catOther"),
+  } as Record<Category, string>)[c];
 
-  const filtered = PRODUCTS.filter(p => cat === "all" || p.category === cat);
-  const featured = PRODUCTS.filter(p => p.featured);
-  const wishProducts = PRODUCTS.filter(p => wish.includes(p.id));
-
-  const cats: { key: typeof cat; label: string }[] = [
-    { key: "all",     label: t("shopAll") },
-    { key: "tech",    label: "Tech" },
-    { key: "fashion", label: "Fashion" },
-    { key: "home",    label: "Home" },
-    { key: "beauty",  label: "Beauty" },
-  ];
-
-  const checkout = () => {
-    if (cart.length === 0) return;
-    toast.success(t("shopPaid"));
-    setCart([]);
-    setSection("browse");
-  };
+  function toggleBought(id: string) {
+    update(items.map((i) => (i.id === id ? { ...i, bought: !i.bought } : i)));
+  }
+  function deleteItem(id: string) {
+    update(items.filter((i) => i.id !== id));
+    toast.success(t("shopItemDeleted"));
+  }
+  function clearBought() {
+    update(items.filter((i) => !i.bought));
+  }
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="page-enter relative min-h-screen pb-28">
       {/* Header */}
-      <header className="mb-4 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate({ to: "/dashboard" })}
-          aria-label={t("back")}
-          className="press-glow grid h-10 w-10 place-items-center rounded-2xl border border-border bg-card/40"
-        >
+      <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-border/40 bg-background/40 px-4 py-3 backdrop-blur-xl">
+        <button onClick={() => navigate({ to: "/dashboard" })} className="grid h-10 w-10 place-items-center rounded-full border border-border/60 bg-card/40">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-neon-title flex-1 text-center text-base">
-          {t("shopping")}
-        </h1>
-        <button
-          type="button"
-          onClick={() => setSection("cart")}
-          aria-label={t("shopCart")}
-          className="press-glow relative grid h-10 w-10 place-items-center rounded-2xl border border-border bg-card/40"
-          style={{
-            color: "var(--theme-accent)",
-            boxShadow: "0 0 14px color-mix(in oklab, var(--theme-accent) 40%, transparent)",
-          }}
-        >
-          <ShoppingBag className="h-5 w-5" />
-          {cartCount > 0 && (
-            <span
-              key={bumpKey}
-              className="absolute -right-1 -top-1 grid h-5 min-w-[1.25rem] place-items-center rounded-full px-1 text-[10px] font-bold"
-              style={{
-                background: "var(--theme-accent)",
-                color: "var(--primary-foreground)",
-                boxShadow: "0 0 10px var(--theme-glow)",
-                animation: "scale-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
-              }}
-            >
-              {cartCount}
-            </span>
-          )}
+        <div className="flex-1 text-center">
+          <h1 className="text-neon-title text-lg">{t("shopListTitle")}</h1>
+          <p className="text-[11px] text-muted-foreground">{t("shopListSubtitle")}</p>
+        </div>
+        <button onClick={() => setShowBudget(true)} className="grid h-10 w-10 place-items-center rounded-full border border-border/60 bg-card/40" aria-label={t("shopBudget")}>
+          <WalletIcon className="h-5 w-5" style={{ color: "var(--theme-accent)" }} />
         </button>
-      </header>
+      </div>
 
-      {/* Section tabs */}
-      <div className="mb-4 grid grid-cols-3 gap-2">
-        {([
-          { k: "browse",   label: t("shopFeatured"),  icon: Sparkles },
-          { k: "wishlist", label: t("shopWishlist"),  icon: Heart },
-          { k: "cart",     label: t("shopCart"),      icon: ShoppingBag },
-        ] as const).map(({ k, label, icon: Icon }) => {
-          const active = section === k;
-          return (
-            <button
-              key={k}
-              onClick={() => setSection(k)}
-              className="press-glow flex items-center justify-center gap-1.5 rounded-2xl border px-3 py-2 text-xs font-semibold tracking-wide"
+      {/* Stats */}
+      <div className="mx-4 mt-4 grid grid-cols-3 gap-2">
+        <StatCard label={t("shopEstimated")} value={`€${estimated.toFixed(2)}`} />
+        <StatCard label={t("shopSpent")} value={`€${spent.toFixed(2)}`} accent />
+        <StatCard label={t("shopBudget")} value={budget > 0 ? `€${budget.toFixed(0)}` : "—"} />
+      </div>
+
+      {/* Budget bar */}
+      {budget > 0 && (
+        <div className="mx-4 mt-3">
+          <div className="h-2 overflow-hidden rounded-full bg-card/60 border border-border/40">
+            <div
+              className="h-full transition-all duration-500"
               style={{
-                borderColor: active
-                  ? "color-mix(in oklab, var(--theme-accent) 75%, transparent)"
-                  : "var(--glass-border)",
-                background: active
-                  ? "color-mix(in oklab, var(--theme-accent) 14%, transparent)"
-                  : "oklch(1 0 0 / 4%)",
-                boxShadow: active
-                  ? "0 0 18px color-mix(in oklab, var(--theme-accent) 40%, transparent)"
-                  : "none",
-                color: "#fff",
-                textShadow: active
-                  ? "0 0 10px var(--theme-accent)"
-                  : "0 1px 0 oklch(1 0 0 / 14%)",
+                width: `${Math.min(100, (spent / budget) * 100)}%`,
+                background: spent > budget
+                  ? "linear-gradient(90deg, oklch(0.7 0.2 25), oklch(0.75 0.22 15))"
+                  : "linear-gradient(90deg, var(--theme-accent), color-mix(in oklab, var(--theme-accent) 60%, white))",
+                boxShadow: "0 0 12px color-mix(in oklab, var(--theme-accent) 60%, transparent)",
               }}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto pb-6">
-        {section === "browse" && (
-          <BrowseSection
-            cats={cats}
-            cat={cat}
-            setCat={setCat}
-            featured={featured}
-            products={filtered}
-            wish={wish}
-            toggleWish={toggleWish}
-            addToCart={addToCart}
-            openPreview={setPreview}
-            t={t}
-          />
-        )}
-
-        {section === "wishlist" && (
-          <WishSection
-            products={wishProducts}
-            toggleWish={toggleWish}
-            addToCart={addToCart}
-            openPreview={setPreview}
-            t={t}
-          />
-        )}
-
-        {section === "cart" && (
-          <CartSection
-            cart={cart}
-            total={cartTotal}
-            inc={incQty}
-            dec={decQty}
-            remove={removeFromCart}
-            checkout={checkout}
-            t={t}
-          />
-        )}
-      </div>
-
-      {/* Product preview modal */}
-      {preview && (
-        <ProductPreview
-          product={preview}
-          onClose={() => setPreview(null)}
-          onAdd={() => { addToCart(preview); setPreview(null); }}
-          inWish={wish.includes(preview.id)}
-          toggleWish={() => toggleWish(preview.id)}
-          t={t}
-        />
+            />
+          </div>
+        </div>
       )}
-    </div>
-  );
-}
 
-/* ───────────── Browse ───────────── */
-function BrowseSection({
-  cats, cat, setCat, featured, products, wish, toggleWish, addToCart, openPreview, t,
-}: {
-  cats: { key: "all" | Product["category"]; label: string }[];
-  cat: "all" | Product["category"];
-  setCat: (c: "all" | Product["category"]) => void;
-  featured: Product[];
-  products: Product[];
-  wish: string[];
-  toggleWish: (id: string) => void;
-  addToCart: (p: Product) => void;
-  openPreview: (p: Product) => void;
-  t: (k: any) => string;
-}) {
-  return (
-    <div className="space-y-5">
-      <p className="text-soft text-center text-xs tracking-wide">{t("shopBrowse")}</p>
-
-      {/* Featured rail */}
-      {featured.length > 0 && (
-        <div>
-          <h3 className="text-premium mb-2 text-xs uppercase tracking-[0.2em]">
-            ✨ {t("shopFeatured")}
-          </h3>
-          <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2">
-            {featured.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => openPreview(p)}
-                className="glass-card glass-card-hover tile-press snap-start flex w-44 shrink-0 flex-col items-start gap-2 p-4 text-left"
-                style={{ borderRadius: 20 }}
-              >
-                <div
-                  className="grid h-20 w-full place-items-center rounded-xl text-5xl"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, color-mix(in oklab, var(--theme-accent) 22%, transparent), oklch(1 0 0 / 3%))",
-                    boxShadow: "inset 0 0 18px color-mix(in oklab, var(--theme-accent) 18%, transparent)",
-                  }}
-                >
-                  <span style={{ filter: "drop-shadow(0 0 10px color-mix(in oklab, var(--theme-accent) 60%, transparent))" }}>
-                    {p.emoji}
-                  </span>
-                </div>
-                <span className="text-premium text-sm font-semibold leading-tight">{p.name}</span>
-                <div className="flex w-full items-center justify-between">
-                  <span className="text-neon-title text-base">€{p.price}</span>
-                  <RatingStars rating={p.rating} />
-                </div>
-              </button>
+      {/* To-buy list */}
+      <Section title={t("shopToBuy")} count={toBuy.length}>
+        {toBuy.length === 0 ? (
+          <EmptyState text={t("shopEmptyList")} />
+        ) : (
+          <ul className="space-y-2">
+            {toBuy.map((item) => (
+              <ItemRow
+                key={item.id}
+                item={item}
+                catLabel={catLabel(item.category)}
+                onToggle={() => toggleBought(item.id)}
+                onDelete={() => deleteItem(item.id)}
+                onEdit={() => setEditing(item)}
+              />
             ))}
-          </div>
-        </div>
+          </ul>
+        )}
+      </Section>
+
+      {/* Bought list */}
+      {bought.length > 0 && (
+        <Section
+          title={t("shopBought")}
+          count={bought.length}
+          action={
+            <button onClick={clearBought} className="text-[11px] uppercase tracking-widest text-muted-foreground hover:text-foreground">
+              {t("shopClearBought")}
+            </button>
+          }
+        >
+          <ul className="space-y-2">
+            {bought.map((item) => (
+              <ItemRow
+                key={item.id}
+                item={item}
+                catLabel={catLabel(item.category)}
+                onToggle={() => toggleBought(item.id)}
+                onDelete={() => deleteItem(item.id)}
+                onEdit={() => setEditing(item)}
+              />
+            ))}
+          </ul>
+        </Section>
       )}
 
-      {/* Categories */}
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1">
-        {cats.map((c) => {
-          const active = c.key === cat;
-          return (
-            <button
-              key={c.key}
-              onClick={() => setCat(c.key)}
-              className="press-glow shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold"
-              style={{
-                borderColor: active ? "var(--theme-accent)" : "var(--glass-border)",
-                background: active
-                  ? "color-mix(in oklab, var(--theme-accent) 18%, transparent)"
-                  : "oklch(1 0 0 / 4%)",
-                color: "#fff",
-                textShadow: active ? "0 0 10px var(--theme-accent)" : "none",
-                boxShadow: active
-                  ? "0 0 14px color-mix(in oklab, var(--theme-accent) 40%, transparent)"
-                  : "none",
-              }}
-            >
-              {c.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Grid */}
-      <div className="grid grid-cols-2 gap-3">
-        {products.map((p) => (
-          <ProductCard
-            key={p.id}
-            p={p}
-            inWish={wish.includes(p.id)}
-            toggleWish={() => toggleWish(p.id)}
-            onAdd={() => addToCart(p)}
-            onOpen={() => openPreview(p)}
-            t={t}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ───────────── Product card ───────────── */
-function ProductCard({ p, inWish, toggleWish, onAdd, onOpen, t }: {
-  p: Product; inWish: boolean; toggleWish: () => void; onAdd: () => void; onOpen: () => void;
-  t: (k: any) => string;
-}) {
-  return (
-    <div
-      className="glass-card glass-card-hover relative flex flex-col gap-2 p-3"
-      style={{ borderRadius: 20 }}
-    >
+      {/* Floating add button */}
       <button
-        type="button"
-        onClick={toggleWish}
-        aria-label="wishlist"
-        className="press-glow absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-full"
-        style={{
-          background: "oklch(0 0 0 / 35%)",
-          backdropFilter: "blur(8px)",
-          color: inWish ? "#ff5e8a" : "#fff",
-          boxShadow: inWish ? "0 0 12px #ff5e8a" : "none",
-        }}
+        onClick={() => setShowAdd(true)}
+        className="neon-circle fixed bottom-6 right-6 z-30 grid h-14 w-14 place-items-center rounded-full text-white shadow-2xl"
+        style={{ background: "var(--theme-accent)" }}
+        aria-label={t("shopAddItem")}
       >
-        <Heart className="h-4 w-4" fill={inWish ? "currentColor" : "none"} />
+        <Plus className="h-6 w-6" />
       </button>
 
-      <button
-        type="button"
-        onClick={onOpen}
-        className="grid h-24 w-full place-items-center rounded-xl text-5xl"
-        style={{
-          background:
-            "linear-gradient(135deg, color-mix(in oklab, var(--theme-accent) 18%, transparent), oklch(1 0 0 / 3%))",
-          boxShadow: "inset 0 0 16px color-mix(in oklab, var(--theme-accent) 14%, transparent)",
-        }}
-      >
-        <span style={{ filter: "drop-shadow(0 0 10px color-mix(in oklab, var(--theme-accent) 55%, transparent))" }}>
-          {p.emoji}
-        </span>
-      </button>
-
-      <div className="flex flex-col gap-0.5">
-        <span className="text-premium text-sm font-semibold leading-tight">{p.name}</span>
-        <div className="flex items-center justify-between">
-          <span className="text-neon-title text-base">€{p.price}</span>
-          <RatingStars rating={p.rating} />
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={onAdd}
-        className="press-glow mt-1 flex items-center justify-center gap-1.5 rounded-full py-2 text-xs font-bold tracking-wide"
-        style={{
-          background: "linear-gradient(135deg, var(--theme-accent), color-mix(in oklab, var(--theme-accent) 60%, #000))",
-          color: "var(--primary-foreground)",
-          boxShadow: "0 0 16px color-mix(in oklab, var(--theme-accent) 50%, transparent)",
-        }}
-      >
-        <Plus className="h-3.5 w-3.5" />
-        {t("shopAddToCart")}
-      </button>
-    </div>
-  );
-}
-
-function RatingStars({ rating }: { rating: number }) {
-  return (
-    <span className="flex items-center gap-0.5 text-[11px] font-semibold text-white"
-          style={{ textShadow: "0 0 8px color-mix(in oklab, var(--theme-accent) 50%, transparent)" }}>
-      <Star className="h-3 w-3" fill="currentColor"
-            style={{ color: "var(--theme-accent)", filter: "drop-shadow(0 0 4px var(--theme-accent))" }} />
-      {rating.toFixed(1)}
-    </span>
-  );
-}
-
-/* ───────────── Wishlist ───────────── */
-function WishSection({ products, toggleWish, addToCart, openPreview, t }: {
-  products: Product[]; toggleWish: (id: string) => void; addToCart: (p: Product) => void;
-  openPreview: (p: Product) => void; t: (k: any) => string;
-}) {
-  if (products.length === 0) {
-    return (
-      <EmptyState icon={<Heart className="h-10 w-10" />} label={t("shopEmptyWishlist")} />
-    );
-  }
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {products.map((p) => (
-        <ProductCard
-          key={p.id}
-          p={p}
-          inWish
-          toggleWish={() => toggleWish(p.id)}
-          onAdd={() => addToCart(p)}
-          onOpen={() => openPreview(p)}
-          t={t}
+      {/* Add / Edit modal */}
+      {(showAdd || editing) && (
+        <ItemModal
+          initial={editing ?? undefined}
+          onClose={() => { setShowAdd(false); setEditing(null); }}
+          onSave={(payload) => {
+            if (editing) {
+              update(items.map((i) => (i.id === editing.id ? { ...i, ...payload } : i)));
+            } else {
+              const newItem: Item = {
+                id: crypto.randomUUID(), bought: false, createdAt: Date.now(), ...payload,
+              };
+              update([newItem, ...items]);
+              toast.success(t("shopItemAdded"));
+            }
+            setShowAdd(false);
+            setEditing(null);
+          }}
         />
-      ))}
-    </div>
-  );
-}
+      )}
 
-/* ───────────── Cart ───────────── */
-function CartSection({ cart, total, inc, dec, remove, checkout, t }: {
-  cart: CartItem[]; total: number;
-  inc: (id: string) => void; dec: (id: string) => void; remove: (id: string) => void;
-  checkout: () => void; t: (k: any) => string;
-}) {
-  if (cart.length === 0) {
-    return <EmptyState icon={<ShoppingBag className="h-10 w-10" />} label={t("shopEmptyCart")} />;
-  }
-  return (
-    <div className="flex flex-col gap-3">
-      {cart.map((i) => {
-        const p = PRODUCTS.find(x => x.id === i.id);
-        if (!p) return null;
-        return (
-          <div key={i.id}
-               className="glass-card flex items-center gap-3 p-3"
-               style={{ borderRadius: 18 }}>
-            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl text-3xl"
-                 style={{
-                   background: "linear-gradient(135deg, color-mix(in oklab, var(--theme-accent) 20%, transparent), oklch(1 0 0 / 3%))",
-                 }}>
-              <span style={{ filter: "drop-shadow(0 0 8px color-mix(in oklab, var(--theme-accent) 50%, transparent))" }}>
-                {p.emoji}
-              </span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-premium truncate text-sm font-semibold">{p.name}</div>
-              <div className="text-neon-title text-sm">€{(p.price * i.qty).toFixed(2)}</div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button onClick={() => dec(i.id)} aria-label="-"
-                className="press-glow grid h-7 w-7 place-items-center rounded-full border"
-                style={{ borderColor: "var(--glass-border)", color: "#fff" }}>
-                <Minus className="h-3 w-3" />
-              </button>
-              <span className="w-5 text-center text-sm font-bold">{i.qty}</span>
-              <button onClick={() => inc(i.id)} aria-label="+"
-                className="press-glow grid h-7 w-7 place-items-center rounded-full"
-                style={{
-                  background: "var(--theme-accent)",
-                  color: "var(--primary-foreground)",
-                  boxShadow: "0 0 10px var(--theme-glow)",
-                }}>
-                <Plus className="h-3 w-3" />
-              </button>
-              <button onClick={() => remove(i.id)} aria-label="remove"
-                className="press-glow ml-1 grid h-7 w-7 place-items-center rounded-full border"
-                style={{ borderColor: "color-mix(in oklab, #ff4d6d 50%, transparent)", color: "#ff8aa3" }}>
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Checkout summary */}
-      <div className="glass-card mt-2 flex flex-col gap-3 p-4" style={{ borderRadius: 22 }}>
-        <div className="flex items-center justify-between">
-          <span className="text-premium text-sm tracking-wide">{t("shopTotal")}</span>
-          <span className="text-neon-title text-xl">€{total.toFixed(2)}</span>
-        </div>
-        <button
-          onClick={checkout}
-          className="press-glow flex items-center justify-center gap-2 rounded-full py-3 text-sm font-bold tracking-wide"
-          style={{
-            background: "linear-gradient(135deg, var(--theme-accent), color-mix(in oklab, var(--theme-accent) 55%, #000))",
-            color: "var(--primary-foreground)",
-            boxShadow:
-              "0 0 22px color-mix(in oklab, var(--theme-accent) 55%, transparent), inset 0 1px 0 oklch(1 0 0 / 25%)",
+      {/* Budget modal */}
+      {showBudget && (
+        <BudgetModal
+          initial={budget}
+          onClose={() => setShowBudget(false)}
+          onSave={(b) => {
+            setBudget(b);
+            localStorage.setItem(BUDGET_KEY, String(b));
+            setShowBudget(false);
           }}
-        >
-          <CreditCard className="h-4 w-4" />
-          {t("shopPay")}
-        </button>
-      </div>
+        />
+      )}
     </div>
   );
 }
 
-/* ───────────── Preview modal ───────────── */
-function ProductPreview({ product, onClose, onAdd, inWish, toggleWish, t }: {
-  product: Product; onClose: () => void; onAdd: () => void;
-  inWish: boolean; toggleWish: () => void; t: (k: any) => string;
-}) {
+function StatCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center p-6"
-      style={{
-        background: "oklch(0 0 0 / 65%)",
-        backdropFilter: "blur(14px)",
-        animation: "gift-fade 0.2s ease-out",
-      }}
-      onClick={onClose}
+      className="rounded-2xl border border-border/40 bg-card/30 p-3 backdrop-blur-xl"
+      style={accent ? { boxShadow: "0 0 18px color-mix(in oklab, var(--theme-accent) 25%, transparent)" } : {}}
     >
-      <div
-        className="glass-card relative w-full max-w-sm p-6"
-        style={{ borderRadius: 28, animation: "scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          aria-label="close"
-          className="press-glow absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full"
-          style={{ background: "oklch(0 0 0 / 35%)", color: "#fff" }}
-        >
-          <X className="h-4 w-4" />
-        </button>
-
-        <div
-          className="mx-auto grid h-40 w-40 place-items-center rounded-3xl text-8xl"
-          style={{
-            background: "linear-gradient(135deg, color-mix(in oklab, var(--theme-accent) 28%, transparent), oklch(1 0 0 / 4%))",
-            boxShadow: "inset 0 0 30px color-mix(in oklab, var(--theme-accent) 25%, transparent), 0 0 30px color-mix(in oklab, var(--theme-accent) 35%, transparent)",
-            animation: "logo-breath 3s ease-in-out infinite",
-          }}
-        >
-          <span style={{ filter: "drop-shadow(0 0 14px color-mix(in oklab, var(--theme-accent) 70%, transparent))" }}>
-            {product.emoji}
-          </span>
-        </div>
-
-        <h2 className="text-neon-title mt-4 text-center text-lg">{product.name}</h2>
-        <div className="mt-1 flex items-center justify-center gap-3">
-          <span className="text-neon-title text-2xl">€{product.price}</span>
-          <RatingStars rating={product.rating} />
-        </div>
-
-        <div className="mt-5 flex gap-2">
-          <button
-            onClick={toggleWish}
-            className="press-glow grid h-11 w-11 place-items-center rounded-full border"
-            style={{
-              borderColor: inWish ? "#ff5e8a" : "var(--glass-border)",
-              color: inWish ? "#ff5e8a" : "#fff",
-              boxShadow: inWish ? "0 0 14px #ff5e8a" : "none",
-            }}
-          >
-            <Heart className="h-5 w-5" fill={inWish ? "currentColor" : "none"} />
-          </button>
-          <button
-            onClick={onAdd}
-            className="press-glow flex flex-1 items-center justify-center gap-2 rounded-full py-3 text-sm font-bold tracking-wide"
-            style={{
-              background: "linear-gradient(135deg, var(--theme-accent), color-mix(in oklab, var(--theme-accent) 55%, #000))",
-              color: "var(--primary-foreground)",
-              boxShadow: "0 0 18px color-mix(in oklab, var(--theme-accent) 55%, transparent)",
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            {t("shopAddToCart")}
-          </button>
-        </div>
-      </div>
+      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="mt-1 text-base font-semibold" style={accent ? { color: "var(--theme-accent)" } : {}}>{value}</p>
     </div>
   );
 }
 
-/* ───────────── Empty state ───────────── */
-function EmptyState({ icon, label }: { icon: React.ReactNode; label: string }) {
+function Section({ title, count, children, action }: { title: string; count: number; children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-20">
-      <div
-        className="grid h-20 w-20 place-items-center rounded-3xl"
-        style={{
-          background: "color-mix(in oklab, var(--theme-accent) 12%, transparent)",
-          color: "var(--theme-accent)",
-          boxShadow: "0 0 20px color-mix(in oklab, var(--theme-accent) 35%, transparent)",
-        }}
-      >
-        {icon}
+    <section className="mx-4 mt-5">
+      <div className="mb-2 flex items-end justify-between">
+        <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
+          {title} <span className="ml-1 text-foreground/70">({count})</span>
+        </h2>
+        {action}
       </div>
-      <p className="text-soft text-sm">{label}</p>
+      {children}
+    </section>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="grid place-items-center rounded-2xl border border-dashed border-border/50 bg-card/20 p-8 text-center">
+      <ShoppingBasket className="mb-2 h-8 w-8 text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">{text}</p>
+    </div>
+  );
+}
+
+function ItemRow({
+  item, catLabel, onToggle, onDelete, onEdit,
+}: {
+  item: Item; catLabel: string;
+  onToggle: () => void; onDelete: () => void; onEdit: () => void;
+}) {
+  const total = item.qty * item.unitPrice;
+  return (
+    <li
+      className="flex items-center gap-3 rounded-2xl border border-border/40 bg-card/30 p-3 backdrop-blur-xl transition-all"
+      style={item.bought ? { opacity: 0.55 } : {}}
+    >
+      <button
+        onClick={onToggle}
+        className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 transition-all"
+        style={
+          item.bought
+            ? { background: "var(--theme-accent)", borderColor: "var(--theme-accent)", boxShadow: "0 0 14px color-mix(in oklab, var(--theme-accent) 60%, transparent)" }
+            : { borderColor: "color-mix(in oklab, var(--theme-accent) 50%, transparent)" }
+        }
+        aria-label="toggle"
+      >
+        {item.bought && <Check className="h-5 w-5 text-white" />}
+      </button>
+
+      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-background/40 text-xl">
+        {CAT_EMOJI[item.category]}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className={`truncate text-sm font-semibold ${item.bought ? "line-through" : ""}`}>{item.name}</p>
+        <p className="truncate text-[11px] text-muted-foreground">
+          {item.qty} × €{item.unitPrice.toFixed(2)} · {catLabel}
+          {item.note ? ` · ${item.note}` : ""}
+        </p>
+      </div>
+
+      <div className="text-right">
+        <p className="text-sm font-semibold" style={{ color: "var(--theme-accent)" }}>€{total.toFixed(2)}</p>
+        <div className="mt-1 flex items-center justify-end gap-1">
+          <button onClick={onEdit} className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground hover:text-foreground" aria-label="edit">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button onClick={onDelete} className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground hover:text-red-400" aria-label="delete">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function ItemModal({
+  initial, onClose, onSave,
+}: {
+  initial?: Item;
+  onClose: () => void;
+  onSave: (p: { name: string; qty: number; unitPrice: number; category: Category; note?: string }) => void;
+}) {
+  const { t } = useApp();
+  const [name, setName] = useState(initial?.name ?? "");
+  const [qty, setQty] = useState(String(initial?.qty ?? 1));
+  const [price, setPrice] = useState(String(initial?.unitPrice ?? ""));
+  const [category, setCategory] = useState<Category>(initial?.category ?? "groceries");
+  const [note, setNote] = useState(initial?.note ?? "");
+
+  const cats: Category[] = ["groceries", "household", "pharmacy", "baby", "pets", "other"];
+  const catLabel = (c: Category) => ({
+    groceries: t("catGroceries"), household: t("catHousehold"),
+    pharmacy: t("catPharmacy"), baby: t("catBaby"),
+    pets: t("catPets"), other: t("catOther"),
+  } as Record<Category, string>)[c];
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    const q = Math.max(1, parseInt(qty) || 1);
+    const p = Math.max(0, parseFloat(price) || 0);
+    onSave({ name: name.trim(), qty: q, unitPrice: p, category, note: note.trim() || undefined });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-end bg-black/60 backdrop-blur-sm sm:place-items-center" onClick={onClose}>
+      <form
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-t-3xl border border-border/50 bg-card/90 p-5 backdrop-blur-2xl sm:rounded-3xl"
+        style={{ boxShadow: "0 -10px 60px color-mix(in oklab, var(--theme-accent) 30%, transparent)" }}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-neon-title text-base">{initial ? t("shopAddItem") : t("shopAddItem")}</h2>
+          <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-background/40">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <input
+          autoFocus value={name} onChange={(e) => setName(e.target.value)}
+          placeholder={t("shopItemName")}
+          className="mb-2 w-full rounded-xl border border-border bg-background/40 px-3 py-2.5 text-sm outline-none focus:border-[var(--theme-accent)]"
+        />
+
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <input
+            value={qty} onChange={(e) => setQty(e.target.value)} inputMode="numeric"
+            placeholder={t("shopQty")}
+            className="rounded-xl border border-border bg-background/40 px-3 py-2.5 text-sm outline-none focus:border-[var(--theme-accent)]"
+          />
+          <input
+            value={price} onChange={(e) => setPrice(e.target.value)} inputMode="decimal"
+            placeholder={`${t("shopUnitPrice")} (€)`}
+            className="rounded-xl border border-border bg-background/40 px-3 py-2.5 text-sm outline-none focus:border-[var(--theme-accent)]"
+          />
+        </div>
+
+        <p className="mb-1 text-[11px] uppercase tracking-widest text-muted-foreground">{t("shopCategory")}</p>
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {cats.map((c) => {
+            const active = category === c;
+            return (
+              <button
+                key={c} type="button" onClick={() => setCategory(c)}
+                className="rounded-full border px-3 py-1.5 text-xs transition-all"
+                style={active
+                  ? { borderColor: "var(--theme-accent)", color: "var(--theme-accent)", background: "color-mix(in oklab, var(--theme-accent) 12%, transparent)" }
+                  : { borderColor: "var(--border)" }
+                }
+              >
+                {CAT_EMOJI[c]} {catLabel(c)}
+              </button>
+            );
+          })}
+        </div>
+
+        <input
+          value={note} onChange={(e) => setNote(e.target.value)}
+          placeholder={t("shopNote")}
+          className="mb-4 w-full rounded-xl border border-border bg-background/40 px-3 py-2.5 text-sm outline-none focus:border-[var(--theme-accent)]"
+        />
+
+        <button type="submit" className="neon-circle w-full rounded-2xl py-3 text-sm font-semibold text-white" style={{ background: "var(--theme-accent)" }}>
+          {t("save")}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function BudgetModal({ initial, onClose, onSave }: { initial: number; onClose: () => void; onSave: (b: number) => void }) {
+  const { t } = useApp();
+  const [val, setVal] = useState(String(initial || ""));
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="w-[90%] max-w-sm rounded-3xl border border-border/50 bg-card/90 p-5 backdrop-blur-2xl">
+        <h2 className="text-neon-title mb-3 text-base">{t("shopSetBudget")}</h2>
+        <input
+          autoFocus value={val} onChange={(e) => setVal(e.target.value)} inputMode="decimal"
+          placeholder="€ 0.00"
+          className="mb-4 w-full rounded-xl border border-border bg-background/40 px-3 py-2.5 text-sm outline-none focus:border-[var(--theme-accent)]"
+        />
+        <button
+          onClick={() => onSave(Math.max(0, parseFloat(val) || 0))}
+          className="neon-circle w-full rounded-2xl py-3 text-sm font-semibold text-white"
+          style={{ background: "var(--theme-accent)" }}
+        >
+          {t("save")}
+        </button>
+      </div>
     </div>
   );
 }
