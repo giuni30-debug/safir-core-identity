@@ -27,6 +27,16 @@ type WebkitAudioWindow = Window & {
   webkitAudioContext?: typeof AudioContext;
 };
 
+function errorText(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error || "Unknown error");
+}
+
+function isOverrideConfigError(error: unknown): boolean {
+  const text = errorText(error).toLowerCase();
+  return text.includes("override") || text.includes("agent_config") || text.includes("overrides");
+}
+
 function getString(value: unknown, path: string[]): string | undefined {
   let current: unknown = value;
   for (const key of path) {
@@ -93,6 +103,7 @@ function VoiceModeInner({
   const rafRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const retryingRef = useRef(false);
+  const activeAgentId = useMemo(() => agentId?.trim() || undefined, [agentId]);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -307,22 +318,23 @@ function VoiceModeInner({
     async (transport: "webrtc" | "websocket", withOverrides: boolean) => {
       const callbacks = { onConnect: () => undefined, onError: () => undefined };
       if (transport === "webrtc") {
-        const res = await getElevenLabsAgentToken({ data: { agentId: undefined } });
+        const res = await getElevenLabsAgentToken({ data: { agentId: activeAgentId } });
         if (!res.token) throw new Error(res.error || "No token returned from server");
         await waitForSessionStart(createSessionOptions({ conversationToken: res.token }, withOverrides, callbacks));
       } else {
-        const signed = await getElevenLabsAgentSignedUrl({ data: { agentId: undefined } });
+        const signed = await getElevenLabsAgentSignedUrl({ data: { agentId: activeAgentId } });
         if (!signed.signedUrl) throw new Error(signed.error || "No signed URL returned from server");
         await waitForSessionStart(createSessionOptions({ signedUrl: signed.signedUrl }, withOverrides, callbacks));
       }
     },
-    [createSessionOptions, waitForSessionStart],
+    [activeAgentId, createSessionOptions, waitForSessionStart],
   );
 
   const connectWithFallbackRetry = useCallback(async () => {
     try {
       await startElevenLabsSession("webrtc", true);
     } catch (overrideErr) {
+      if (!isOverrideConfigError(overrideErr)) throw overrideErr;
       console.warn(
         "ElevenLabs startSession failed with overrides — retrying without. " +
           "Enable 'Security → Overrides' in your agent dashboard to customize voice/prompt.",
@@ -336,6 +348,7 @@ function VoiceModeInner({
     try {
       await startElevenLabsSession("websocket", true);
     } catch (overrideErr) {
+      if (!isOverrideConfigError(overrideErr)) throw overrideErr;
       console.warn("ElevenLabs WebSocket startSession failed with overrides — retrying without.", overrideErr);
       await startElevenLabsSession("websocket", false);
     }
