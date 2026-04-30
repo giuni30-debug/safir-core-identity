@@ -107,24 +107,23 @@ function VoiceModeInner({
 
   const conversation = useConversation({
     onConnect: () => {
-      console.log("Connection success");
+      console.log("[voice] connected");
       setOrbState("idle");
       setRetrying(false);
       retryingRef.current = false;
       playSound("notification");
     },
     onDisconnect: () => {
+      console.log("[voice] disconnected");
       setOrbState("idle");
       setInputLevel(0);
       setOutputLevel(0);
       setPttHeld(false);
     },
     onError: (e) => {
-      console.error("ElevenLabs convo error:", e);
-      setOrbState("error");
-      playSound("error");
-      if (!retryingRef.current) toast.error("Voice not connected. Retrying...");
-      setTimeout(() => setOrbState("idle"), 1200);
+      // Errors during startSession are handled by waitForSessionStart;
+      // only log here to avoid duplicate toasts / retry loops.
+      console.error("[voice] sdk error:", e);
     },
     onMessage: async (msg: unknown) => {
       // Surface user transcript & agent response
@@ -216,45 +215,56 @@ function VoiceModeInner({
     };
   }, [conversation, conversation.status]);
 
-  const unlockAudioPlayback = useCallback(async () => {
+  /**
+   * Synchronously unlock the AudioContext inside a user gesture.
+   * Must NOT be awaited before calling — keep call before any `await`.
+   */
+  const unlockAudioPlayback = useCallback(() => {
     const AudioContextCtor =
       window.AudioContext || (window as WebkitAudioWindow).webkitAudioContext;
     if (!AudioContextCtor) return;
-    const ctx = audioContextRef.current ?? new AudioContextCtor();
-    audioContextRef.current = ctx;
-    if (ctx.state === "suspended") await ctx.resume();
-    const buffer = ctx.createBuffer(1, 1, 22050);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    source.start(0);
+    let ctx = audioContextRef.current;
+    if (!ctx) {
+      ctx = new AudioContextCtor();
+      audioContextRef.current = ctx;
+    }
+    if (ctx.state === "suspended") void ctx.resume();
+    try {
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch {
+      /* ignore */
+    }
   }, []);
 
+  /**
+   * Request mic permission. The getUserMedia() call MUST be the first await
+   * after the user gesture — no other awaits before it, or Safari/iOS deny.
+   */
   const requestMicStream = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("Microphone is not available in this browser.");
     }
-    if (navigator.permissions?.query) {
-      try {
-        const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
-        if (status.state === "denied") {
-          throw new Error("Microphone permission is blocked. Enable it in browser settings.");
-        }
-      } catch (err) {
-        if (err instanceof Error && err.message.includes("Microphone permission")) throw err;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      // Release immediately — ElevenLabs SDK opens its own stream; permission persists.
+      stream.getTracks().forEach((t) => t.stop());
+    } catch (err) {
+      const name = err instanceof Error ? err.name : "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        throw new Error("Microphone permission denied. Enable it in browser settings.");
       }
+      if (name === "NotFoundError") {
+        throw new Error("No microphone detected on this device.");
+      }
+      throw err instanceof Error ? err : new Error("Could not access microphone.");
     }
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
-    stream.getTracks().forEach((track) => track.stop());
   }, []);
-
-  const prepareAudioFromTap = useCallback(async () => {
-    const audioUnlock = unlockAudioPlayback();
-    const micPermission = requestMicStream();
-    await Promise.all([audioUnlock, micPermission]);
-  }, [requestMicStream, unlockAudioPlayback]);
 
   const createSessionOptions = useCallback(
     (
@@ -366,20 +376,27 @@ function VoiceModeInner({
     }
   }, [startElevenLabsSession]);
 
-  // Start session
+  // Start session — invoked directly from a user tap.
   const start = useCallback(async () => {
-    console.log("Connecting to ElevenLabs...");
-    console.log("Agent ID used: (masked)");
+    if (connecting || conversation.status === "connected") return;
+    console.log("[voice] connecting…");
+    feedback("tap", "tap");
+
+    // STEP 1 — synchronous, inside the user gesture (no awaits before this):
+    unlockAudioPlayback();
+
     setConnecting(true);
     setOrbState("listening");
-    feedback("tap", "tap");
+
     try {
-      await prepareAudioFromTap();
+      // STEP 2 — first await must be getUserMedia, otherwise iOS/Safari deny it.
+      await requestMicStream();
+
+      // STEP 3 — try WebRTC first (with overrides, then without if blocked).
       try {
         await connectWithFallbackRetry();
-      } catch (firstErr) {
-        console.warn("Connection fail", firstErr);
-        toast.error("Voice not connected. Retrying...");
+      } catch (webrtcErr) {
+        console.warn("[voice] WebRTC failed, falling back to WebSocket:", webrtcErr);
         setRetrying(true);
         retryingRef.current = true;
         try {
@@ -387,24 +404,39 @@ function VoiceModeInner({
         } catch {
           /* ignore */
         }
+        // STEP 4 — single WebSocket fallback attempt. No infinite retry loop.
         await connectWithWebSocketFallback();
       }
-      console.log("Connection success");
+
+      console.log("[voice] session started");
       setPttHeld(true);
       playSound("voice-start");
     } catch (e) {
-      console.log("Connection fail");
-      console.error("start voice failed", e);
-      toast.error("Voice not connected. Retrying...");
+      console.error("[voice] start failed", e);
+      const msg = errorText(e);
+      toast.error(msg.length < 120 ? msg : "Voice not connected. Try again.");
       setOrbState("error");
       setPttHeld(false);
+      playSound("error");
       setTimeout(() => setOrbState("idle"), 1200);
+      try {
+        await conversation.endSession();
+      } catch {
+        /* ignore */
+      }
     } finally {
       setConnecting(false);
       setRetrying(false);
       retryingRef.current = false;
     }
-  }, [connectWithFallbackRetry, connectWithWebSocketFallback, conversation, prepareAudioFromTap]);
+  }, [
+    connecting,
+    conversation,
+    connectWithFallbackRetry,
+    connectWithWebSocketFallback,
+    requestMicStream,
+    unlockAudioPlayback,
+  ]);
 
   const stop = useCallback(async () => {
     feedback("tap", "tap");
