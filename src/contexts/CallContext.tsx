@@ -250,7 +250,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const audio = remoteAudioRef.current as AudioSinkElement | null;
     if (!audio) return;
     audio.muted = false;
-    audio.volume = 0.82;
+    audio.volume = 0.88;
     if (typeof audio.setSinkId !== "function") return;
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -258,12 +258,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const normalize = (v: string) => v.toLowerCase();
       const earpiece = outputs.find((d) => /earpiece|receiver|phone|communication|comunicare|cască|casca/.test(normalize(d.label)))?.deviceId;
       await audio.setSinkId(earpiece || "communications");
-    } catch (firstError) {
-      try {
-        await audio.setSinkId("default");
-      } catch (secondError) {
-        console.warn("[call] earpiece routing unavailable", firstError, secondError);
-      }
+    } catch (e) {
+      console.warn("[call] earpiece routing unavailable", e);
     }
   }, []);
 
@@ -272,10 +268,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (!stream) return;
     if (remoteAudioRef.current) {
       const a = remoteAudioRef.current;
-      const playbackStream = getRemotePlaybackStream(stream);
-      if (a.srcObject !== playbackStream) a.srcObject = playbackStream;
+      a.disableRemotePlayback = true;
+      if (a.srcObject !== stream) a.srcObject = stream;
       a.muted = false;
-      a.volume = 0.82;
+      a.volume = 0.88;
       a.play().catch((e) => {
         console.warn("remote audio play blocked", e);
         setInfo("Tap to enable call audio");
@@ -286,7 +282,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       remoteVideoRef.current.srcObject = stream;
       remoteVideoRef.current.play().catch(() => {});
     }
-  }, [applyAudioRouting, getRemotePlaybackStream]);
+  }, [applyAudioRouting]);
 
   const buildPeer = useCallback(
     (callId: string, peerId: string) => {
