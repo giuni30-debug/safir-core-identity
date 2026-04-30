@@ -44,10 +44,11 @@ export function useAssistantPrefs(userId: string | null | undefined) {
 
   const update = useCallback(
     async (patch: Partial<AssistantPrefs>) => {
-      if (!userId) return;
+      if (!userId) throw new Error("Not signed in");
       const next = { ...prefs, ...patch };
+      // Optimistic update for snappy UI
       setPrefs(next);
-      await supabase
+      const { error } = await supabase
         .from("profiles")
         .update({
           elevenlabs_agent_id: next.agentId,
@@ -56,6 +57,11 @@ export function useAssistantPrefs(userId: string | null | undefined) {
           assistant_auto_mode: next.autoMode,
         })
         .eq("id", userId);
+      if (error) {
+        // Roll back so UI reflects DB truth
+        setPrefs(prefs);
+        throw new Error(error.message || "Failed to save assistant settings");
+      }
     },
     [userId, prefs],
   );

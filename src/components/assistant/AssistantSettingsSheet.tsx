@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Save } from "lucide-react";
 import { toast } from "sonner";
 import type { AssistantPersonality, AssistantPrefs } from "@/hooks/useAssistantPrefs";
@@ -32,6 +32,15 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
   const [autoMode, setAutoMode] = useState(prefs.autoMode);
   const [saving, setSaving] = useState(false);
 
+  // Re-sync local form whenever the sheet is (re)opened or prefs change.
+  useEffect(() => {
+    if (!open) return;
+    setAgentId(prefs.agentId ?? "");
+    setVoiceId(prefs.voiceId);
+    setPersonality(prefs.personality);
+    setAutoMode(prefs.autoMode);
+  }, [open, prefs.agentId, prefs.voiceId, prefs.personality, prefs.autoMode]);
+
   if (!open) return null;
 
   const trimmedId = agentId.trim();
@@ -61,7 +70,7 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
       toast.success("Saved");
       onClose();
     } catch (e) {
-      toast.error("Failed to save");
+      toast.error(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setSaving(false);
     }
