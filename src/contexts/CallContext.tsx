@@ -86,8 +86,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     elapsedTimerRef.current = null;
     setElapsed(0);
     setMuted(false);
-    setSpeakerOn(true);
-    speakerOnRef.current = true;
+    setSpeakerOn(false);
+    speakerOnRef.current = false;
     setCameraOn(true);
     setHasRemoteVideo(false);
     facingRef.current = "user";
