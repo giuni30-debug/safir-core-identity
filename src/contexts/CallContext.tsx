@@ -44,8 +44,13 @@ const CALL_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
   echoCancellation: true,
   noiseSuppression: true,
   autoGainControl: true,
-  channelCount: 1,
+  channelCount: { ideal: 1 },
+  sampleRate: { ideal: 48000 },
+  sampleSize: { ideal: 16 },
+  latency: { ideal: 0.02 },
 };
+
+const REMOTE_AUDIO_VOLUME = 0.72;
 
 type AudioSinkElement = HTMLAudioElement & { setSinkId?: (sinkId: string) => Promise<void> };
 type AudioLevelerGraph = {
@@ -153,51 +158,30 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const prepareCallAudioElement = useCallback((audio: HTMLAudioElement) => {
+    audio.autoplay = true;
+    audio.muted = false;
+    audio.volume = REMOTE_AUDIO_VOLUME;
+    audio.disableRemotePlayback = true;
+    audio.setAttribute("playsinline", "true");
+    audio.setAttribute("webkit-playsinline", "true");
+    audio.setAttribute("x-webkit-airplay", "deny");
+    audio.setAttribute("controlslist", "nodownload noremoteplayback");
+  }, []);
+
   const unlockCallAudio = useCallback(async () => {
-    const AudioContextCtor =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextCtor) return;
-    const ctx = audioContextRef.current ?? new AudioContextCtor();
-    audioContextRef.current = ctx;
-    if (ctx.state === "suspended") await ctx.resume();
-    const buffer = ctx.createBuffer(1, 1, 22050);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    source.start(0);
+    if (remoteAudioRef.current) prepareCallAudioElement(remoteAudioRef.current);
   }, []);
 
   const normalizeLocalMicrophone = useCallback((stream: MediaStream) => {
     const audioTracks = stream.getAudioTracks();
     if (audioTracks.length === 0) return stream;
     releaseLocalAudioProcessing();
-    const AudioContextCtor =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextCtor) return stream;
-    const ctx = audioContextRef.current ?? new AudioContextCtor();
-    audioContextRef.current = ctx;
-    const source = ctx.createMediaStreamSource(new MediaStream(audioTracks));
-    const leveler = ctx.createDynamicsCompressor();
-    leveler.threshold.value = -36;
-    leveler.knee.value = 16;
-    leveler.ratio.value = 8;
-    leveler.attack.value = 0.005;
-    leveler.release.value = 0.25;
-    const makeupGain = ctx.createGain();
-    makeupGain.gain.value = 0.88;
-    const limiter = ctx.createDynamicsCompressor();
-    limiter.threshold.value = -11;
-    limiter.knee.value = 0;
-    limiter.ratio.value = 20;
-    limiter.attack.value = 0.001;
-    limiter.release.value = 0.07;
-    const destination = ctx.createMediaStreamDestination();
-    source.connect(leveler).connect(makeupGain).connect(limiter).connect(destination);
-    rawLocalAudioTracksRef.current = audioTracks;
-    localAudioGraphRef.current = { input: stream, source, leveler, makeupGain, limiter, destination };
-    return new MediaStream([...destination.stream.getAudioTracks(), ...stream.getVideoTracks()]);
+    audioTracks.forEach((track) => {
+      track.contentHint = "speech";
+      track.applyConstraints(CALL_AUDIO_CONSTRAINTS).catch(() => {});
+    });
+    return stream;
   }, [releaseLocalAudioProcessing]);
 
   const applyAudioRouting = useCallback(async () => {
