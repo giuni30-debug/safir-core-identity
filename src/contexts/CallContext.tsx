@@ -196,19 +196,19 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   // Clean speaker routing: keep the remote track alive, only switch output device.
   const applyAudioRouting = useCallback(async (on: boolean) => {
-    const a = remoteAudioRef.current;
-    if (!a) return;
-    a.muted = false;
-    a.volume = 1;
-    const sinkable = a as AudioSinkElement;
-    if (typeof sinkable.setSinkId !== "function") return;
+    const earpieceAudio = remoteAudioRef.current as AudioSinkElement | null;
+    const speakerAudio = speakerAudioRef.current as AudioSinkElement | null;
+    if (!earpieceAudio && !speakerAudio) return;
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const outputs = devices.filter((d) => d.kind === "audiooutput");
       const findOutput = (words: RegExp) => outputs.find((d) => words.test(d.label.toLowerCase()))?.deviceId;
       const earpiece = findOutput(/earpiece|receiver|phone|communication|comunicare|cască|casca/);
       const loudspeaker = findOutput(/speaker|loud|media|multimedia|difuzor/);
-      await sinkable.setSinkId(on ? loudspeaker || "default" : earpiece || "default");
+      await Promise.all([
+        earpieceAudio?.setSinkId?.(earpiece || "communications").catch(() => undefined),
+        speakerAudio?.setSinkId?.(loudspeaker || "default").catch(() => undefined),
+      ]);
     } catch (e) {
       console.warn("[call] audio output routing unavailable", e);
     }
@@ -219,8 +219,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (!stream) return;
     if (remoteAudioRef.current) {
       const a = remoteAudioRef.current;
-      const playbackStream = getRemotePlaybackStream(stream);
-      if (a.srcObject !== playbackStream) a.srcObject = playbackStream;
+      if (a.srcObject !== stream) a.srcObject = stream;
       a.muted = speakerOnRef.current;
       a.volume = 1;
       a.play().catch((e) => {
