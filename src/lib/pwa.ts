@@ -69,6 +69,7 @@ if (typeof window !== "undefined") {
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     deferredPrompt = e as BIPEvent;
+    console.log("Install prompt ready");
     promptListeners.forEach((fn) => fn(true));
   });
   window.addEventListener("appinstalled", () => {
