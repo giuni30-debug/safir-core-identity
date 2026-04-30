@@ -90,12 +90,15 @@ function VoiceModeInner({
 
   const conversation = useConversation({
     onConnect: () => {
-      console.log("[voice] connected");
+      console.log("[voice] state: connected");
+      connectedOnceRef.current = true;
       setOrbState("listening");
       playSound("notification");
     },
     onDisconnect: () => {
-      console.log("[voice] disconnected");
+      console.log("[voice] state: closed");
+      sessionStartedRef.current = false;
+      connectedOnceRef.current = false;
       setOrbState("idle");
       setInputLevel(0);
       setOutputLevel(0);
