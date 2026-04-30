@@ -151,6 +151,10 @@ function AssistantPage() {
       if (user && activeConvId && acc) {
         void appendMessage(user.id, activeConvId, "assistant", acc);
       }
+      // Auto-speak final reply via ElevenLabs TTS (only if enabled & we got text)
+      if (autoSpeak && acc.trim()) {
+        void speakText(acc);
+      }
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
         console.error(e);
@@ -161,6 +165,141 @@ function AssistantPage() {
       abortRef.current = null;
     }
   }
+
+  // ---------------- Voice: TTS (ElevenLabs) ----------------
+  function stopSpeaking() {
+    try { ttsAbortRef.current?.abort(); } catch { /* ignore */ }
+    ttsAbortRef.current = null;
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      } catch { /* ignore */ }
+      audioRef.current = null;
+    }
+    setSpeaking(false);
+  }
+
+  async function speakText(text: string) {
+    // Strip markdown-ish noise so TTS sounds natural
+    const clean = text
+      .replace(/```[\s\S]*?```/g, " ")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/[*_~>#]+/g, " ")
+      .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!clean) return;
+    stopSpeaking();
+    const ctrl = new AbortController();
+    ttsAbortRef.current = ctrl;
+    setSpeaking(true);
+    try {
+      const resp = await fetch(TTS_URL, {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: {
+          "Content-Type": "application/json",
+          ...(SUPA_KEY ? { Authorization: `Bearer ${SUPA_KEY}` } : {}),
+        },
+        body: JSON.stringify({ text: clean }),
+      });
+      if (!resp.ok) {
+        console.error("[tts] failed", resp.status, await resp.text().catch(() => ""));
+        setSpeaking(false);
+        return;
+      }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => {
+        setSpeaking(false);
+        URL.revokeObjectURL(url);
+        if (audioRef.current === audio) audioRef.current = null;
+      };
+      audio.onerror = () => {
+        setSpeaking(false);
+        URL.revokeObjectURL(url);
+      };
+      await audio.play().catch((err) => {
+        console.warn("[tts] play blocked", err);
+        setSpeaking(false);
+      });
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") {
+        console.error("[tts] error", e);
+      }
+      setSpeaking(false);
+    }
+  }
+
+  // ---------------- Voice: STT push-to-talk (Web Speech API) ----------------
+  function startRecording() {
+    const SR: any =
+      (typeof window !== "undefined" &&
+        ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)) ||
+      null;
+    if (!SR) {
+      toast.error("Voice input not supported on this browser");
+      return;
+    }
+    // Stop any ongoing TTS so user hears themselves
+    stopSpeaking();
+    try {
+      const rec = new SR();
+      rec.lang = "en-US";
+      rec.continuous = false;
+      rec.interimResults = true;
+      let finalText = "";
+      rec.onresult = (e: any) => {
+        let interim = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const r = e.results[i];
+          if (r.isFinal) finalText += r[0].transcript;
+          else interim += r[0].transcript;
+        }
+        const combined = (finalText + " " + interim).trim();
+        if (combined) setInput(combined);
+      };
+      rec.onerror = (e: any) => {
+        console.warn("[stt] error", e?.error);
+        if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
+          toast.error("Microphone permission denied");
+        }
+        setRecording(false);
+      };
+      rec.onend = () => {
+        setRecording(false);
+        recognitionRef.current = null;
+      };
+      recognitionRef.current = rec;
+      rec.start();
+      setRecording(true);
+    } catch (e) {
+      console.error("[stt] start failed", e);
+      setRecording(false);
+    }
+  }
+
+  function stopRecording() {
+    const rec = recognitionRef.current;
+    if (rec) {
+      try { rec.stop(); } catch { /* ignore */ }
+    }
+    setRecording(false);
+  }
+
+  // Cleanup on unmount: stop any audio + recognition
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+      const rec = recognitionRef.current;
+      if (rec) { try { rec.stop(); } catch { /* ignore */ } }
+    };
+  }, []);
+
 
   async function generateImage(prompt: string) {
     setLoading(true);
