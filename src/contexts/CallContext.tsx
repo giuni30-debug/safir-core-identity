@@ -163,33 +163,52 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     source.start(0);
   }, []);
 
-  // Apply audio output routing without ever muting the remote stream.
-  // - speaker ON  → main loudspeaker (default media output, full volume)
-  // - speaker OFF → earpiece/communications device when supported,
-  //                 otherwise a softer volume as fallback (NEVER muted).
+  const getRemotePlaybackStream = useCallback((stream: MediaStream) => {
+    const audioTracks = stream.getAudioTracks();
+    if (audioTracks.length === 0) return stream;
+    const graph = remoteAudioGraphRef.current;
+    if (graph?.input === stream) return graph.destination.stream;
+    graph?.source.disconnect();
+    graph?.compressor.disconnect();
+    graph?.gain.disconnect();
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) return stream;
+    const ctx = audioContextRef.current ?? new AudioContextCtor();
+    audioContextRef.current = ctx;
+    const source = ctx.createMediaStreamSource(new MediaStream(audioTracks));
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -28;
+    compressor.knee.value = 24;
+    compressor.ratio.value = 4;
+    compressor.attack.value = 0.004;
+    compressor.release.value = 0.18;
+    const gain = ctx.createGain();
+    gain.gain.value = 1.18;
+    const destination = ctx.createMediaStreamDestination();
+    source.connect(compressor).connect(gain).connect(destination);
+    remoteAudioGraphRef.current = { input: stream, source, compressor, gain, destination };
+    return destination.stream;
+  }, []);
+
+  // Clean speaker routing: keep the remote track alive, only switch output device.
   const applyAudioRouting = useCallback(async (on: boolean) => {
     const a = remoteAudioRef.current;
     if (!a) return;
-    // Always keep the element unmuted so the call voice stays audible.
     a.muted = false;
     a.volume = 1;
-    const anyA = a as HTMLAudioElement & {
-      setSinkId?: (id: string) => Promise<void>;
-    };
-    if (typeof anyA.setSinkId === "function") {
-      try {
-        // "" = default media output (loudspeaker on mobile)
-        // "communications" = earpiece/comm device when available
-        await anyA.setSinkId(on ? "" : "communications");
-      } catch (e) {
-        // setSinkId not permitted (e.g. iOS Safari) — fall back to volume only
-        console.warn("[call] setSinkId failed, falling back", e);
-        a.volume = on ? 1 : 0.55;
-      }
-    } else {
-      // No sink selection API — use volume as a soft routing approximation,
-      // but never below an audible level.
-      a.volume = on ? 1 : 0.55;
+    const sinkable = a as AudioSinkElement;
+    if (typeof sinkable.setSinkId !== "function") return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const outputs = devices.filter((d) => d.kind === "audiooutput");
+      const findOutput = (words: RegExp) => outputs.find((d) => words.test(d.label.toLowerCase()))?.deviceId;
+      const earpiece = findOutput(/earpiece|receiver|phone|communication|comunicare|cască|casca/);
+      const loudspeaker = findOutput(/speaker|loud|media|multimedia|difuzor/);
+      await sinkable.setSinkId(on ? loudspeaker || "default" : earpiece || "default");
+    } catch (e) {
+      console.warn("[call] audio output routing unavailable", e);
     }
   }, []);
 
@@ -198,7 +217,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (!stream) return;
     if (remoteAudioRef.current) {
       const a = remoteAudioRef.current;
-      if (a.srcObject !== stream) a.srcObject = stream;
+      const playbackStream = getRemotePlaybackStream(stream);
+      if (a.srcObject !== playbackStream) a.srcObject = playbackStream;
       a.muted = false;
       a.volume = 1;
       a.play().catch((e) => {
