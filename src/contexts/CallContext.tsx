@@ -503,9 +503,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       localVideoRef.current.play().catch(() => {});
     }
     if (state.kind === "active") {
+      setSpeakerphoneOff();
       playRemoteMedia();
     }
-  }, [state, playRemoteMedia]);
+  }, [state, playRemoteMedia, setSpeakerphoneOff]);
 
   // ---- Elapsed timer ----
   useEffect(() => {
