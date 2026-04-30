@@ -112,7 +112,7 @@ function ChatPage() {
   const { t, user } = useApp();
   const { id: contactId } = Route.useParams();
   const myId = user?.id ?? null;
-  const { startCall, inCall } = useCall();
+  const { startCall, startVideoCall, inCall } = useCall();
 
   const [contact, setContact] = useState<{
     display_name: string; username: string; avatar_url: string | null;
@@ -473,6 +473,16 @@ function ChatPage() {
           style={{ boxShadow: contact && !inCall ? "var(--shadow-glow)" : undefined }}
         >
           <Phone className="h-5 w-5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => { if (contact) void startVideoCall(contactId); }}
+          disabled={!contact || inCall}
+          aria-label="Video call"
+          className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card/40 text-primary disabled:opacity-40"
+          style={{ boxShadow: contact && !inCall ? "var(--shadow-glow)" : undefined }}
+        >
+          <VideoIcon className="h-5 w-5" />
         </button>
       </header>
 
