@@ -107,24 +107,23 @@ function VoiceModeInner({
 
   const conversation = useConversation({
     onConnect: () => {
-      console.log("Connection success");
+      console.log("[voice] connected");
       setOrbState("idle");
       setRetrying(false);
       retryingRef.current = false;
       playSound("notification");
     },
     onDisconnect: () => {
+      console.log("[voice] disconnected");
       setOrbState("idle");
       setInputLevel(0);
       setOutputLevel(0);
       setPttHeld(false);
     },
     onError: (e) => {
-      console.error("ElevenLabs convo error:", e);
-      setOrbState("error");
-      playSound("error");
-      if (!retryingRef.current) toast.error("Voice not connected. Retrying...");
-      setTimeout(() => setOrbState("idle"), 1200);
+      // Errors during startSession are handled by waitForSessionStart;
+      // only log here to avoid duplicate toasts / retry loops.
+      console.error("[voice] sdk error:", e);
     },
     onMessage: async (msg: unknown) => {
       // Surface user transcript & agent response
