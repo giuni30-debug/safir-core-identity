@@ -825,16 +825,7 @@ function CallOverlay({
               >
                 <SwitchCamera className="h-5 w-5" />
               </button>
-            ) : (
-              <button
-                onClick={onToggleSpeaker}
-                disabled={state.kind !== "active"}
-                className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card/60 backdrop-blur disabled:opacity-40"
-                aria-label="Speaker"
-              >
-                <Volume2 className={speakerOn ? "h-5 w-5 text-primary" : "h-5 w-5"} />
-              </button>
-            )}
+            ) : null}
           </>
         )}
       </div>
