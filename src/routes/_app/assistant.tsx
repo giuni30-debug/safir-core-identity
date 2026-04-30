@@ -727,6 +727,23 @@ function AssistantPage() {
           >
             <Wand2 className="h-3.5 w-3.5" /> {t("aiCreateImage")}
           </button>
+          <button
+            onClick={() => {
+              if (speaking) stopSpeaking();
+              setAutoSpeak((v) => !v);
+            }}
+            className="press-glow shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold"
+            style={autoSpeak ? {
+              borderColor: "var(--theme-accent)",
+              color: "var(--theme-accent)",
+              background: "color-mix(in oklab, var(--theme-accent) 14%, transparent)",
+            } : { borderColor: "var(--border)", color: "#fff" }}
+            aria-label="Toggle voice reply"
+            title={autoSpeak ? "Voice reply: ON" : "Voice reply: OFF"}
+          >
+            {autoSpeak ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            {speaking ? "Speaking…" : autoSpeak ? "Voice on" : "Voice off"}
+          </button>
           {messages.length > 0 && suggestions.slice(0, 2).map((s) => (
             <button
               key={s.key}
@@ -761,6 +778,25 @@ function AssistantPage() {
           </button>
           <input ref={fileInputRef} type="file" hidden onChange={(e) => onPickFile(e, "file")} />
           <input ref={imgInputRef} type="file" accept="image/*" hidden onChange={(e) => onPickFile(e, "image")} />
+
+          {/* Push-to-talk microphone */}
+          <button
+            onPointerDown={(e) => { e.preventDefault(); startRecording(); }}
+            onPointerUp={(e) => { e.preventDefault(); stopRecording(); }}
+            onPointerLeave={() => { if (recording) stopRecording(); }}
+            onPointerCancel={() => { if (recording) stopRecording(); }}
+            onContextMenu={(e) => e.preventDefault()}
+            className="press-glow grid h-9 w-9 place-items-center rounded-full select-none"
+            style={recording ? {
+              background: "color-mix(in oklab, var(--theme-accent) 30%, transparent)",
+              color: "var(--theme-accent)",
+              boxShadow: "0 0 16px color-mix(in oklab, var(--theme-accent) 60%, transparent)",
+            } : { color: "var(--theme-accent)" }}
+            aria-label={recording ? "Recording — release to stop" : "Hold to talk"}
+            title="Hold to talk"
+          >
+            <Mic className="h-4 w-4" />
+          </button>
 
           <textarea
             value={input}
