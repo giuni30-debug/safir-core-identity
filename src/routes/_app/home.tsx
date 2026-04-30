@@ -52,6 +52,8 @@ function Home() {
         </Link>
       </header>
 
+      <HomeInstallBanner />
+
       {/* Tiles — vertically centered */}
       <div className="flex flex-1 items-center">
         <div className="grid w-full grid-cols-2 gap-3">
