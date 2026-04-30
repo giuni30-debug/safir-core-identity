@@ -40,7 +40,10 @@ export type Database = {
           audio_url: string | null
           created_at: string
           duration_seconds: number | null
+          file_name: string | null
+          file_size: number | null
           id: string
+          media_url: string | null
           message_text: string | null
           message_type: string
           receiver_user_id: string
@@ -50,7 +53,10 @@ export type Database = {
           audio_url?: string | null
           created_at?: string
           duration_seconds?: number | null
+          file_name?: string | null
+          file_size?: number | null
           id?: string
+          media_url?: string | null
           message_text?: string | null
           message_type?: string
           receiver_user_id: string
@@ -60,7 +66,10 @@ export type Database = {
           audio_url?: string | null
           created_at?: string
           duration_seconds?: number | null
+          file_name?: string | null
+          file_size?: number | null
           id?: string
+          media_url?: string | null
           message_text?: string | null
           message_type?: string
           receiver_user_id?: string
