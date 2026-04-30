@@ -41,17 +41,30 @@ const ICE_SERVERS: RTCIceServer[] = [
 ];
 
 const CALL_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
-  echoCancellation: true,
-  noiseSuppression: true,
-  autoGainControl: true,
+  echoCancellation: { ideal: true },
+  noiseSuppression: { ideal: true },
+  autoGainControl: { ideal: true },
   channelCount: { ideal: 1 },
   sampleRate: { ideal: 48000 },
   sampleSize: { ideal: 16 },
+  advanced: [
+    { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    {
+      googEchoCancellation: true,
+      googNoiseSuppression: true,
+      googAutoGainControl: true,
+      googAutoGainControl2: true,
+      googHighpassFilter: true,
+    } as MediaTrackConstraintSet,
+  ],
 };
 
-const REMOTE_AUDIO_VOLUME = 0.72;
+const REMOTE_AUDIO_VOLUME = 0.78;
 
-type AudioSinkElement = HTMLAudioElement & { setSinkId?: (sinkId: string) => Promise<void> };
+type AudioSinkElement = HTMLMediaElement & { setSinkId?: (sinkId: string) => Promise<void> };
+type CallAudioSessionNavigator = Navigator & {
+  audioSession?: { type: "auto" | "playback" | "transient" | "transient-solo" | "ambient" | "play-and-record" };
+};
 
 export function CallProvider({ children }: { children: React.ReactNode }) {
   const { user } = useApp();
@@ -153,9 +166,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     audio.setAttribute("controlslist", "nodownload noremoteplayback");
   }, []);
 
-  const unlockCallAudio = useCallback(async () => {
-    if (remoteAudioRef.current) prepareCallAudioElement(remoteAudioRef.current);
+  const forceNativeCallAudioSession = useCallback(() => {
+    const nav = navigator as CallAudioSessionNavigator;
+    if (nav.audioSession) {
+      try {
+        nav.audioSession.type = "play-and-record";
+      } catch (e) {
+        console.warn("[call] native call audio session unavailable", e);
+      }
+    }
   }, []);
+
+  const unlockCallAudio = useCallback(async () => {
+    forceNativeCallAudioSession();
+    if (remoteAudioRef.current) prepareCallAudioElement(remoteAudioRef.current);
+  }, [forceNativeCallAudioSession, prepareCallAudioElement]);
 
   const normalizeLocalMicrophone = useCallback((stream: MediaStream) => {
     const audioTracks = stream.getAudioTracks();
@@ -169,21 +194,41 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [releaseLocalAudioProcessing]);
 
   const applyAudioRouting = useCallback(async () => {
-    const audio = remoteAudioRef.current as AudioSinkElement | null;
-    if (!audio) return;
-    prepareCallAudioElement(audio);
-    audio.muted = false;
-    if (typeof audio.setSinkId !== "function") return;
+    forceNativeCallAudioSession();
+    const targets = [remoteAudioRef.current, remoteVideoRef.current].filter(Boolean) as AudioSinkElement[];
+    if (remoteAudioRef.current) {
+      prepareCallAudioElement(remoteAudioRef.current);
+      remoteAudioRef.current.muted = false;
+    }
     try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
+      const devices = await navigator.mediaDevices?.enumerateDevices?.();
+      if (!devices) return;
       const outputs = devices.filter((d) => d.kind === "audiooutput");
       const normalize = (v: string) => v.toLowerCase();
-      const earpiece = outputs.find((d) => /earpiece|receiver|phone|communication|comunicare|cască|casca/.test(normalize(d.label)))?.deviceId;
-      await audio.setSinkId(earpiece || "communications");
+      const loudspeakerPattern = /speaker|loudspeaker|difuzor|media|handsfree|external|bluetooth|airplay|hdmi|usb|cast|default/;
+      const earpiece = outputs.find((d) => {
+        const label = normalize(d.label);
+        return /earpiece|receiver|phone|communication|communications|comunicare|cască|casca|telefon|auricular/.test(label)
+          && !loudspeakerPattern.test(label);
+      })?.deviceId;
+      const sinkId = earpiece || "communications";
+      await Promise.all(targets.map(async (target) => {
+        if (typeof target.setSinkId !== "function") return;
+        try {
+          await target.setSinkId(sinkId);
+        } catch {
+          if (sinkId !== "communications") await target.setSinkId("communications");
+        }
+      }));
     } catch (e) {
       console.warn("[call] earpiece routing unavailable", e);
     }
-  }, []);
+  }, [forceNativeCallAudioSession, prepareCallAudioElement]);
+
+  const setSpeakerphoneOff = useCallback(() => {
+    forceNativeCallAudioSession();
+    void applyAudioRouting();
+  }, [applyAudioRouting, forceNativeCallAudioSession]);
 
   const playRemoteMedia = useCallback(() => {
     const stream = remoteStreamRef.current;
@@ -297,6 +342,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setInfo(null);
       facingRef.current = "user";
       await unlockCallAudio();
+      setSpeakerphoneOff();
 
       const { data: peer } = await supabase
         .from("profiles")
@@ -333,6 +379,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
       const pc = buildPeer(call.id, contactId);
       stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+      setSpeakerphoneOff();
 
       const offer = await pc.createOffer({
         offerToReceiveAudio: true,
@@ -352,7 +399,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         media,
       });
     },
-    [myId, state.kind, buildPeer, sendSignal, getLocalMedia, unlockCallAudio],
+    [myId, state.kind, buildPeer, sendSignal, getLocalMedia, unlockCallAudio, setSpeakerphoneOff],
   );
 
   const startCall = useCallback((id: string) => startCallInternal(id, "audio"), [startCallInternal]);
@@ -363,6 +410,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (state.kind !== "incoming" || !myId) return;
     const { callId, peer, offer, media } = state;
     await unlockCallAudio();
+    setSpeakerphoneOff();
 
     const stream = await getLocalMedia(media);
     if (!stream) {
@@ -379,6 +427,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     const pc = buildPeer(callId, peer.id);
     stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+    setSpeakerphoneOff();
 
     await pc.setRemoteDescription(offer);
     remoteDescSetRef.current = true;
@@ -396,7 +445,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     await updateCallStatus(callId, "accepted");
 
     setState({ kind: "active", callId, peer, role: "callee", startedAt: Date.now(), media });
-  }, [state, myId, buildPeer, sendSignal, updateCallStatus, cleanup, getLocalMedia, unlockCallAudio]);
+  }, [state, myId, buildPeer, sendSignal, updateCallStatus, cleanup, getLocalMedia, unlockCallAudio, setSpeakerphoneOff]);
 
   const declineIncoming = useCallback(async () => {
     if (state.kind !== "incoming") return;
@@ -455,9 +504,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       localVideoRef.current.play().catch(() => {});
     }
     if (state.kind === "active") {
+      setSpeakerphoneOff();
       playRemoteMedia();
     }
-  }, [state, playRemoteMedia]);
+  }, [state, playRemoteMedia, setSpeakerphoneOff]);
 
   // ---- Elapsed timer ----
   useEffect(() => {
