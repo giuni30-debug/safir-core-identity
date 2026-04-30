@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppShoppingRouteImport } from './routes/_app/shopping'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
@@ -59,6 +60,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppShoppingRoute = AppShoppingRouteImport.update({
+  id: '/shopping',
+  path: '/shopping',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AppNotificationsRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
+  '/shopping': typeof AppShoppingRoute
   '/chat/$id': typeof AppChatIdRoute
 }
 export interface FileRoutesByTo {
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AppNotificationsRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
+  '/shopping': typeof AppShoppingRoute
   '/chat/$id': typeof AppChatIdRoute
 }
 export interface FileRoutesById {
@@ -202,6 +210,7 @@ export interface FileRoutesById {
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/shopping': typeof AppShoppingRoute
   '/_app/chat/$id': typeof AppChatIdRoute
 }
 export interface FileRouteTypes {
@@ -226,6 +235,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/profile'
     | '/settings'
+    | '/shopping'
     | '/chat/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -248,6 +258,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/profile'
     | '/settings'
+    | '/shopping'
     | '/chat/$id'
   id:
     | '__root__'
@@ -271,6 +282,7 @@ export interface FileRouteTypes {
     | '/_app/notifications'
     | '/_app/profile'
     | '/_app/settings'
+    | '/_app/shopping'
     | '/_app/chat/$id'
   fileRoutesById: FileRoutesById
 }
@@ -326,6 +338,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/shopping': {
+      id: '/_app/shopping'
+      path: '/shopping'
+      fullPath: '/shopping'
+      preLoaderRoute: typeof AppShoppingRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/settings': {
       id: '/_app/settings'
@@ -450,6 +469,7 @@ interface AppRouteChildren {
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppShoppingRoute: typeof AppShoppingRoute
   AppChatIdRoute: typeof AppChatIdRoute
 }
 
@@ -468,6 +488,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppNotificationsRoute: AppNotificationsRoute,
   AppProfileRoute: AppProfileRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppShoppingRoute: AppShoppingRoute,
   AppChatIdRoute: AppChatIdRoute,
 }
 
