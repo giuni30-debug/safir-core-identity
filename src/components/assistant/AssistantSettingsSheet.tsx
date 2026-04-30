@@ -68,33 +68,6 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
           </button>
         </div>
 
-        {/* Agent ID */}
-        <div className="mb-4">
-          <label className="mb-1 block text-xs uppercase tracking-wider text-white/50">
-            ElevenLabs Agent ID
-          </label>
-          <input
-            value={agentId}
-            onChange={(e) => setAgentId(e.target.value)}
-            placeholder="agent_xxxxxxxxxxxxxxxx"
-            aria-invalid={!!agentIdError}
-            className={`w-full rounded-xl border bg-white/5 px-3 py-2 text-sm outline-none transition ${
-              agentIdError
-                ? "border-red-400/70 focus:border-red-400"
-                : agentIdValid && trimmedId
-                ? "border-emerald-400/60 focus:border-emerald-400"
-                : "border-white/10 focus:border-cyan-400/60"
-            }`}
-          />
-          {agentIdError ? (
-            <p className="mt-1 text-[11px] text-red-300">{agentIdError}</p>
-          ) : (
-            <p className="mt-1 text-[11px] text-white/40">
-              Create a Conversational AI agent at elevenlabs.io → Conversational AI → Create Agent, then paste its ID here.
-            </p>
-          )}
-        </div>
-
         {/* Voice */}
         <div className="mb-4">
           <label className="mb-2 block text-xs uppercase tracking-wider text-white/50">Voice</label>
@@ -153,7 +126,7 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
 
         <button
           onClick={submit}
-          disabled={saving || !!agentIdError}
+          disabled={saving}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-500 px-4 py-3 font-medium text-white shadow-lg disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
