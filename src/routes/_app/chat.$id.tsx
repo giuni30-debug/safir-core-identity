@@ -513,7 +513,7 @@ function ChatPage() {
       const ext = voicePreview.blob.type.includes("mp4") ? "m4a" : "webm";
       const path = `${myId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage
-        .from("voice-messages")
+        .from(VOICE_BUCKET)
         .upload(path, voicePreview.blob, {
           contentType: voicePreview.blob.type || "audio/webm",
           upsert: false,
@@ -524,7 +524,7 @@ function ChatPage() {
         sender_user_id: myId,
         receiver_user_id: contactId,
         message_type: "voice",
-        audio_url: path,
+        audio_url: `/${VOICE_BUCKET}/${path}`,
         duration_seconds: voicePreview.duration,
         message_text: null,
       });
