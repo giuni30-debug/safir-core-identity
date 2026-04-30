@@ -84,15 +84,20 @@ function VoiceModeInner({
   const [partial, setPartial] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [pttHeld, setPttHeld] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const convoIdRef = useRef<string | null>(voiceConversationId ?? null);
   const lastUserRef = useRef<string>("");
   const rafRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const retryingRef = useRef(false);
 
   const conversation = useConversation({
     onConnect: () => {
+      console.log("Connection success");
       setOrbState("idle");
+      setRetrying(false);
+      retryingRef.current = false;
       playSound("notification");
     },
     onDisconnect: () => {
@@ -105,7 +110,7 @@ function VoiceModeInner({
       console.error("ElevenLabs convo error:", e);
       setOrbState("error");
       playSound("error");
-      toast.error("Voice not connected. Retrying...");
+      if (!retryingRef.current) toast.error("Voice not connected. Retrying...");
       setTimeout(() => setOrbState("idle"), 1200);
     },
     onMessage: async (msg: unknown) => {
