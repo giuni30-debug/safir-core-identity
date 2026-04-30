@@ -5,6 +5,12 @@ import { Phone, PhoneOff, Mic, MicOff, Video as VideoIcon, VideoOff, SwitchCamer
 import { supabase } from "@/integrations/supabase/client";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
+import {
+  startNativeCallSession,
+  endNativeCallSession,
+  setNativeSpeakerphone,
+  isNativePlatform,
+} from "@/lib/nativeAudio";
 
 type ContactProfile = {
   id: string;
@@ -98,6 +104,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const cleanup = useCallback(() => {
+    void endNativeCallSession();
     pcRef.current?.getSenders().forEach((s) => s.track?.stop());
     pcRef.current?.close();
     pcRef.current = null;
@@ -226,6 +233,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [forceNativeCallAudioSession, prepareCallAudioElement]);
 
   const setSpeakerphoneOff = useCallback(() => {
+    // Pe mobil nativ (Capacitor): forțează casca prin AVAudioSession / AudioManager
+    if (isNativePlatform()) {
+      void startNativeCallSession();
+      void setNativeSpeakerphone(false);
+    }
+    // Pe web: continuă cu fallback-ul existent
     forceNativeCallAudioSession();
     void applyAudioRouting();
   }, [applyAudioRouting, forceNativeCallAudioSession]);
