@@ -15,6 +15,7 @@ import { decodeGiftMessage, encodeGiftMessage, type Gift } from "@/components/ch
 import { usePeerPresence, formatLastSeen } from "@/hooks/usePresence";
 import { useTypingIndicator } from "@/hooks/useTyping";
 import { useReactions } from "@/hooks/useReactions";
+import { playSound, vibrate } from "@/lib/sound";
 
 export const Route = createFileRoute("/_app/chat/$id")({
   component: ChatPage,
