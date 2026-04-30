@@ -589,6 +589,66 @@ function ChatPage() {
         </div>
       )}
 
+      {attachError && (
+        <div className="mb-2 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {attachError}
+        </div>
+      )}
+
+      {attachment && (
+        <div className="mb-2 rounded-2xl border border-border bg-card/40 p-2">
+          <div className="flex items-start gap-2">
+            <div className="flex-1 overflow-hidden">
+              {attachment.kind === "image" ? (
+                <img
+                  src={attachment.url}
+                  alt={attachment.file.name}
+                  className="max-h-48 w-auto rounded-xl object-cover"
+                />
+              ) : attachment.kind === "video" ? (
+                <video
+                  src={attachment.url}
+                  controls
+                  preload="metadata"
+                  className="max-h-48 w-full rounded-xl"
+                />
+              ) : (
+                <div className="flex items-center gap-2 rounded-xl bg-muted/30 p-2">
+                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/80 text-primary-foreground">
+                    <FileIcon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium">{attachment.file.name}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatBytes(attachment.file.size)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={discardAttachment}
+                className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card/40 text-destructive"
+                aria-label="Cancel"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={sendAttachment}
+                disabled={sending}
+                className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+                aria-label="Send"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {recording ? (
         <div className="flex items-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/10 px-3 py-3">
           <span className="grid h-3 w-3 place-items-center">
@@ -616,11 +676,55 @@ function ChatPage() {
         </div>
       ) : (
         <form onSubmit={onSend} className="flex items-center gap-2">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setAttachMenuOpen((v) => !v)}
+              disabled={!!voicePreview || !!attachment}
+              aria-label="Attach"
+              className="grid h-12 w-12 place-items-center rounded-2xl border border-border bg-card/40 disabled:opacity-40"
+            >
+              <Plus className={`h-5 w-5 transition-transform ${attachMenuOpen ? "rotate-45" : ""}`} />
+            </button>
+            {attachMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  aria-hidden
+                  onClick={() => setAttachMenuOpen(false)}
+                  className="fixed inset-0 z-10 cursor-default bg-transparent"
+                />
+                <div className="absolute bottom-14 left-0 z-20 w-44 overflow-hidden rounded-2xl border border-border bg-card/95 shadow-xl backdrop-blur">
+                  <button
+                    type="button"
+                    onClick={() => pickAttachment("image")}
+                    className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted/40"
+                  >
+                    <ImageIcon className="h-4 w-4 text-primary" /> Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => pickAttachment("video")}
+                    className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted/40"
+                  >
+                    <VideoIcon className="h-4 w-4 text-primary" /> Video
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => pickAttachment("file")}
+                    className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted/40"
+                  >
+                    <FileIcon className="h-4 w-4 text-primary" /> File
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={t("typeMessage")}
-            disabled={!!voicePreview}
+            disabled={!!voicePreview || !!attachment}
             className="flex-1 rounded-2xl border border-input bg-card/30 px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
           />
           {text.trim() ? (
@@ -636,7 +740,7 @@ function ChatPage() {
             <button
               type="button"
               onClick={startRecording}
-              disabled={!!voicePreview}
+              disabled={!!voicePreview || !!attachment}
               aria-label="Record voice message"
               className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-primary-foreground disabled:opacity-40"
             >
@@ -645,6 +749,28 @@ function ChatPage() {
           )}
         </form>
       )}
+
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => onAttachChange("image", e)}
+      />
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={(e) => onAttachChange("video", e)}
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.txt,.zip,.rar,.7z,.xls,.xlsx,.ppt,.pptx,.csv,.json,application/pdf,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+        className="hidden"
+        onChange={(e) => onAttachChange("file", e)}
+      />
     </div>
   );
 }
