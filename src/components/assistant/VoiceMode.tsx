@@ -441,7 +441,9 @@ function VoiceModeInner({
 
   const isConnected = conversation.status === "connected";
   const statusLabel =
-    orbState === "thinking"
+    retrying
+      ? "Voice not connected. Retrying…"
+      : orbState === "thinking"
       ? "Thinking…"
       : orbState === "listening"
         ? "Listening…"
