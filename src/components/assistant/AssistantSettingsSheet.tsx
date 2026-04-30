@@ -34,11 +34,26 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
 
   if (!open) return null;
 
+  const trimmedId = agentId.trim();
+  // ElevenLabs agent IDs: usually "agent_" + 20-40 alphanumeric, or legacy alphanumeric (>= 16 chars)
+  const agentIdValid =
+    trimmedId.length === 0 ||
+    /^agent_[A-Za-z0-9]{16,}$/.test(trimmedId) ||
+    /^[A-Za-z0-9]{20,}$/.test(trimmedId);
+  const agentIdError =
+    trimmedId.length > 0 && !agentIdValid
+      ? "Invalid format. Expected something like agent_xxxxxxxxxxxxxxxx"
+      : null;
+
   const submit = async () => {
+    if (agentIdError) {
+      toast.error(agentIdError);
+      return;
+    }
     setSaving(true);
     try {
       await onSave({
-        agentId: agentId.trim() || null,
+        agentId: trimmedId || null,
         voiceId,
         personality,
         autoMode,
