@@ -41,17 +41,30 @@ const ICE_SERVERS: RTCIceServer[] = [
 ];
 
 const CALL_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
-  echoCancellation: true,
-  noiseSuppression: true,
-  autoGainControl: true,
+  echoCancellation: { ideal: true },
+  noiseSuppression: { ideal: true },
+  autoGainControl: { ideal: true },
   channelCount: { ideal: 1 },
   sampleRate: { ideal: 48000 },
   sampleSize: { ideal: 16 },
+  advanced: [
+    { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    {
+      googEchoCancellation: true,
+      googNoiseSuppression: true,
+      googAutoGainControl: true,
+      googAutoGainControl2: true,
+      googHighpassFilter: true,
+    } as MediaTrackConstraintSet,
+  ],
 };
 
-const REMOTE_AUDIO_VOLUME = 0.72;
+const REMOTE_AUDIO_VOLUME = 0.78;
 
-type AudioSinkElement = HTMLAudioElement & { setSinkId?: (sinkId: string) => Promise<void> };
+type AudioSinkElement = HTMLMediaElement & { setSinkId?: (sinkId: string) => Promise<void> };
+type CallAudioSessionNavigator = Navigator & {
+  audioSession?: { type: "auto" | "playback" | "transient" | "transient-solo" | "ambient" | "play-and-record" };
+};
 
 export function CallProvider({ children }: { children: React.ReactNode }) {
   const { user } = useApp();
