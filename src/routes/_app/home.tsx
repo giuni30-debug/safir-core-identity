@@ -127,7 +127,108 @@ function Home() {
 
       <HomeInstallBanner />
 
+      {/* Communication Hero panel */}
+      <section
+        className="relative z-10 mt-3 animate-[fade-in_0.5s_ease-out] rounded-3xl p-4"
+        style={{
+          background:
+            "linear-gradient(135deg, oklch(1 0 0 / 8%) 0%, oklch(0.70 0.18 250 / 10%) 50%, oklch(1 0 0 / 4%) 100%)",
+          border: "1.5px solid oklch(0.70 0.18 250 / 45%)",
+          backdropFilter: "blur(28px) saturate(160%)",
+          WebkitBackdropFilter: "blur(28px) saturate(160%)",
+          boxShadow:
+            "0 0 32px oklch(0.70 0.18 250 / 28%), 0 12px 40px oklch(0 0 0 / 50%), inset 0 1px 0 oklch(1 0 0 / 12%)",
+        }}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <p
+            className="text-sm font-semibold tracking-wide text-white"
+            style={{ textShadow: "0 0 14px oklch(0.70 0.18 250 / 60%)" }}
+          >
+            {t("commTitle")}
+          </p>
+          <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-white/70">
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"
+              style={{
+                boxShadow: "0 0 8px #34d399, 0 0 14px #34d399",
+                animation: "logo-breath 1.6s ease-in-out infinite",
+              }}
+            />
+            {t("commOnlineNow")}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2.5">
+          <CommButton
+            accent="oklch(0.78 0.18 200)"
+            label={t("commChat")}
+            desc={t("commChatDesc")}
+            icon={<MessageCircle className="h-6 w-6" />}
+            badge={<TypingDots />}
+            onClick={() => navigate({ to: "/contacts" })}
+          />
+          <CommButton
+            accent="oklch(0.78 0.18 145)"
+            label={t("commCall")}
+            desc={t("commCallDesc")}
+            icon={<Phone className="h-6 w-6" />}
+            badge={<PulseRing color="oklch(0.78 0.18 145)" />}
+            onClick={() => {
+              if (quickContacts[0]) void startCall(quickContacts[0].id);
+              else navigate({ to: "/contacts" });
+            }}
+          />
+          <CommButton
+            accent="oklch(0.78 0.18 320)"
+            label={t("commVideo")}
+            desc={t("commVideoDesc")}
+            icon={<Video className="h-6 w-6" />}
+            badge={<GlowFlicker color="oklch(0.78 0.18 320)" />}
+            onClick={() => {
+              if (quickContacts[0]) void startVideoCall(quickContacts[0].id);
+              else navigate({ to: "/contacts" });
+            }}
+          />
+        </div>
+
+        {/* Quick contacts */}
+        <div className="mt-3 flex items-center gap-2">
+          <p className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/55">
+            {t("commQuickContacts")}
+          </p>
+          <div className="flex-1 overflow-x-auto">
+            <div className="flex items-center gap-2">
+              {quickContacts.length === 0 && (
+                <Link
+                  to="/connect"
+                  className="press-glow shrink-0 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-white/70"
+                >
+                  {t("commNoContactsYet")} →
+                </Link>
+              )}
+              {quickContacts.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => navigate({ to: "/chat/$id", params: { id: c.id } })}
+                  className="press-glow relative shrink-0"
+                  aria-label={c.display_name}
+                  title={c.display_name}
+                >
+                  <Avatar url={c.avatar_url} name={c.display_name} size={36} />
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-emerald-400"
+                    style={{ boxShadow: "0 0 6px #34d399" }}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Centerpiece: Logo + tagline (compact to make room for module cards) */}
+
       <div className="relative z-10 flex flex-col items-center gap-5 pt-2">
         {/* Sapphire S logo */}
         <div className="relative grid place-items-center" aria-hidden>
