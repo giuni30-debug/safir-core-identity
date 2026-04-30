@@ -171,8 +171,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const applyAudioRouting = useCallback(async () => {
     const audio = remoteAudioRef.current as AudioSinkElement | null;
     if (!audio) return;
+    prepareCallAudioElement(audio);
     audio.muted = false;
-    audio.volume = 0.88;
     if (typeof audio.setSinkId !== "function") return;
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -190,10 +190,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (!stream) return;
     if (remoteAudioRef.current) {
       const a = remoteAudioRef.current;
-      a.disableRemotePlayback = true;
-      if (a.srcObject !== stream) a.srcObject = stream;
+      prepareCallAudioElement(a);
+      const audioOnlyStream = new MediaStream(stream.getAudioTracks());
+      const current = a.srcObject as MediaStream | null;
+      const currentIds = current?.getAudioTracks().map((t) => t.id).join(",") ?? "";
+      const nextIds = audioOnlyStream.getAudioTracks().map((t) => t.id).join(",");
+      if (currentIds !== nextIds) a.srcObject = audioOnlyStream;
       a.muted = false;
-      a.volume = 0.88;
       a.play().catch((e) => {
         console.warn("remote audio play blocked", e);
         setInfo("Tap to enable call audio");
@@ -204,7 +207,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       remoteVideoRef.current.srcObject = stream;
       remoteVideoRef.current.play().catch(() => {});
     }
-  }, [applyAudioRouting]);
+  }, [applyAudioRouting, prepareCallAudioElement]);
 
   const buildPeer = useCallback(
     (callId: string, peerId: string) => {
