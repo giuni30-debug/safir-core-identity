@@ -16,6 +16,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppWalletRouteImport } from './routes/_app/wallet'
+import { Route as AppTranslatorRouteImport } from './routes/_app/translator'
 import { Route as AppShoppingRouteImport } from './routes/_app/shopping'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
@@ -29,6 +30,7 @@ import { Route as AppContactsRouteImport } from './routes/_app/contacts'
 import { Route as AppConnectRouteImport } from './routes/_app/connect'
 import { Route as AppComingSoonRouteImport } from './routes/_app/coming-soon'
 import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
+import { Route as AppAssistantRouteImport } from './routes/_app/assistant'
 import { Route as AppAppointmentsRouteImport } from './routes/_app/appointments'
 import { Route as AppAppearanceRouteImport } from './routes/_app/appearance'
 import { Route as AppChatIdRouteImport } from './routes/_app/chat.$id'
@@ -65,6 +67,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppWalletRoute = AppWalletRouteImport.update({
   id: '/wallet',
   path: '/wallet',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTranslatorRoute = AppTranslatorRouteImport.update({
+  id: '/translator',
+  path: '/translator',
   getParentRoute: () => AppRoute,
 } as any)
 const AppShoppingRoute = AppShoppingRouteImport.update({
@@ -132,6 +139,11 @@ const AppCalendarRoute = AppCalendarRouteImport.update({
   path: '/calendar',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAssistantRoute = AppAssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAppointmentsRoute = AppAppointmentsRouteImport.update({
   id: '/appointments',
   path: '/appointments',
@@ -156,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/appearance': typeof AppAppearanceRoute
   '/appointments': typeof AppAppointmentsRoute
+  '/assistant': typeof AppAssistantRoute
   '/calendar': typeof AppCalendarRoute
   '/coming-soon': typeof AppComingSoonRoute
   '/connect': typeof AppConnectRoute
@@ -169,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
   '/shopping': typeof AppShoppingRoute
+  '/translator': typeof AppTranslatorRoute
   '/wallet': typeof AppWalletRoute
   '/chat/$id': typeof AppChatIdRoute
 }
@@ -180,6 +194,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/appearance': typeof AppAppearanceRoute
   '/appointments': typeof AppAppointmentsRoute
+  '/assistant': typeof AppAssistantRoute
   '/calendar': typeof AppCalendarRoute
   '/coming-soon': typeof AppComingSoonRoute
   '/connect': typeof AppConnectRoute
@@ -193,6 +208,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
   '/shopping': typeof AppShoppingRoute
+  '/translator': typeof AppTranslatorRoute
   '/wallet': typeof AppWalletRoute
   '/chat/$id': typeof AppChatIdRoute
 }
@@ -206,6 +222,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_app/appearance': typeof AppAppearanceRoute
   '/_app/appointments': typeof AppAppointmentsRoute
+  '/_app/assistant': typeof AppAssistantRoute
   '/_app/calendar': typeof AppCalendarRoute
   '/_app/coming-soon': typeof AppComingSoonRoute
   '/_app/connect': typeof AppConnectRoute
@@ -219,6 +236,7 @@ export interface FileRoutesById {
   '/_app/profile': typeof AppProfileRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/shopping': typeof AppShoppingRoute
+  '/_app/translator': typeof AppTranslatorRoute
   '/_app/wallet': typeof AppWalletRoute
   '/_app/chat/$id': typeof AppChatIdRoute
 }
@@ -232,6 +250,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/appearance'
     | '/appointments'
+    | '/assistant'
     | '/calendar'
     | '/coming-soon'
     | '/connect'
@@ -245,6 +264,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/shopping'
+    | '/translator'
     | '/wallet'
     | '/chat/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -256,6 +276,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/appearance'
     | '/appointments'
+    | '/assistant'
     | '/calendar'
     | '/coming-soon'
     | '/connect'
@@ -269,6 +290,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/shopping'
+    | '/translator'
     | '/wallet'
     | '/chat/$id'
   id:
@@ -281,6 +303,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_app/appearance'
     | '/_app/appointments'
+    | '/_app/assistant'
     | '/_app/calendar'
     | '/_app/coming-soon'
     | '/_app/connect'
@@ -294,6 +317,7 @@ export interface FileRouteTypes {
     | '/_app/profile'
     | '/_app/settings'
     | '/_app/shopping'
+    | '/_app/translator'
     | '/_app/wallet'
     | '/_app/chat/$id'
   fileRoutesById: FileRoutesById
@@ -356,6 +380,13 @@ declare module '@tanstack/react-router' {
       path: '/wallet'
       fullPath: '/wallet'
       preLoaderRoute: typeof AppWalletRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/translator': {
+      id: '/_app/translator'
+      path: '/translator'
+      fullPath: '/translator'
+      preLoaderRoute: typeof AppTranslatorRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/shopping': {
@@ -449,6 +480,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCalendarRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/assistant': {
+      id: '/_app/assistant'
+      path: '/assistant'
+      fullPath: '/assistant'
+      preLoaderRoute: typeof AppAssistantRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/appointments': {
       id: '/_app/appointments'
       path: '/appointments'
@@ -476,6 +514,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppAppearanceRoute: typeof AppAppearanceRoute
   AppAppointmentsRoute: typeof AppAppointmentsRoute
+  AppAssistantRoute: typeof AppAssistantRoute
   AppCalendarRoute: typeof AppCalendarRoute
   AppComingSoonRoute: typeof AppComingSoonRoute
   AppConnectRoute: typeof AppConnectRoute
@@ -489,6 +528,7 @@ interface AppRouteChildren {
   AppProfileRoute: typeof AppProfileRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppShoppingRoute: typeof AppShoppingRoute
+  AppTranslatorRoute: typeof AppTranslatorRoute
   AppWalletRoute: typeof AppWalletRoute
   AppChatIdRoute: typeof AppChatIdRoute
 }
@@ -496,6 +536,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAppearanceRoute: AppAppearanceRoute,
   AppAppointmentsRoute: AppAppointmentsRoute,
+  AppAssistantRoute: AppAssistantRoute,
   AppCalendarRoute: AppCalendarRoute,
   AppComingSoonRoute: AppComingSoonRoute,
   AppConnectRoute: AppConnectRoute,
@@ -509,6 +550,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppProfileRoute: AppProfileRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppShoppingRoute: AppShoppingRoute,
+  AppTranslatorRoute: AppTranslatorRoute,
   AppWalletRoute: AppWalletRoute,
   AppChatIdRoute: AppChatIdRoute,
 }
