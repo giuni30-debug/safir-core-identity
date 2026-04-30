@@ -442,10 +442,24 @@ export function vibrate(pattern: HapticPattern = "tap") {
   }
 }
 
-// Convenience: sound + haptic in one call.
-export function feedback(id: SoundId, hap: HapticPattern | null = "tap") {
-  playSound(id);
+// Convenience: sound + haptic in one call. Pass `opts` for spatial pan/depth.
+export function feedback(
+  id: SoundId,
+  hap: HapticPattern | null = "tap",
+  opts?: SpatialOpts,
+) {
+  playSound(id, opts);
   if (hap) vibrate(hap);
+}
+
+/** Helper: play a sound spatialized to a click/tap event. */
+export function feedbackFromEvent(
+  id: SoundId,
+  e: { clientX?: number } | null | undefined,
+  hap: HapticPattern | null = "tap",
+) {
+  const pan = e && typeof e.clientX === "number" ? panFromClientX(e.clientX) : 0;
+  feedback(id, hap, { pan });
 }
 
 // Mark unlocked (read-only)
