@@ -217,11 +217,6 @@ function VoiceModeInner({
     source.start(0);
   }, []);
 
-  const prepareAudioFromTap = useCallback(async () => {
-    await unlockAudioPlayback();
-    await requestMicStream();
-  }, [requestMicStream, unlockAudioPlayback]);
-
   const requestMicStream = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("Microphone is not available in this browser.");
@@ -241,6 +236,11 @@ function VoiceModeInner({
     });
     stream.getTracks().forEach((track) => track.stop());
   }, []);
+
+  const prepareAudioFromTap = useCallback(async () => {
+    await unlockAudioPlayback();
+    await requestMicStream();
+  }, [requestMicStream, unlockAudioPlayback]);
 
   const createSessionOptions = useCallback(
     (connection: { conversationToken: string } | { signedUrl: string }, withOverrides: boolean) => {
