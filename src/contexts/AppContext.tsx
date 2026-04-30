@@ -33,6 +33,10 @@ type Ctx = {
   setBg: (b: BgKind) => void;
   anim: AnimKind;
   setAnim: (a: AnimKind) => void;
+  neon: NeonColor;
+  setNeon: (n: NeonColor) => void;
+  neonAnim: boolean;
+  setNeonAnim: (v: boolean) => void;
 };
 
 const AppCtx = createContext<Ctx | null>(null);
