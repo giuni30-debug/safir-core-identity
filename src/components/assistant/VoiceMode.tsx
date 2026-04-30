@@ -59,6 +59,7 @@ export function VoiceMode({
   const convoIdRef = useRef<string | null>(voiceConversationId ?? null);
   const lastUserRef = useRef<string>("");
   const rafRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -159,80 +160,103 @@ export function VoiceMode({
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [conversation, conversation.status]);
 
-  // Start session
-  const start = useCallback(async () => {
-    const id = agentId?.trim() || null;
-    // If user provided an ID, validate format. Otherwise the server falls
-    // back to the ELEVENLABS_AGENT_ID secret.
-    if (id) {
-      const isValid = /^agent_[A-Za-z0-9]{16,}$/.test(id) || /^[A-Za-z0-9]{20,}$/.test(id);
-      if (!isValid) {
-        toast.error("Invalid Agent ID format. Expected something like agent_xxxxxxxxxxxxxxxx", {
-          duration: 5000,
-        });
-        onOpenSettings();
-        return;
+  const unlockAudioPlayback = useCallback(async () => {
+    const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextCtor) return;
+    const ctx = audioContextRef.current ?? new AudioContextCtor();
+    audioContextRef.current = ctx;
+    if (ctx.state === "suspended") await ctx.resume();
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+  }, []);
+
+  const requestMicStream = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Microphone is not available in this browser.");
+    }
+    if (navigator.permissions?.query) {
+      try {
+        const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+        if (status.state === "denied") {
+          throw new Error("Microphone permission is blocked. Enable it in browser settings.");
+        }
+      } catch (err) {
+        if (err instanceof Error && err.message.includes("Microphone permission")) throw err;
       }
     }
-    setConnecting(true);
-    setOrbState("thinking");
-    feedback("tap", "tap");
-    try {
-      // 1. Mic permission (must be inside user gesture)
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+    stream.getTracks().forEach((track) => track.stop());
+  }, []);
 
-      // 2. Get short-lived WebRTC token from our server (uses ELEVENLABS_AGENT_ID secret if id is null)
-      const res = await getElevenLabsAgentToken({ data: { agentId: id ?? undefined } });
+  const startElevenLabsSession = useCallback(
+    async (withOverrides: boolean) => {
+      const res = await getElevenLabsAgentToken({ data: { agentId: undefined } });
       if (!res.token) throw new Error(res.error || "No token returned from server");
 
-      // 3. Connect — try with overrides first, fall back without if the agent
-      //    doesn't have overrides enabled in the ElevenLabs dashboard.
       const baseOpts = {
         conversationToken: res.token,
         connectionType: "webrtc" as const,
       };
       const language =
         lang === "ro" ? "ro" : lang === "tr" ? "tr" : lang === "de" ? "de" : "en";
-      const overrides = {
-        agent: {
-          prompt: { prompt: personalityPrompts[personality] },
-          language,
-        },
-        tts: { voiceId },
-      };
 
+      if (!withOverrides) {
+        await conversation.startSession(baseOpts as any);
+        return;
+      }
+
+      await conversation.startSession({
+        ...baseOpts,
+        overrides: {
+          agent: {
+            prompt: { prompt: personalityPrompts[personality] },
+            language,
+          },
+          tts: { voiceId },
+        },
+      } as any);
+    },
+    [conversation, lang, personality, voiceId],
+  );
+
+  // Start session
+  const start = useCallback(async () => {
+    console.log("Connecting to ElevenLabs...");
+    console.log("Agent ID used: (masked)");
+    setConnecting(true);
+    setOrbState("listening");
+    feedback("tap", "tap");
+    try {
+      await unlockAudioPlayback();
+      await requestMicStream();
       try {
-        await conversation.startSession({ ...baseOpts, overrides } as any);
+        await startElevenLabsSession(true);
       } catch (overrideErr) {
         console.warn(
           "ElevenLabs startSession failed with overrides — retrying without. " +
             "Enable 'Security → Overrides' in your agent dashboard to customize voice/prompt.",
           overrideErr,
         );
-        // Need a fresh token (the previous one was consumed)
-        const res2 = await getElevenLabsAgentToken({ data: { agentId: id ?? undefined } });
-        if (!res2.token) throw new Error(res2.error || "No token (retry)");
-        await conversation.startSession({
-          ...baseOpts,
-          conversationToken: res2.token,
-        } as any);
+        toast.error("Voice not connected. Retrying...");
+        await startElevenLabsSession(false);
       }
-
+      console.log("Connection success");
       playSound("voice-start");
     } catch (e) {
+      console.log("Connection fail");
       console.error("start voice failed", e);
-      const msg = e instanceof Error ? e.message : "Failed to start";
-      toast.error(
-        msg.toLowerCase().includes("agent")
-          ? "Could not reach the agent. Verify the Agent ID and that the agent is published."
-          : msg,
-      );
+      toast.error("Voice not connected. Retrying...");
       setOrbState("error");
       setTimeout(() => setOrbState("idle"), 1200);
     } finally {
       setConnecting(false);
     }
-  }, [agentId, conversation, personality, voiceId, lang, onOpenSettings]);
+  }, [requestMicStream, startElevenLabsSession, unlockAudioPlayback]);
 
   const stop = useCallback(async () => {
     feedback("tap", "tap");
