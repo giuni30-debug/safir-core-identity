@@ -100,6 +100,18 @@ const en = {
   noContacts: "No contacts yet.",
   // Chat
   noMessages: "No messages yet — say hello 👋",
+  online: "Online",
+  offline: "Offline",
+  typing: "typing",
+  lastSeenJustNow: "last seen just now",
+  lastSeenPrefix: "last seen",
+  minutesAgo: "min ago",
+  hoursAgo: "h ago",
+  daysAgo: "d ago",
+  statusSent: "Sent",
+  statusDelivered: "Delivered",
+  statusSeen: "Seen",
+  seenAt: "Seen at",
   // Notes
   searchNotes: "Search notes",
   noNotes: "No notes yet",
