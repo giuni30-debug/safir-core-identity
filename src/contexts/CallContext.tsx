@@ -77,6 +77,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const remoteAudioGraphRef = useRef<AudioLevelerGraph | null>(null);
   const localAudioGraphRef = useRef<AudioLevelerGraph | null>(null);
   const rawLocalAudioTracksRef = useRef<MediaStreamTrack[]>([]);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
@@ -103,6 +104,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
+    remoteAudioGraphRef.current?.source.disconnect();
+    remoteAudioGraphRef.current?.leveler.disconnect();
+    remoteAudioGraphRef.current?.makeupGain.disconnect();
+    remoteAudioGraphRef.current?.limiter.disconnect();
+    remoteAudioGraphRef.current = null;
     releaseLocalAudioProcessing();
     remoteStreamRef.current = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
