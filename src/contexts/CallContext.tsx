@@ -221,14 +221,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const a = remoteAudioRef.current;
       const playbackStream = getRemotePlaybackStream(stream);
       if (a.srcObject !== playbackStream) a.srcObject = playbackStream;
-      a.muted = false;
+      a.muted = speakerOnRef.current;
       a.volume = 1;
       a.play().catch((e) => {
         console.warn("remote audio play blocked", e);
         setInfo("Tap speaker to enable audio");
       });
-      // Re-apply current routing whenever we (re)bind the stream.
       void applyAudioRouting(speakerOnRef.current);
+    }
+    if (speakerAudioRef.current) {
+      const a = speakerAudioRef.current;
+      const playbackStream = getRemotePlaybackStream(stream);
+      if (a.srcObject !== playbackStream) a.srcObject = playbackStream;
+      a.muted = !speakerOnRef.current;
+      a.volume = 1;
+      a.play().catch(() => {});
     }
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = stream;
