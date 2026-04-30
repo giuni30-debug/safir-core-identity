@@ -138,7 +138,16 @@ function SettingsPage() {
         />
       </Section>
 
-      {/* ===== Account ===== */}
+      {/* ===== Sounds & Haptics ===== */}
+      <Section
+        title={t("soundsTitle")}
+        subtitle={t("soundsSubtitle")}
+        icon={Volume2}
+      >
+        <SoundSettingsPanel />
+      </Section>
+
+
       <p className="mt-8 mb-3 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
         {t("account")}
       </p>
