@@ -2,11 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
 import {
   ArrowLeft, Send, Mic, Square, Trash2, Play, Pause,
-  Plus, Image as ImageIcon, Video as VideoIcon, FileIcon, X, Download,
+  Plus, Image as ImageIcon, Video as VideoIcon, FileIcon, X, Download, Phone,
 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "@/components/Avatar";
+import { useCall } from "@/contexts/CallContext";
 
 export const Route = createFileRoute("/_app/chat/$id")({
   component: ChatPage,
