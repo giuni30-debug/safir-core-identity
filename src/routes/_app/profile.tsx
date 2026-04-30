@@ -34,7 +34,7 @@ function ProfilePage() {
   const onSave = async () => {
     if (!user) return;
     if (!/^[a-zA-Z0-9_]{4,30}$/.test(username)) {
-      return toast.error("Username: letters, numbers, underscore, min 4.");
+      return toast.error(t("usernameInvalid"));
     }
     setBusy(true);
     const { error } = await supabase
@@ -47,11 +47,11 @@ function ProfilePage() {
       .eq("id", user.id);
     setBusy(false);
     if (error) {
-      if (error.code === "23505") return toast.error("That @username is taken.");
+      if (error.code === "23505") return toast.error(t("usernameTaken"));
       return toast.error(error.message);
     }
     await refreshProfile();
-    toast.success("Saved.");
+    toast.success(t("saved"));
   };
 
   return (
@@ -68,11 +68,11 @@ function ProfilePage() {
       </div>
 
       <div className="mt-8 space-y-4">
-        <Field label="Avatar URL" value={avatar} onChange={setAvatar} placeholder="https://…" />
+        <Field label={t("avatarUrl")} value={avatar} onChange={setAvatar} placeholder="https://…" />
         <Field label={t("displayName")} value={name} onChange={setName} />
         <Field label={`@${t("username")}`} value={username} onChange={setUsername} prefix="@" />
         <p className="text-xs text-muted-foreground">
-          Letters, numbers, underscore. Minimum 4 characters.
+          {t("usernameRules")}
         </p>
 
         <button
