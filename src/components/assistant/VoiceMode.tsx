@@ -70,6 +70,7 @@ export function VoiceMode({
       setOrbState("idle");
       setInputLevel(0);
       setOutputLevel(0);
+      setPttHeld(false);
     },
     onError: (e) => {
       console.error("ElevenLabs convo error:", e);
@@ -255,12 +256,14 @@ export function VoiceMode({
         await connectWithFallbackRetry();
       }
       console.log("Connection success");
+      setPttHeld(true);
       playSound("voice-start");
     } catch (e) {
       console.log("Connection fail");
       console.error("start voice failed", e);
       toast.error("Voice not connected. Retrying...");
       setOrbState("error");
+      setPttHeld(false);
       setTimeout(() => setOrbState("idle"), 1200);
     } finally {
       setConnecting(false);
@@ -274,6 +277,7 @@ export function VoiceMode({
     setTranscript([]);
     setPartial("");
     convoIdRef.current = null;
+    setPttHeld(false);
     setOrbState("idle");
   }, [conversation]);
 
