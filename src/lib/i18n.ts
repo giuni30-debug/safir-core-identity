@@ -200,6 +200,17 @@ const en = {
   modTranslator: "Translator Pro",
   modTranslatorDesc: "Translate text, voice, photos, documents",
   homeChooseModule: "Choose a module",
+  // Communication hero
+  commTitle: "Quick communication",
+  commChat: "Chat",
+  commCall: "Call",
+  commVideo: "Video",
+  commChatDesc: "Real-time messages",
+  commCallDesc: "Ring instantly",
+  commVideoDesc: "Live HD video",
+  commOnlineNow: "Online now",
+  commQuickContacts: "Quick contacts",
+  commNoContactsYet: "Add your first contact",
   // AI Assistant
   aiTitle: "All Assist AI",
   aiSubtitle: "Ask anything — premium AI assistant",
