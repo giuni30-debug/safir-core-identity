@@ -195,10 +195,43 @@ export type Database = {
         }
         Relationships: []
       }
+      message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           audio_url: string | null
           created_at: string
+          delivered_at: string | null
           duration_seconds: number | null
           file_name: string | null
           file_size: number | null
@@ -206,12 +239,14 @@ export type Database = {
           media_url: string | null
           message_text: string | null
           message_type: string
+          read_at: string | null
           receiver_user_id: string
           sender_user_id: string
         }
         Insert: {
           audio_url?: string | null
           created_at?: string
+          delivered_at?: string | null
           duration_seconds?: number | null
           file_name?: string | null
           file_size?: number | null
@@ -219,12 +254,14 @@ export type Database = {
           media_url?: string | null
           message_text?: string | null
           message_type?: string
+          read_at?: string | null
           receiver_user_id: string
           sender_user_id: string
         }
         Update: {
           audio_url?: string | null
           created_at?: string
+          delivered_at?: string | null
           duration_seconds?: number | null
           file_name?: string | null
           file_size?: number | null
@@ -232,6 +269,7 @@ export type Database = {
           media_url?: string | null
           message_text?: string | null
           message_type?: string
+          read_at?: string | null
           receiver_user_id?: string
           sender_user_id?: string
         }
@@ -267,6 +305,48 @@ export type Database = {
           id?: string
           updated_at?: string
           username?: string
+        }
+        Relationships: []
+      }
+      typing_indicators: {
+        Row: {
+          is_typing: boolean
+          peer_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          is_typing?: boolean
+          peer_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          is_typing?: boolean
+          peer_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_presence: {
+        Row: {
+          is_online: boolean
+          last_seen: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          is_online?: boolean
+          last_seen?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          is_online?: boolean
+          last_seen?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
