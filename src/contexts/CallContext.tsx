@@ -102,7 +102,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       callId: string,
       status: "accepted" | "declined" | "ended" | "missed" | "failed",
     ) => {
-      const patch: Record<string, unknown> = { status };
+      const patch: { status: string; answered_at?: string; ended_at?: string } = { status };
       if (status === "accepted") patch.answered_at = new Date().toISOString();
       if (["ended", "declined", "missed", "failed"].includes(status))
         patch.ended_at = new Date().toISOString();
