@@ -44,18 +44,14 @@ const CALL_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
   echoCancellation: true,
   noiseSuppression: true,
   autoGainControl: true,
-  channelCount: 1,
+  channelCount: { ideal: 1 },
+  sampleRate: { ideal: 48000 },
+  sampleSize: { ideal: 16 },
 };
 
+const REMOTE_AUDIO_VOLUME = 0.72;
+
 type AudioSinkElement = HTMLAudioElement & { setSinkId?: (sinkId: string) => Promise<void> };
-type AudioLevelerGraph = {
-  input: MediaStream;
-  source: MediaStreamAudioSourceNode;
-  leveler: DynamicsCompressorNode;
-  makeupGain: GainNode;
-  limiter: DynamicsCompressorNode;
-  destination: MediaStreamAudioDestinationNode;
-};
 
 export function CallProvider({ children }: { children: React.ReactNode }) {
   const { user } = useApp();
@@ -75,8 +71,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const localAudioGraphRef = useRef<AudioLevelerGraph | null>(null);
   const rawLocalAudioTracksRef = useRef<MediaStreamTrack[]>([]);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const callIdRef = useRef<string | null>(null);
@@ -88,11 +82,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const releaseLocalAudioProcessing = useCallback(() => {
     rawLocalAudioTracksRef.current.forEach((t) => t.stop());
     rawLocalAudioTracksRef.current = [];
-    localAudioGraphRef.current?.source.disconnect();
-    localAudioGraphRef.current?.leveler.disconnect();
-    localAudioGraphRef.current?.makeupGain.disconnect();
-    localAudioGraphRef.current?.limiter.disconnect();
-    localAudioGraphRef.current = null;
   }, []);
 
   const cleanup = useCallback(() => {
@@ -153,58 +142,37 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const prepareCallAudioElement = useCallback((audio: HTMLAudioElement) => {
+    audio.autoplay = true;
+    audio.muted = false;
+    audio.volume = REMOTE_AUDIO_VOLUME;
+    audio.disableRemotePlayback = true;
+    audio.setAttribute("playsinline", "true");
+    audio.setAttribute("webkit-playsinline", "true");
+    audio.setAttribute("x-webkit-airplay", "deny");
+    audio.setAttribute("controlslist", "nodownload noremoteplayback");
+  }, []);
+
   const unlockCallAudio = useCallback(async () => {
-    const AudioContextCtor =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextCtor) return;
-    const ctx = audioContextRef.current ?? new AudioContextCtor();
-    audioContextRef.current = ctx;
-    if (ctx.state === "suspended") await ctx.resume();
-    const buffer = ctx.createBuffer(1, 1, 22050);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    source.start(0);
+    if (remoteAudioRef.current) prepareCallAudioElement(remoteAudioRef.current);
   }, []);
 
   const normalizeLocalMicrophone = useCallback((stream: MediaStream) => {
     const audioTracks = stream.getAudioTracks();
     if (audioTracks.length === 0) return stream;
     releaseLocalAudioProcessing();
-    const AudioContextCtor =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextCtor) return stream;
-    const ctx = audioContextRef.current ?? new AudioContextCtor();
-    audioContextRef.current = ctx;
-    const source = ctx.createMediaStreamSource(new MediaStream(audioTracks));
-    const leveler = ctx.createDynamicsCompressor();
-    leveler.threshold.value = -36;
-    leveler.knee.value = 16;
-    leveler.ratio.value = 8;
-    leveler.attack.value = 0.005;
-    leveler.release.value = 0.25;
-    const makeupGain = ctx.createGain();
-    makeupGain.gain.value = 0.88;
-    const limiter = ctx.createDynamicsCompressor();
-    limiter.threshold.value = -11;
-    limiter.knee.value = 0;
-    limiter.ratio.value = 20;
-    limiter.attack.value = 0.001;
-    limiter.release.value = 0.07;
-    const destination = ctx.createMediaStreamDestination();
-    source.connect(leveler).connect(makeupGain).connect(limiter).connect(destination);
-    rawLocalAudioTracksRef.current = audioTracks;
-    localAudioGraphRef.current = { input: stream, source, leveler, makeupGain, limiter, destination };
-    return new MediaStream([...destination.stream.getAudioTracks(), ...stream.getVideoTracks()]);
+    audioTracks.forEach((track) => {
+      track.contentHint = "speech";
+      track.applyConstraints(CALL_AUDIO_CONSTRAINTS).catch(() => {});
+    });
+    return stream;
   }, [releaseLocalAudioProcessing]);
 
   const applyAudioRouting = useCallback(async () => {
     const audio = remoteAudioRef.current as AudioSinkElement | null;
     if (!audio) return;
+    prepareCallAudioElement(audio);
     audio.muted = false;
-    audio.volume = 0.88;
     if (typeof audio.setSinkId !== "function") return;
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -222,10 +190,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (!stream) return;
     if (remoteAudioRef.current) {
       const a = remoteAudioRef.current;
-      a.disableRemotePlayback = true;
-      if (a.srcObject !== stream) a.srcObject = stream;
+      prepareCallAudioElement(a);
+      const audioOnlyStream = new MediaStream(stream.getAudioTracks());
+      const current = a.srcObject as MediaStream | null;
+      const currentIds = current?.getAudioTracks().map((t) => t.id).join(",") ?? "";
+      const nextIds = audioOnlyStream.getAudioTracks().map((t) => t.id).join(",");
+      if (currentIds !== nextIds) a.srcObject = audioOnlyStream;
       a.muted = false;
-      a.volume = 0.88;
       a.play().catch((e) => {
         console.warn("remote audio play blocked", e);
         setInfo("Tap to enable call audio");
@@ -236,7 +207,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       remoteVideoRef.current.srcObject = stream;
       remoteVideoRef.current.play().catch(() => {});
     }
-  }, [applyAudioRouting]);
+  }, [applyAudioRouting, prepareCallAudioElement]);
 
   const buildPeer = useCallback(
     (callId: string, peerId: string) => {
@@ -614,30 +585,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const t = window.setTimeout(() => setInfo(null), 4000);
     return () => window.clearTimeout(t);
   }, [info]);
-
-  // Ringtone
-  useEffect(() => {
-    if (state.kind !== "incoming") return;
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    let stopped = false;
-    const playBeep = () => {
-      if (stopped) return;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = 480;
-      gain.gain.value = 0.05;
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.4);
-    };
-    playBeep();
-    const i = window.setInterval(playBeep, 1500);
-    return () => {
-      stopped = true;
-      window.clearInterval(i);
-      ctx.close().catch(() => {});
-    };
-  }, [state.kind]);
 
   const api = useMemo<CallApi>(
     () => ({ startCall, startVideoCall, inCall: state.kind !== "idle" }),
