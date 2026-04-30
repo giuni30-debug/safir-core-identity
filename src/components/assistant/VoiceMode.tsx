@@ -329,7 +329,7 @@ export function VoiceMode({
   const sendChip = useCallback(
     (label: string) => {
       try {
-        (conversation as any).sendUserMessage?.(label);
+        (conversation as ConversationExtras).sendUserMessage?.(label);
         setTranscript((p) => [...p, { role: "user", text: label, id: cryptoId() }]);
         setOrbState("thinking");
       } catch (e) {
