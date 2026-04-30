@@ -19,7 +19,9 @@ type ConversationExtras = {
   sendUserMessage?: (message: string) => void;
 };
 
-type ElevenLabsStartOptions = Parameters<ReturnType<typeof useConversation>["startSession"]>[0];
+type ElevenLabsStartOptions = NonNullable<
+  Parameters<ReturnType<typeof useConversation>["startSession"]>[0]
+>;
 
 type WebkitAudioWindow = Window & {
   webkitAudioContext?: typeof AudioContext;
