@@ -3,11 +3,15 @@ import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
 import {
   ArrowLeft, Send, Mic, Square, Trash2, Play, Pause,
   Plus, Image as ImageIcon, Video as VideoIcon, FileIcon, X, Download, Phone,
+  Gift as GiftIcon,
 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "@/components/Avatar";
 import { useCall } from "@/contexts/CallContext";
+import { GiftSheet } from "@/components/chat/GiftSheet";
+import { GiftFX } from "@/components/chat/GiftFX";
+import { decodeGiftMessage, encodeGiftMessage, type Gift } from "@/components/chat/gifts";
 
 export const Route = createFileRoute("/_app/chat/$id")({
   component: ChatPage,
