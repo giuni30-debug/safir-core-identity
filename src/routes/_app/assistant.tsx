@@ -5,6 +5,7 @@ import {
   ArrowLeft, Send, Paperclip, Image as ImageIcon, Sparkles,
   Plus, Wand2, Square, Search, Brain,
   History, Trash2, Settings as SettingsIcon, MessageSquare,
+  Mic, Volume2, VolumeX,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -43,7 +44,9 @@ function detectIntent(text: string): Msg["intent"] {
 
 const CHAT_URL  = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-image`;
+const TTS_URL   = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 const SUPA_KEY  = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const AUTOSPEAK_KEY = "safir.assistant.autospeak.v1";
 
 function AssistantPage() {
   const { t, user } = useApp();
