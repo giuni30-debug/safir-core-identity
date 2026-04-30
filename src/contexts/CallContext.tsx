@@ -166,9 +166,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     audio.setAttribute("controlslist", "nodownload noremoteplayback");
   }, []);
 
-  const unlockCallAudio = useCallback(async () => {
-    if (remoteAudioRef.current) prepareCallAudioElement(remoteAudioRef.current);
+  const forceNativeCallAudioSession = useCallback(() => {
+    const nav = navigator as CallAudioSessionNavigator;
+    if (nav.audioSession) {
+      try {
+        nav.audioSession.type = "play-and-record";
+      } catch (e) {
+        console.warn("[call] native call audio session unavailable", e);
+      }
+    }
   }, []);
+
+  const unlockCallAudio = useCallback(async () => {
+    forceNativeCallAudioSession();
+    if (remoteAudioRef.current) prepareCallAudioElement(remoteAudioRef.current);
+  }, [forceNativeCallAudioSession, prepareCallAudioElement]);
 
   const normalizeLocalMicrophone = useCallback((stream: MediaStream) => {
     const audioTracks = stream.getAudioTracks();
