@@ -701,7 +701,7 @@ function ChatPage() {
             const isPickerOpen = reactionFor === m.id;
             return (
               <div key={m.id} className={`msg-in flex ${mine ? "justify-end" : "justify-start"}`}>
-                <div className="relative max-w-[78%]">
+                <div className="group relative max-w-[78%]">
                   <button
                     type="button"
                     onContextMenu={(e) => {
