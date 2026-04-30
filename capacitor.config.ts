@@ -11,7 +11,8 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'app.lovable.safirhomecall',
   appName: 'Safir Home Call',
-  webDir: 'dist',
+  // Folder cu un index.html placeholder (real conținut vine de la server.url)
+  webDir: 'capacitor-webdir',
   server: {
     // ✅ TEST MODE: încarcă preview-ul Lovable live
     url: 'https://id-preview--c37270b2-ee89-406c-9f05-d457f52c1094.lovable.app',
