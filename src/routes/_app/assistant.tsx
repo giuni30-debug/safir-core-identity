@@ -1,11 +1,18 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useApp } from "@/contexts/AppContext";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft, Send, Mic, Paperclip, Image as ImageIcon, Sparkles,
   Loader2, Plus, Volume2, VolumeX, Wand2, Square, Search, Brain,
+  History, Trash2, Settings as SettingsIcon, MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  useAiMemory, detectMemoryCandidates,
+  createConversation, appendMessage,
+  listConversations, loadMessages, deleteConversation, renameConversation,
+  type AiConversation,
+} from "@/hooks/useAiMemory";
 
 export const Route = createFileRoute("/_app/assistant")({
   component: AssistantPage,
