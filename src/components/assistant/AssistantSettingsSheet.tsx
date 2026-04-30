@@ -70,7 +70,7 @@ export function AssistantSettingsSheet({ open, onClose, prefs, onSave }: Props) 
       toast.success("Saved");
       onClose();
     } catch (e) {
-      toast.error("Failed to save");
+      toast.error(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setSaving(false);
     }
