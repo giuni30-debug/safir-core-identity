@@ -1,7 +1,7 @@
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from "react";
-import { Phone, PhoneOff, Mic, MicOff, Volume2, Video as VideoIcon, VideoOff, SwitchCamera } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Video as VideoIcon, VideoOff, SwitchCamera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
@@ -48,11 +48,12 @@ const CALL_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
 };
 
 type AudioSinkElement = HTMLAudioElement & { setSinkId?: (sinkId: string) => Promise<void> };
-type RemoteAudioGraph = {
+type AudioLevelerGraph = {
   input: MediaStream;
   source: MediaStreamAudioSourceNode;
-  compressor: DynamicsCompressorNode;
-  gain: GainNode;
+  leveler: DynamicsCompressorNode;
+  makeupGain: GainNode;
+  limiter: DynamicsCompressorNode;
   destination: MediaStreamAudioDestinationNode;
 };
 
@@ -64,7 +65,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
-  const [speakerOn, setSpeakerOn] = useState(false);
   const [cameraOn, setCameraOn] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
@@ -73,18 +73,27 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
-  const speakerAudioRef = useRef<HTMLAudioElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const remoteAudioGraphRef = useRef<RemoteAudioGraph | null>(null);
+  const localAudioGraphRef = useRef<AudioLevelerGraph | null>(null);
+  const rawLocalAudioTracksRef = useRef<MediaStreamTrack[]>([]);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const callIdRef = useRef<string | null>(null);
   const peerIdRef = useRef<string | null>(null);
   const remoteDescSetRef = useRef(false);
   const elapsedTimerRef = useRef<number | null>(null);
   const facingRef = useRef<"user" | "environment">("user");
-  const speakerOnRef = useRef(false);
+
+  const releaseLocalAudioProcessing = useCallback(() => {
+    rawLocalAudioTracksRef.current.forEach((t) => t.stop());
+    rawLocalAudioTracksRef.current = [];
+    localAudioGraphRef.current?.source.disconnect();
+    localAudioGraphRef.current?.leveler.disconnect();
+    localAudioGraphRef.current?.makeupGain.disconnect();
+    localAudioGraphRef.current?.limiter.disconnect();
+    localAudioGraphRef.current = null;
+  }, []);
 
   const cleanup = useCallback(() => {
     pcRef.current?.getSenders().forEach((s) => s.track?.stop());
@@ -92,13 +101,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
-    remoteAudioGraphRef.current?.source.disconnect();
-    remoteAudioGraphRef.current?.compressor.disconnect();
-    remoteAudioGraphRef.current?.gain.disconnect();
-    remoteAudioGraphRef.current = null;
+    releaseLocalAudioProcessing();
     remoteStreamRef.current = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
-    if (speakerAudioRef.current) speakerAudioRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     pendingIceRef.current = [];
@@ -109,12 +114,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     elapsedTimerRef.current = null;
     setElapsed(0);
     setMuted(false);
-    setSpeakerOn(false);
-    speakerOnRef.current = false;
     setCameraOn(true);
     setHasRemoteVideo(false);
     facingRef.current = "user";
-  }, []);
+  }, [releaseLocalAudioProcessing]);
 
   const sendSignal = useCallback(
     async (
@@ -165,14 +168,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     source.start(0);
   }, []);
 
-  const getRemotePlaybackStream = useCallback((stream: MediaStream) => {
+  const normalizeLocalMicrophone = useCallback((stream: MediaStream) => {
     const audioTracks = stream.getAudioTracks();
     if (audioTracks.length === 0) return stream;
-    const graph = remoteAudioGraphRef.current;
-    if (graph?.input === stream) return graph.destination.stream;
-    graph?.source.disconnect();
-    graph?.compressor.disconnect();
-    graph?.gain.disconnect();
+    releaseLocalAudioProcessing();
     const AudioContextCtor =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -180,37 +179,41 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const ctx = audioContextRef.current ?? new AudioContextCtor();
     audioContextRef.current = ctx;
     const source = ctx.createMediaStreamSource(new MediaStream(audioTracks));
-    const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.value = -28;
-    compressor.knee.value = 24;
-    compressor.ratio.value = 4;
-    compressor.attack.value = 0.004;
-    compressor.release.value = 0.18;
-    const gain = ctx.createGain();
-    gain.gain.value = 1.18;
+    const leveler = ctx.createDynamicsCompressor();
+    leveler.threshold.value = -36;
+    leveler.knee.value = 16;
+    leveler.ratio.value = 8;
+    leveler.attack.value = 0.005;
+    leveler.release.value = 0.25;
+    const makeupGain = ctx.createGain();
+    makeupGain.gain.value = 0.88;
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -11;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.07;
     const destination = ctx.createMediaStreamDestination();
-    source.connect(compressor).connect(gain).connect(destination);
-    remoteAudioGraphRef.current = { input: stream, source, compressor, gain, destination };
-    return destination.stream;
-  }, []);
+    source.connect(leveler).connect(makeupGain).connect(limiter).connect(destination);
+    rawLocalAudioTracksRef.current = audioTracks;
+    localAudioGraphRef.current = { input: stream, source, leveler, makeupGain, limiter, destination };
+    return new MediaStream([...destination.stream.getAudioTracks(), ...stream.getVideoTracks()]);
+  }, [releaseLocalAudioProcessing]);
 
-  // Clean speaker routing: keep the remote track alive, only switch output device.
   const applyAudioRouting = useCallback(async () => {
-    const earpieceAudio = remoteAudioRef.current as AudioSinkElement | null;
-    const speakerAudio = speakerAudioRef.current as AudioSinkElement | null;
-    if (!earpieceAudio && !speakerAudio) return;
+    const audio = remoteAudioRef.current as AudioSinkElement | null;
+    if (!audio) return;
+    audio.muted = false;
+    audio.volume = 0.88;
+    if (typeof audio.setSinkId !== "function") return;
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const outputs = devices.filter((d) => d.kind === "audiooutput");
-      const findOutput = (words: RegExp) => outputs.find((d) => words.test(d.label.toLowerCase()))?.deviceId;
-      const earpiece = findOutput(/earpiece|receiver|phone|communication|comunicare|cască|casca/);
-      const loudspeaker = findOutput(/speaker|loud|media|multimedia|difuzor/);
-      await Promise.all([
-        earpieceAudio?.setSinkId?.(earpiece || "communications").catch(() => undefined),
-        speakerAudio?.setSinkId?.(loudspeaker || "default").catch(() => undefined),
-      ]);
+      const normalize = (v: string) => v.toLowerCase();
+      const earpiece = outputs.find((d) => /earpiece|receiver|phone|communication|comunicare|cască|casca/.test(normalize(d.label)))?.deviceId;
+      await audio.setSinkId(earpiece || "communications");
     } catch (e) {
-      console.warn("[call] audio output routing unavailable", e);
+      console.warn("[call] earpiece routing unavailable", e);
     }
   }, []);
 
@@ -219,28 +222,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     if (!stream) return;
     if (remoteAudioRef.current) {
       const a = remoteAudioRef.current;
+      a.disableRemotePlayback = true;
       if (a.srcObject !== stream) a.srcObject = stream;
-      a.muted = speakerOnRef.current;
-      a.volume = 1;
+      a.muted = false;
+      a.volume = 0.88;
       a.play().catch((e) => {
         console.warn("remote audio play blocked", e);
-        setInfo("Tap speaker to enable audio");
+        setInfo("Tap to enable call audio");
       });
       void applyAudioRouting();
-    }
-    if (speakerAudioRef.current) {
-      const a = speakerAudioRef.current;
-      const playbackStream = getRemotePlaybackStream(stream);
-      if (a.srcObject !== playbackStream) a.srcObject = playbackStream;
-      a.muted = !speakerOnRef.current;
-      a.volume = 1;
-      a.play().catch(() => {});
     }
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = stream;
       remoteVideoRef.current.play().catch(() => {});
     }
-  }, [applyAudioRouting, getRemotePlaybackStream]);
+  }, [applyAudioRouting]);
 
   const buildPeer = useCallback(
     (callId: string, peerId: string) => {
@@ -298,27 +294,28 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             audio: CALL_AUDIO_CONSTRAINTS,
             video: { facingMode: facingRef.current },
           });
-          return s;
+          return normalizeLocalMicrophone(s);
         } catch (e) {
           console.warn("video+audio failed, trying audio only", e);
           try {
             const s = await navigator.mediaDevices.getUserMedia({ audio: CALL_AUDIO_CONSTRAINTS });
             setInfo("Video unavailable, audio still connected");
-            return s;
+            return normalizeLocalMicrophone(s);
           } catch {
             setError("Camera and microphone permission are required for video calls.");
             return null;
           }
         }
       }
-      return await navigator.mediaDevices.getUserMedia({ audio: CALL_AUDIO_CONSTRAINTS });
+      const s = await navigator.mediaDevices.getUserMedia({ audio: CALL_AUDIO_CONSTRAINTS });
+      return normalizeLocalMicrophone(s);
     } catch {
       setError(media === "video"
         ? "Camera and microphone permission are required for video calls."
         : "Microphone permission is required for calls.");
       return null;
     }
-  }, []);
+  }, [normalizeLocalMicrophone]);
 
   // ---- Caller flow ----
   const startCallInternal = useCallback(
@@ -446,26 +443,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const next = !muted;
     stream.getAudioTracks().forEach((t) => (t.enabled = !next));
     setMuted(next);
-  };
-
-  const toggleSpeaker = () => {
-    const next = !speakerOn;
-    speakerOnRef.current = next;
-    setSpeakerOn(next);
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.muted = next;
-      remoteAudioRef.current.volume = 1;
-    }
-    if (speakerAudioRef.current) {
-      speakerAudioRef.current.muted = !next;
-      speakerAudioRef.current.volume = 1;
-      speakerAudioRef.current.play().catch(() => {});
-    }
-    // Reroute output WITHOUT muting the stream and WITHOUT touching the
-    // peer connection / local mic. Voice keeps flowing throughout.
-    void unlockCallAudio()
-      .then(() => applyAudioRouting())
-      .catch((e) => console.warn("[call] speaker toggle routing failed", e));
   };
 
   const toggleCamera = () => {
@@ -672,7 +649,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       {children}
 
       <audio ref={remoteAudioRef} autoPlay playsInline />
-      <audio ref={speakerAudioRef} autoPlay playsInline />
 
       {error && state.kind === "idle" && (
         <div className="fixed left-1/2 top-4 z-[100] -translate-x-1/2 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-2 text-xs text-destructive backdrop-blur">
@@ -685,7 +661,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           state={state}
           elapsed={elapsed}
           muted={muted}
-          speakerOn={speakerOn}
           cameraOn={cameraOn}
           hasRemoteVideo={hasRemoteVideo}
           error={error}
@@ -696,7 +671,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           onDecline={declineIncoming}
           onEnd={() => handleEnd("ended")}
           onToggleMute={toggleMute}
-          onToggleSpeaker={toggleSpeaker}
           onToggleCamera={toggleCamera}
           onSwitchCamera={switchCamera}
         />
@@ -712,14 +686,13 @@ function fmtElapsed(s: number) {
 }
 
 function CallOverlay({
-  state, elapsed, muted, speakerOn, cameraOn, hasRemoteVideo, error, info,
+  state, elapsed, muted, cameraOn, hasRemoteVideo, error, info,
   remoteVideoRef, localVideoRef,
-  onAccept, onDecline, onEnd, onToggleMute, onToggleSpeaker, onToggleCamera, onSwitchCamera,
+  onAccept, onDecline, onEnd, onToggleMute, onToggleCamera, onSwitchCamera,
 }: {
   state: Exclude<CallState, { kind: "idle" }>;
   elapsed: number;
   muted: boolean;
-  speakerOn: boolean;
   cameraOn: boolean;
   hasRemoteVideo: boolean;
   error: string | null;
@@ -730,7 +703,6 @@ function CallOverlay({
   onDecline: () => void;
   onEnd: () => void;
   onToggleMute: () => void;
-  onToggleSpeaker: () => void;
   onToggleCamera: () => void;
   onSwitchCamera: () => void;
 }) {
@@ -853,16 +825,7 @@ function CallOverlay({
               >
                 <SwitchCamera className="h-5 w-5" />
               </button>
-            ) : (
-              <button
-                onClick={onToggleSpeaker}
-                disabled={state.kind !== "active"}
-                className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card/60 backdrop-blur disabled:opacity-40"
-                aria-label="Speaker"
-              >
-                <Volume2 className={speakerOn ? "h-5 w-5 text-primary" : "h-5 w-5"} />
-              </button>
-            )}
+            ) : null}
           </>
         )}
       </div>
