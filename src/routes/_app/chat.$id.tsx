@@ -952,3 +952,35 @@ function ChatPage() {
     </div>
   );
 }
+
+function FloatingHeaderButton({
+  children, onClick, disabled, ariaLabel, intense,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  ariaLabel: string;
+  intense?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      className="press-glow relative grid h-10 w-10 place-items-center rounded-full transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
+      style={{
+        background: intense
+          ? "linear-gradient(135deg, color-mix(in oklab, var(--theme-accent) 35%, transparent), color-mix(in oklab, var(--theme-accent) 8%, transparent))"
+          : "linear-gradient(135deg, oklch(1 0 0 / 8%), oklch(1 0 0 / 3%))",
+        border: `1.5px solid color-mix(in oklab, var(--theme-accent) ${intense ? 75 : 50}%, transparent)`,
+        color: "var(--theme-accent)",
+        boxShadow: intense
+          ? "0 0 18px color-mix(in oklab, var(--theme-accent) 60%, transparent), inset 0 0 10px color-mix(in oklab, var(--theme-accent) 25%, transparent)"
+          : "0 0 12px color-mix(in oklab, var(--theme-accent) 35%, transparent), inset 0 1px 0 oklch(1 0 0 / 12%)",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
