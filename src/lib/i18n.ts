@@ -251,6 +251,21 @@ const en = {
   trAutoSpeak: "Auto speak",
   trYou: "You",
   trPartner: "Partner",
+  // Assistant smart layer
+  aiSources: "Sources",
+  aiNoSources: "Based on AI knowledge — no live web sources used.",
+  aiSearchDeeper: "Search deeper",
+  aiLiveUnavailable: "Live data not available right now",
+  aiFollowExplainSimpler: "Explain simpler",
+  aiFollowMoreDetails: "More details",
+  aiFollowTranslate: "Translate",
+  aiFollowSummarize: "Summarize",
+  aiIntentChat: "Chat",
+  aiIntentAnalyzeDoc: "Analyzing document",
+  aiIntentAnalyzeImage: "Analyzing image",
+  aiIntentTranslate: "Translation",
+  aiIntentCode: "Code",
+  aiUnsureNote: "I'm not fully sure, but here's what I found.",
 } as const;
 
 const ro: Record<keyof typeof en, string> = {
