@@ -400,6 +400,54 @@ function ShoppingPage() {
         </Section>
       )}
 
+      {/* Smart suggestions — only when real history exists */}
+      {(frequentSuggestions.length > 0 || recentSuggestions.length > 0) && (
+        <section className="mx-4 mt-6">
+          {frequentSuggestions.length > 0 && (
+            <>
+              <h2 className="text-premium mb-2 flex items-center gap-1.5 text-xs uppercase tracking-widest">
+                <Flame className="h-3.5 w-3.5" style={{ color: "var(--theme-accent)" }} />
+                Frequently used
+              </h2>
+              <div className="mb-4 flex flex-wrap gap-1.5">
+                {frequentSuggestions.map((s) => (
+                  <SuggestionChip key={s.key} name={s.name} emoji={CAT_EMOJI[s.category]} onAdd={() => addFromSuggestion(s)} />
+                ))}
+              </div>
+            </>
+          )}
+          {recentSuggestions.length > 0 && (
+            <>
+              <h2 className="text-premium mb-2 flex items-center gap-1.5 text-xs uppercase tracking-widest">
+                <History className="h-3.5 w-3.5" style={{ color: "var(--theme-accent)" }} />
+                Recently bought
+              </h2>
+              <div className="flex flex-wrap gap-1.5">
+                {recentSuggestions.map((s) => (
+                  <SuggestionChip key={s.key} name={s.name} emoji={CAT_EMOJI[s.category]} onAdd={() => addFromSuggestion(s)} />
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
+      {/* Mini analytics */}
+      {weekAnalytics.count > 0 && (
+        <section className="mx-4 mt-6">
+          <h2 className="text-premium mb-2 flex items-center gap-1.5 text-xs uppercase tracking-widest">
+            <TrendingUp className="h-3.5 w-3.5" style={{ color: "var(--theme-accent)" }} />
+            This week
+          </h2>
+          <div className="grid grid-cols-2 gap-2">
+            <StatCard label="Spending" value={`€${weekAnalytics.total.toFixed(2)}`} accent />
+            <StatCard
+              label="Top category"
+              value={weekAnalytics.topCat ? `${CAT_EMOJI[weekAnalytics.topCat]} ${catLabel(weekAnalytics.topCat)}` : "—"}
+            />
+          </div>
+        </section>
+      )}
 
 
       {/* Floating add button */}
