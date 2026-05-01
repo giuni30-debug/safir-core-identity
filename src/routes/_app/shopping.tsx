@@ -383,7 +383,7 @@ function Section({ title, count, children, action }: { title: string; count: num
   );
 }
 
-function EmptyHero({ title, hint }: { title: string; hint: string }) {
+function EmptyHero({ title, hint, onAdd }: { title: string; hint: string; onAdd?: () => void }) {
   return (
     <div className="glass-card grid place-items-center p-10 text-center">
       <div className="relative mb-4">
@@ -402,6 +402,18 @@ function EmptyHero({ title, hint }: { title: string; hint: string }) {
       </div>
       <p className="text-neon-title text-base">{title}</p>
       <p className="text-soft mt-1 text-xs">{hint}</p>
+      {onAdd && (
+        <button
+          onClick={onAdd}
+          className="press-glow mt-5 inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-bold text-white"
+          style={{
+            background: "var(--theme-accent)",
+            boxShadow: "0 0 22px color-mix(in oklab, var(--theme-accent) 55%, transparent)",
+          }}
+        >
+          <Plus className="h-4 w-4" /> Add your first product
+        </button>
+      )}
     </div>
   );
 }
