@@ -348,8 +348,8 @@ function ShoppingPage() {
       <Section title={`🛍️ ${t("shopToBuy")}`} count={toBuy.length}>
         {toBuy.length === 0 ? (
           <EmptyHero
-            title="Create your own shopping list"
-            hint="Add only what you need — tap + or use Quick Add."
+            title="Start building your smart shopping list"
+            hint="Add products in seconds — type, paste, or speak them."
             onAdd={() => setShowAdd(true)}
           />
         ) : (
