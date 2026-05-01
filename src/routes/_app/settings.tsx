@@ -152,7 +152,10 @@ function SettingsPage() {
         />
       </Section>
 
-      {/* ===== Sounds & Haptics ===== */}
+      {/* ===== Sound & Haptics ===== */}
+      <p className="mt-8 mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Sound & Haptics
+      </p>
       <Section
         title={t("soundsTitle")}
         subtitle={t("soundsSubtitle")}
@@ -161,18 +164,16 @@ function SettingsPage() {
         <SoundSettingsPanel />
       </Section>
 
-
-      <p className="mt-8 mb-3 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        {t("account")}
+      {/* ===== Premium ===== */}
+      <p className="mt-8 mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Subscription
       </p>
       <div className="space-y-3">
-        <Row to="/profile"       icon={User}      label={t("profile")} />
-        <Row to="/language"      icon={Languages} label={t("language")} />
-        <Row to="/notifications" icon={Bell}      label={t("notifications")} />
-        <Row to="/ai-memory"     icon={Brain}     label={t("aiMemoryTitle")} />
+        <Row to="/premium" icon={Crown} label="Safir Premium" />
       </div>
 
-      <p className="mt-8 mb-3 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+      {/* ===== Privacy & Security ===== */}
+      <p className="mt-8 mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Privacy & Security
       </p>
       <div className="space-y-3">
@@ -181,7 +182,8 @@ function SettingsPage() {
         <Row to="/data-deletion" icon={Database}    label="Data & Account Deletion" />
       </div>
 
-      <p className="mt-8 mb-3 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+      {/* ===== Support ===== */}
+      <p className="mt-8 mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Support
       </p>
       <div className="space-y-3">
