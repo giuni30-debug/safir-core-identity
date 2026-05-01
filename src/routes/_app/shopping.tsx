@@ -281,30 +281,7 @@ function ShoppingPage() {
         </Section>
       )}
 
-      {/* Suggestions section */}
-      {visibleSuggestions.length > 0 && (
-        <Section title={`🧠 ${t("shopSuggestions")}`} count={visibleSuggestions.length}>
-          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {visibleSuggestions.map((s, idx) => (
-              <button
-                key={idx}
-                onClick={() => addSuggestion(s)}
-                className="glass-card glass-card-hover shrink-0 w-36 p-3 text-left press-glow"
-              >
-                <div className="text-2xl mb-1">{CAT_EMOJI[s.category]}</div>
-                <p className="text-premium text-sm font-semibold truncate">{s.name}</p>
-                <p className="text-soft text-[11px]">€{s.price.toFixed(2)}</p>
-                <span
-                  className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest"
-                  style={{ color: "var(--theme-accent)" }}
-                >
-                  <Plus className="h-3 w-3" /> {t("shopAddSuggestion")}
-                </span>
-              </button>
-            ))}
-          </div>
-        </Section>
-      )}
+
 
       {/* Floating add button */}
       <button
