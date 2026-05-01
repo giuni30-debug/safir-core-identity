@@ -158,6 +158,23 @@ function SettingsPage() {
         <Row to="/ai-memory"     icon={Brain}     label={t("aiMemoryTitle")} />
       </div>
 
+      <p className="mt-8 mb-3 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        Privacy & Security
+      </p>
+      <div className="space-y-3">
+        <Row to="/privacy"       icon={ShieldCheck} label="Privacy Policy" />
+        <Row to="/terms"         icon={FileText}    label="Terms & Conditions" />
+        <Row to="/data-deletion" icon={Database}    label="Data & Account Deletion" />
+      </div>
+
+      <p className="mt-8 mb-3 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        Support
+      </p>
+      <div className="space-y-3">
+        <Row to="/help"  icon={LifeBuoy} label="Help Center" />
+        <Row to="/about" icon={Info}     label="About App" />
+      </div>
+
       <InstallRow />
 
       <div className="mt-8 space-y-3">
