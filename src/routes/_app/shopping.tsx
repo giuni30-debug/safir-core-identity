@@ -3,7 +3,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, Plus, Check, Trash2, X, Wallet as WalletIcon,
-  ShoppingBasket, Pencil, Minus, Sparkles, AlertTriangle,
+  ShoppingBasket, Pencil, Minus, Sparkles, AlertTriangle, Mic, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,15 +42,37 @@ const CAT_EMOJI: Record<Category, string> = {
   other: "✨",
 };
 
-// Suggestions pool (AI-style fake suggestions)
-const SUGGESTIONS: { name: string; category: Category; price: number }[] = [
-  { name: "Lapte 1L",        category: "groceries", price: 1.8 },
-  { name: "Pâine integrală", category: "groceries", price: 2.5 },
-  { name: "Detergent rufe",  category: "household", price: 12.9 },
-  { name: "Vitamina C",      category: "pharmacy",  price: 8.5 },
-  { name: "Scutece",         category: "baby",      price: 24.0 },
-  { name: "Hrană uscată",    category: "pets",      price: 18.5 },
-];
+// Quick Add parser: extracts name + price (and optional qty) from free text.
+// Examples: "milk 2€" → { name:"milk", price:2 }, "3 bread 1.5" → { name:"bread", qty:3, price:1.5 }
+export function parseQuickAdd(input: string): { name: string; qty?: number; price?: number } {
+  const raw = input.trim().replace(/\s+/g, " ");
+  if (!raw) return { name: "" };
+  const tokens = raw.split(" ");
+  let qty: number | undefined;
+  let price: number | undefined;
+  const nameParts: string[] = [];
+  for (const tok of tokens) {
+    // price: ends with €/$ or has decimal separator, or "€2", "2eur"
+    const priceMatch = tok.match(/^€?\$?(\d+(?:[.,]\d+)?)(?:€|\$|eur|ron|lei)?$/i);
+    if (priceMatch && (tok.includes("€") || tok.includes("$") || /[.,]/.test(tok) || /eur|ron|lei/i.test(tok))) {
+      price = parseFloat(priceMatch[1].replace(",", "."));
+      continue;
+    }
+    // bare integer at start = qty
+    if (qty === undefined && nameParts.length === 0 && /^\d+$/.test(tok)) {
+      qty = parseInt(tok, 10);
+      continue;
+    }
+    // bare integer/decimal anywhere else with no name yet decided as price → only if price not set
+    if (price === undefined && /^\d+(?:[.,]\d+)?$/.test(tok) && nameParts.length > 0) {
+      price = parseFloat(tok.replace(",", "."));
+      continue;
+    }
+    nameParts.push(tok);
+  }
+  return { name: nameParts.join(" ").trim(), qty, price };
+}
+
 
 function loadItems(): Item[] {
   try { return JSON.parse(localStorage.getItem(ITEMS_KEY) || "[]"); } catch { return []; }
@@ -145,15 +167,6 @@ function ShoppingPage() {
     setTimeout(() => setNewId(null), 600);
     toast.success(t("shopItemAdded"));
   }
-  function addSuggestion(s: { name: string; category: Category; price: number }) {
-    addItem({ name: s.name, qty: 1, unitPrice: s.price, category: s.category });
-  }
-
-  // Hide suggestions already in list
-  const visibleSuggestions = useMemo(() => {
-    const taken = new Set(items.map((i) => i.name.toLowerCase()));
-    return SUGGESTIONS.filter((s) => !taken.has(s.name.toLowerCase())).slice(0, 4);
-  }, [items]);
 
   return (
     <div className="page-enter relative min-h-screen pb-32">
@@ -219,7 +232,11 @@ function ShoppingPage() {
       {/* To-buy section */}
       <Section title={`🛍️ ${t("shopToBuy")}`} count={toBuy.length}>
         {toBuy.length === 0 ? (
-          <EmptyHero title={t("shopEmptyHero")} hint={t("shopEmptyHint")} />
+          <EmptyHero
+            title="Create your own shopping list"
+            hint="Add only what you need — tap + or use Quick Add."
+            onAdd={() => setShowAdd(true)}
+          />
         ) : (
           <ul className="space-y-2.5">
             {toBuy.map((item) => (
@@ -268,30 +285,7 @@ function ShoppingPage() {
         </Section>
       )}
 
-      {/* Suggestions section */}
-      {visibleSuggestions.length > 0 && (
-        <Section title={`🧠 ${t("shopSuggestions")}`} count={visibleSuggestions.length}>
-          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {visibleSuggestions.map((s, idx) => (
-              <button
-                key={idx}
-                onClick={() => addSuggestion(s)}
-                className="glass-card glass-card-hover shrink-0 w-36 p-3 text-left press-glow"
-              >
-                <div className="text-2xl mb-1">{CAT_EMOJI[s.category]}</div>
-                <p className="text-premium text-sm font-semibold truncate">{s.name}</p>
-                <p className="text-soft text-[11px]">€{s.price.toFixed(2)}</p>
-                <span
-                  className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest"
-                  style={{ color: "var(--theme-accent)" }}
-                >
-                  <Plus className="h-3 w-3" /> {t("shopAddSuggestion")}
-                </span>
-              </button>
-            ))}
-          </div>
-        </Section>
-      )}
+
 
       {/* Floating add button */}
       <button
@@ -389,7 +383,7 @@ function Section({ title, count, children, action }: { title: string; count: num
   );
 }
 
-function EmptyHero({ title, hint }: { title: string; hint: string }) {
+function EmptyHero({ title, hint, onAdd }: { title: string; hint: string; onAdd?: () => void }) {
   return (
     <div className="glass-card grid place-items-center p-10 text-center">
       <div className="relative mb-4">
@@ -408,6 +402,18 @@ function EmptyHero({ title, hint }: { title: string; hint: string }) {
       </div>
       <p className="text-neon-title text-base">{title}</p>
       <p className="text-soft mt-1 text-xs">{hint}</p>
+      {onAdd && (
+        <button
+          onClick={onAdd}
+          className="press-glow mt-5 inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-bold text-white"
+          style={{
+            background: "var(--theme-accent)",
+            boxShadow: "0 0 22px color-mix(in oklab, var(--theme-accent) 55%, transparent)",
+          }}
+        >
+          <Plus className="h-4 w-4" /> Add your first product
+        </button>
+      )}
     </div>
   );
 }
@@ -636,6 +642,8 @@ function ItemModal({
   const [price, setPrice] = useState(String(initial?.unitPrice ?? ""));
   const [category, setCategory] = useState<Category>(initial?.category ?? "groceries");
   const [note, setNote] = useState(initial?.note ?? "");
+  const [quick, setQuick] = useState("");
+  const [listening, setListening] = useState(false);
 
   const cats: Category[] = ["groceries", "household", "pharmacy", "baby", "pets", "other"];
   const catLabel = (c: Category) => ({
@@ -644,12 +652,56 @@ function ItemModal({
     pets: t("catPets"), other: t("catOther"),
   } as Record<Category, string>)[c];
 
+  function applyQuick(text: string) {
+    const parsed = parseQuickAdd(text);
+    if (parsed.name) setName(parsed.name);
+    if (parsed.qty !== undefined) setQty(String(parsed.qty));
+    if (parsed.price !== undefined) setPrice(String(parsed.price));
+  }
+
+  function startVoice() {
+    const SR =
+      (typeof window !== "undefined" &&
+        ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)) ||
+      null;
+    if (!SR) {
+      toast.error("Voice input not supported on this device");
+      return;
+    }
+    const rec = new SR();
+    rec.lang = navigator.language || "en-US";
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    setListening(true);
+    rec.onresult = (e: any) => {
+      const transcript = e.results?.[0]?.[0]?.transcript ?? "";
+      if (transcript) {
+        setQuick(transcript);
+        applyQuick(transcript);
+        toast.success("Heard: " + transcript);
+      }
+    };
+    rec.onerror = () => { setListening(false); toast.error("Couldn't hear you"); };
+    rec.onend = () => setListening(false);
+    try { rec.start(); } catch { setListening(false); }
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
-    const q = Math.max(1, parseInt(qty) || 1);
-    const p = Math.max(0, parseFloat(price) || 0);
-    onSave({ name: name.trim(), qty: q, unitPrice: p, category, note: note.trim() || undefined });
+    let finalName = name.trim();
+    let finalQty = qty;
+    let finalPrice = price;
+    // If user only typed in Quick Add, parse it on submit too
+    if (!finalName && quick.trim()) {
+      const parsed = parseQuickAdd(quick);
+      finalName = parsed.name;
+      if (parsed.qty !== undefined) finalQty = String(parsed.qty);
+      if (parsed.price !== undefined) finalPrice = String(parsed.price);
+    }
+    if (!finalName) return;
+    const q = Math.max(1, parseInt(finalQty) || 1);
+    const p = Math.max(0, parseFloat(finalPrice) || 0);
+    onSave({ name: finalName, qty: q, unitPrice: p, category, note: note.trim() || undefined });
   }
 
   return (
@@ -667,8 +719,44 @@ function ItemModal({
           </button>
         </div>
 
+        {/* Quick Add — only when creating new */}
+        {!initial && (
+          <div className="mb-3">
+            <p className="text-soft mb-1 flex items-center gap-1 text-[11px] uppercase tracking-widest">
+              <Zap className="h-3 w-3" style={{ color: "var(--theme-accent)" }} /> Quick Add
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                value={quick}
+                onChange={(e) => { setQuick(e.target.value); applyQuick(e.target.value); }}
+                placeholder='Try "milk 2€" or "3 bread 1.5"'
+                className="flex-1 rounded-xl border bg-background/40 px-3 py-2.5 text-sm outline-none focus:border-[var(--theme-accent)]"
+                style={{ borderColor: "color-mix(in oklab, var(--theme-accent) 35%, transparent)" }}
+              />
+              <button
+                type="button"
+                onClick={startVoice}
+                aria-label="Voice input"
+                className="press-glow grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+                style={{
+                  background: listening
+                    ? "var(--theme-accent)"
+                    : "color-mix(in oklab, var(--theme-accent) 14%, transparent)",
+                  border: "1px solid color-mix(in oklab, var(--theme-accent) 45%, transparent)",
+                  boxShadow: listening
+                    ? "0 0 24px color-mix(in oklab, var(--theme-accent) 70%, transparent)"
+                    : undefined,
+                  animation: listening ? "glow-pulse 1.2s ease-in-out infinite" : undefined,
+                }}
+              >
+                <Mic className="h-4 w-4" style={{ color: listening ? "#fff" : "var(--theme-accent)" }} />
+              </button>
+            </div>
+          </div>
+        )}
+
         <input
-          autoFocus value={name} onChange={(e) => setName(e.target.value)}
+          autoFocus={!!initial} value={name} onChange={(e) => setName(e.target.value)}
           placeholder={t("shopItemName")}
           className="mb-2 w-full rounded-xl border border-border bg-background/40 px-3 py-2.5 text-sm outline-none focus:border-[var(--theme-accent)]"
         />
