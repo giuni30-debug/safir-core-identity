@@ -39,6 +39,7 @@ import { Route as AppAssistantRouteImport } from './routes/_app/assistant'
 import { Route as AppAppointmentsRouteImport } from './routes/_app/appointments'
 import { Route as AppAppearanceRouteImport } from './routes/_app/appearance'
 import { Route as AppAiMemoryRouteImport } from './routes/_app/ai-memory'
+import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppAboutRouteImport } from './routes/_app/about'
 import { Route as AppChatIdRouteImport } from './routes/_app/chat.$id'
 
@@ -191,6 +192,11 @@ const AppAiMemoryRoute = AppAiMemoryRouteImport.update({
   path: '/ai-memory',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAboutRoute = AppAboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/about': typeof AppAboutRoute
+  '/admin': typeof AppAdminRoute
   '/ai-memory': typeof AppAiMemoryRoute
   '/appearance': typeof AppAppearanceRoute
   '/appointments': typeof AppAppointmentsRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/about': typeof AppAboutRoute
+  '/admin': typeof AppAdminRoute
   '/ai-memory': typeof AppAiMemoryRoute
   '/appearance': typeof AppAppearanceRoute
   '/appointments': typeof AppAppointmentsRoute
@@ -277,6 +285,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_app/about': typeof AppAboutRoute
+  '/_app/admin': typeof AppAdminRoute
   '/_app/ai-memory': typeof AppAiMemoryRoute
   '/_app/appearance': typeof AppAppearanceRoute
   '/_app/appointments': typeof AppAppointmentsRoute
@@ -312,6 +321,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/about'
+    | '/admin'
     | '/ai-memory'
     | '/appearance'
     | '/appointments'
@@ -345,6 +355,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/about'
+    | '/admin'
     | '/ai-memory'
     | '/appearance'
     | '/appointments'
@@ -379,6 +390,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_app/about'
+    | '/_app/admin'
     | '/_app/ai-memory'
     | '/_app/appearance'
     | '/_app/appointments'
@@ -627,6 +639,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAiMemoryRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/about': {
       id: '/_app/about'
       path: '/about'
@@ -646,6 +665,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppAboutRoute: typeof AppAboutRoute
+  AppAdminRoute: typeof AppAdminRoute
   AppAiMemoryRoute: typeof AppAiMemoryRoute
   AppAppearanceRoute: typeof AppAppearanceRoute
   AppAppointmentsRoute: typeof AppAppointmentsRoute
@@ -675,6 +695,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAboutRoute: AppAboutRoute,
+  AppAdminRoute: AppAdminRoute,
   AppAiMemoryRoute: AppAiMemoryRoute,
   AppAppearanceRoute: AppAppearanceRoute,
   AppAppointmentsRoute: AppAppointmentsRoute,

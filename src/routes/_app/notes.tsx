@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Search, Pin, Trash2, X, NotebookPen } from "lucide-rea
 import { useApp } from "@/contexts/AppContext";
 import { EmptyState } from "@/components/EmptyState";
 import { NeonFab } from "@/components/NeonFab";
+import { useTrackScreen } from "@/hooks/useTrackScreen";
 
 export const Route = createFileRoute("/_app/notes")({
   component: Notes,
@@ -27,6 +28,7 @@ const LS = "spl_notes_v1";
 
 function Notes() {
   const { t } = useApp();
+  useTrackScreen("notes_opened");
   const [notes, setNotes] = useState<Note[]>([]);
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Note | null>(null);

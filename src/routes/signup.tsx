@@ -6,6 +6,7 @@ import { useApp } from "@/contexts/AppContext";
 import { GoogleIcon, AppleIcon } from "@/components/icons/BrandIcons";
 import { Field, Divider, OAuthButton } from "./login";
 import { toast } from "sonner";
+import { track } from "@/lib/analytics";
 
 export const Route = createFileRoute("/signup")({
   component: SignupPage,
@@ -38,6 +39,7 @@ function SignupPage() {
     });
     setBusy(false);
     if (error) return toast.error(error.message);
+    track("signup", { email });
     toast.success("Check your email to confirm your account.");
     navigate({ to: "/login" });
   };

@@ -8,6 +8,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useWallet, useAnimatedNumber, type WalletTx } from "@/hooks/useWallet";
 import { SendMoneySheet } from "@/components/wallet/SendMoneySheet";
 import { toast } from "sonner";
+import { useTrackScreen } from "@/hooks/useTrackScreen";
 
 export const Route = createFileRoute("/_app/wallet")({
   component: WalletPage,
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/_app/wallet")({
 
 function WalletPage() {
   const { t } = useApp();
+  useTrackScreen("wallet_opened");
   const navigate = useNavigate();
   const { balance, tx, topUp, withdraw } = useWallet();
   const animatedBalance = useAnimatedNumber(balance);

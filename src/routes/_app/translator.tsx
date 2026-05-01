@@ -6,6 +6,7 @@ import {
   Copy, Volume2, VolumeX, Loader2, Type, MessagesSquare,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTrackScreen } from "@/hooks/useTrackScreen";
 
 export const Route = createFileRoute("/_app/translator")({
   component: TranslatorPage,
@@ -29,6 +30,7 @@ type ConvLine = { speaker: "you" | "partner"; original: string; translated: stri
 function TranslatorPage() {
   const { t } = useApp();
   const navigate = useNavigate();
+  useTrackScreen("translator_opened");
   const [mode, setMode] = useState<Mode>("text");
   const [from, setFrom] = useState("auto");
   const [to, setTo] = useState("ro");

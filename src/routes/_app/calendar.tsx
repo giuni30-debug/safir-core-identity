@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, Plus, X, Clock } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
+import { useTrackScreen } from "@/hooks/useTrackScreen";
 
 export const Route = createFileRoute("/_app/calendar")({
   component: CalendarPage,
@@ -33,6 +34,7 @@ function ymd(d: Date) {
 function CalendarPage() {
   const { t, lang } = useApp();
   const today = new Date();
+  useTrackScreen("calendar_opened");
   const [view, setView] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selected, setSelected] = useState<string>(ymd(today));
   const [events, setEvents] = useState<Event[]>([]);

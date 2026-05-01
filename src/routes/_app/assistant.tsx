@@ -14,6 +14,8 @@ import {
   listConversations, loadMessages, deleteConversation,
   type AiConversation,
 } from "@/hooks/useAiMemory";
+import { useTrackScreen } from "@/hooks/useTrackScreen";
+import { track } from "@/lib/analytics";
 
 export const Route = createFileRoute("/_app/assistant")({
   component: AssistantPage,
@@ -53,6 +55,7 @@ const REPLY_IN_APPLANG_KEY = "safir.assistant.replyInAppLang.v1";
 function AssistantPage() {
   const { t, user, lang } = useApp();
   const navigate = useNavigate();
+  useTrackScreen("assistant_opened");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);

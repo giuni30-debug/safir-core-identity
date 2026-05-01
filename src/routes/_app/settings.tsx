@@ -11,6 +11,7 @@ import { onInstallPromptChange, triggerInstall, isStandalone, isIOS } from "@/li
 import { toast } from "sonner";
 import { useSoundPrefs } from "@/hooks/useSoundPrefs";
 import { playSound, vibrate } from "@/lib/sound";
+import { useTrackScreen } from "@/hooks/useTrackScreen";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -47,6 +48,7 @@ const ANIM_OPTIONS: { id: AnimKind; label: string; icon: React.ComponentType<{ c
 function SettingsPage() {
   const { t, signOut, theme, setTheme, bg, setBg, anim, setAnim } = useApp();
   const navigate = useNavigate();
+  useTrackScreen("settings_opened");
 
   const onLogout = async () => {
     await signOut();
@@ -189,6 +191,7 @@ function SettingsPage() {
       <div className="space-y-3">
         <Row to="/help"  icon={LifeBuoy} label="Help Center" />
         <Row to="/about" icon={Info}     label="About App" />
+        <Row to="/admin" icon={Database} label="Analytics" />
       </div>
 
       <InstallRow />
