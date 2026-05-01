@@ -44,7 +44,7 @@ function TranslatorPage() {
   const docRef = useRef<HTMLInputElement>(null);
 
   const labelOf = (code: string) =>
-    code === "auto" ? t("trDetect") : LANGS.find((l) => l.code === code)?.label ?? code;
+    code === "auto" ? t("trDetect") : getLangInfo(code).name;
 
   function swap() {
     if (from === "auto") { toast.info(t("trDetect")); return; }
@@ -426,22 +426,28 @@ function TranslatorPage() {
 function LangSelect({
   value, onChange, includeAuto, label,
 }: { value: string; onChange: (v: string) => void; includeAuto?: boolean; label: string }) {
+  const current = value === "auto" ? null : getLangInfo(value);
   return (
     <label className="glass-card flex-1 px-3 py-2">
       <span className="text-soft block text-[9px] uppercase tracking-widest">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-transparent text-sm font-semibold outline-none"
-        style={{ color: "#fff" }}
-      >
-        {includeAuto && <option value="auto" className="bg-background">🌐 Auto</option>}
-        {LANGS.map((l) => (
-          <option key={l.code} value={l.code} className="bg-background">
-            {l.flag} {l.label}
-          </option>
-        ))}
-      </select>
+      <div className="flex items-center gap-2">
+        <span className="text-base leading-none">
+          {value === "auto" ? "🌐" : current?.flag}
+        </span>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-transparent text-sm font-semibold outline-none"
+          style={{ color: "#fff" }}
+        >
+          {includeAuto && <option value="auto" className="bg-background">🌐 Auto detect</option>}
+          {LANG_CATALOG.map((l) => (
+            <option key={l.code} value={l.code} className="bg-background">
+              {l.flag} {l.native} — {l.name}
+            </option>
+          ))}
+        </select>
+      </div>
     </label>
   );
 }
