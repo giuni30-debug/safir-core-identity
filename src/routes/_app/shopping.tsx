@@ -546,6 +546,24 @@ function Section({ title, count, children, action }: { title: string; count: num
   );
 }
 
+function SuggestionChip({ name, emoji, onAdd }: { name: string; emoji: string; onAdd: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onAdd}
+      className="press-glow inline-flex items-center gap-1.5 rounded-full border bg-card/40 px-3 py-1.5 text-xs font-medium text-white transition-all hover:scale-[1.03]"
+      style={{
+        borderColor: "color-mix(in oklab, var(--theme-accent) 35%, transparent)",
+        boxShadow: "0 0 10px color-mix(in oklab, var(--theme-accent) 20%, transparent)",
+      }}
+    >
+      <span>{emoji}</span>
+      <span className="truncate max-w-[140px]">{name}</span>
+      <Plus className="h-3 w-3" style={{ color: "var(--theme-accent)" }} />
+    </button>
+  );
+}
+
 function EmptyHero({ title, hint, onAdd }: { title: string; hint: string; onAdd?: () => void }) {
   return (
     <div className="glass-card grid place-items-center p-10 text-center">
