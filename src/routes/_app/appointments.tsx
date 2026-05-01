@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, X, MapPin, Clock, Check, Trash2, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, X, MapPin, Clock, Check, Trash2, Pencil, CalendarClock } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
+import { EmptyState } from "@/components/EmptyState";
 
 export const Route = createFileRoute("/_app/appointments")({
   component: Appointments,
@@ -89,7 +90,13 @@ function Appointments() {
         <Section title={t("past")} lang={lang} t={t} items={past} expanded={expanded} setExpanded={setExpanded} onToggle={toggle} onDelete={remove} onEdit={(a) => { setEditing(a); setOpen(true); }} />
       )}
       {items.length === 0 && (
-        <p className="mt-12 text-center text-sm text-muted-foreground">{t("noAppointments")}</p>
+        <EmptyState
+          icon={CalendarClock}
+          title="No appointments scheduled"
+          subtitle="Plan meetings, reminders and personal events — all in one place."
+          ctaLabel="Add appointment"
+          onCta={() => { setEditing(null); setOpen(true); }}
+        />
       )}
 
       <button

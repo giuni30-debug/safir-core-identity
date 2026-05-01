@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, X, TrendingUp, TrendingDown, Coffee, ShoppingBag, Car, Home, Utensils, Wallet } from "lucide-react";
+import { ArrowLeft, Plus, X, TrendingUp, TrendingDown, Coffee, ShoppingBag, Car, Home, Utensils, Wallet, Receipt } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
+import { EmptyState } from "@/components/EmptyState";
 
 export const Route = createFileRoute("/_app/expenses")({
   component: Expenses,
@@ -182,7 +183,13 @@ function Expenses() {
       {/* Transactions */}
       <div className="mt-5 flex flex-col gap-2">
         {filtered.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted-foreground">{t("noTransactions")}</p>
+          <EmptyState
+            icon={Receipt}
+            title="No expenses yet"
+            subtitle="Track your spending and watch your balance update in real time."
+            ctaLabel="Add expense"
+            onCta={() => setOpen(true)}
+          />
         )}
         {filtered.map((t, i) => {
           const Icon = iconFor(t.category);
