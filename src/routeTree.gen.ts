@@ -17,14 +17,18 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppWalletRouteImport } from './routes/_app/wallet'
 import { Route as AppTranslatorRouteImport } from './routes/_app/translator'
+import { Route as AppTermsRouteImport } from './routes/_app/terms'
 import { Route as AppShoppingRouteImport } from './routes/_app/shopping'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
+import { Route as AppPrivacyRouteImport } from './routes/_app/privacy'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppNotesRouteImport } from './routes/_app/notes'
 import { Route as AppLanguageRouteImport } from './routes/_app/language'
 import { Route as AppHomeRouteImport } from './routes/_app/home'
+import { Route as AppHelpRouteImport } from './routes/_app/help'
 import { Route as AppExpensesRouteImport } from './routes/_app/expenses'
+import { Route as AppDataDeletionRouteImport } from './routes/_app/data-deletion'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppContactsRouteImport } from './routes/_app/contacts'
 import { Route as AppConnectRouteImport } from './routes/_app/connect'
@@ -34,6 +38,7 @@ import { Route as AppAssistantRouteImport } from './routes/_app/assistant'
 import { Route as AppAppointmentsRouteImport } from './routes/_app/appointments'
 import { Route as AppAppearanceRouteImport } from './routes/_app/appearance'
 import { Route as AppAiMemoryRouteImport } from './routes/_app/ai-memory'
+import { Route as AppAboutRouteImport } from './routes/_app/about'
 import { Route as AppChatIdRouteImport } from './routes/_app/chat.$id'
 
 const SignupRoute = SignupRouteImport.update({
@@ -75,6 +80,11 @@ const AppTranslatorRoute = AppTranslatorRouteImport.update({
   path: '/translator',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTermsRoute = AppTermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppShoppingRoute = AppShoppingRouteImport.update({
   id: '/shopping',
   path: '/shopping',
@@ -88,6 +98,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppProfileRoute = AppProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPrivacyRoute = AppPrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => AppRoute,
 } as any)
 const AppNotificationsRoute = AppNotificationsRouteImport.update({
@@ -110,9 +125,19 @@ const AppHomeRoute = AppHomeRouteImport.update({
   path: '/home',
   getParentRoute: () => AppRoute,
 } as any)
+const AppHelpRoute = AppHelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppExpensesRoute = AppExpensesRouteImport.update({
   id: '/expenses',
   path: '/expenses',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDataDeletionRoute = AppDataDeletionRouteImport.update({
+  id: '/data-deletion',
+  path: '/data-deletion',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -160,6 +185,11 @@ const AppAiMemoryRoute = AppAiMemoryRouteImport.update({
   path: '/ai-memory',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAboutRoute = AppAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppChatIdRoute = AppChatIdRouteImport.update({
   id: '/chat/$id',
   path: '/chat/$id',
@@ -172,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/about': typeof AppAboutRoute
   '/ai-memory': typeof AppAiMemoryRoute
   '/appearance': typeof AppAppearanceRoute
   '/appointments': typeof AppAppointmentsRoute
@@ -181,14 +212,18 @@ export interface FileRoutesByFullPath {
   '/connect': typeof AppConnectRoute
   '/contacts': typeof AppContactsRoute
   '/dashboard': typeof AppDashboardRoute
+  '/data-deletion': typeof AppDataDeletionRoute
   '/expenses': typeof AppExpensesRoute
+  '/help': typeof AppHelpRoute
   '/home': typeof AppHomeRoute
   '/language': typeof AppLanguageRoute
   '/notes': typeof AppNotesRoute
   '/notifications': typeof AppNotificationsRoute
+  '/privacy': typeof AppPrivacyRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
   '/shopping': typeof AppShoppingRoute
+  '/terms': typeof AppTermsRoute
   '/translator': typeof AppTranslatorRoute
   '/wallet': typeof AppWalletRoute
   '/chat/$id': typeof AppChatIdRoute
@@ -199,6 +234,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/about': typeof AppAboutRoute
   '/ai-memory': typeof AppAiMemoryRoute
   '/appearance': typeof AppAppearanceRoute
   '/appointments': typeof AppAppointmentsRoute
@@ -208,14 +244,18 @@ export interface FileRoutesByTo {
   '/connect': typeof AppConnectRoute
   '/contacts': typeof AppContactsRoute
   '/dashboard': typeof AppDashboardRoute
+  '/data-deletion': typeof AppDataDeletionRoute
   '/expenses': typeof AppExpensesRoute
+  '/help': typeof AppHelpRoute
   '/home': typeof AppHomeRoute
   '/language': typeof AppLanguageRoute
   '/notes': typeof AppNotesRoute
   '/notifications': typeof AppNotificationsRoute
+  '/privacy': typeof AppPrivacyRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
   '/shopping': typeof AppShoppingRoute
+  '/terms': typeof AppTermsRoute
   '/translator': typeof AppTranslatorRoute
   '/wallet': typeof AppWalletRoute
   '/chat/$id': typeof AppChatIdRoute
@@ -228,6 +268,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/_app/about': typeof AppAboutRoute
   '/_app/ai-memory': typeof AppAiMemoryRoute
   '/_app/appearance': typeof AppAppearanceRoute
   '/_app/appointments': typeof AppAppointmentsRoute
@@ -237,14 +278,18 @@ export interface FileRoutesById {
   '/_app/connect': typeof AppConnectRoute
   '/_app/contacts': typeof AppContactsRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/data-deletion': typeof AppDataDeletionRoute
   '/_app/expenses': typeof AppExpensesRoute
+  '/_app/help': typeof AppHelpRoute
   '/_app/home': typeof AppHomeRoute
   '/_app/language': typeof AppLanguageRoute
   '/_app/notes': typeof AppNotesRoute
   '/_app/notifications': typeof AppNotificationsRoute
+  '/_app/privacy': typeof AppPrivacyRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/shopping': typeof AppShoppingRoute
+  '/_app/terms': typeof AppTermsRoute
   '/_app/translator': typeof AppTranslatorRoute
   '/_app/wallet': typeof AppWalletRoute
   '/_app/chat/$id': typeof AppChatIdRoute
@@ -257,6 +302,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/about'
     | '/ai-memory'
     | '/appearance'
     | '/appointments'
@@ -266,14 +312,18 @@ export interface FileRouteTypes {
     | '/connect'
     | '/contacts'
     | '/dashboard'
+    | '/data-deletion'
     | '/expenses'
+    | '/help'
     | '/home'
     | '/language'
     | '/notes'
     | '/notifications'
+    | '/privacy'
     | '/profile'
     | '/settings'
     | '/shopping'
+    | '/terms'
     | '/translator'
     | '/wallet'
     | '/chat/$id'
@@ -284,6 +334,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/about'
     | '/ai-memory'
     | '/appearance'
     | '/appointments'
@@ -293,14 +344,18 @@ export interface FileRouteTypes {
     | '/connect'
     | '/contacts'
     | '/dashboard'
+    | '/data-deletion'
     | '/expenses'
+    | '/help'
     | '/home'
     | '/language'
     | '/notes'
     | '/notifications'
+    | '/privacy'
     | '/profile'
     | '/settings'
     | '/shopping'
+    | '/terms'
     | '/translator'
     | '/wallet'
     | '/chat/$id'
@@ -312,6 +367,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/_app/about'
     | '/_app/ai-memory'
     | '/_app/appearance'
     | '/_app/appointments'
@@ -321,14 +377,18 @@ export interface FileRouteTypes {
     | '/_app/connect'
     | '/_app/contacts'
     | '/_app/dashboard'
+    | '/_app/data-deletion'
     | '/_app/expenses'
+    | '/_app/help'
     | '/_app/home'
     | '/_app/language'
     | '/_app/notes'
     | '/_app/notifications'
+    | '/_app/privacy'
     | '/_app/profile'
     | '/_app/settings'
     | '/_app/shopping'
+    | '/_app/terms'
     | '/_app/translator'
     | '/_app/wallet'
     | '/_app/chat/$id'
@@ -401,6 +461,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTranslatorRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/terms': {
+      id: '/_app/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof AppTermsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/shopping': {
       id: '/_app/shopping'
       path: '/shopping'
@@ -420,6 +487,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/privacy': {
+      id: '/_app/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof AppPrivacyRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/notifications': {
@@ -450,11 +524,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppHomeRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/help': {
+      id: '/_app/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof AppHelpRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/expenses': {
       id: '/_app/expenses'
       path: '/expenses'
       fullPath: '/expenses'
       preLoaderRoute: typeof AppExpensesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/data-deletion': {
+      id: '/_app/data-deletion'
+      path: '/data-deletion'
+      fullPath: '/data-deletion'
+      preLoaderRoute: typeof AppDataDeletionRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/dashboard': {
@@ -520,6 +608,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAiMemoryRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/about': {
+      id: '/_app/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AppAboutRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/chat/$id': {
       id: '/_app/chat/$id'
       path: '/chat/$id'
@@ -531,6 +626,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAboutRoute: typeof AppAboutRoute
   AppAiMemoryRoute: typeof AppAiMemoryRoute
   AppAppearanceRoute: typeof AppAppearanceRoute
   AppAppointmentsRoute: typeof AppAppointmentsRoute
@@ -540,20 +636,25 @@ interface AppRouteChildren {
   AppConnectRoute: typeof AppConnectRoute
   AppContactsRoute: typeof AppContactsRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppDataDeletionRoute: typeof AppDataDeletionRoute
   AppExpensesRoute: typeof AppExpensesRoute
+  AppHelpRoute: typeof AppHelpRoute
   AppHomeRoute: typeof AppHomeRoute
   AppLanguageRoute: typeof AppLanguageRoute
   AppNotesRoute: typeof AppNotesRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
+  AppPrivacyRoute: typeof AppPrivacyRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppShoppingRoute: typeof AppShoppingRoute
+  AppTermsRoute: typeof AppTermsRoute
   AppTranslatorRoute: typeof AppTranslatorRoute
   AppWalletRoute: typeof AppWalletRoute
   AppChatIdRoute: typeof AppChatIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAboutRoute: AppAboutRoute,
   AppAiMemoryRoute: AppAiMemoryRoute,
   AppAppearanceRoute: AppAppearanceRoute,
   AppAppointmentsRoute: AppAppointmentsRoute,
@@ -563,14 +664,18 @@ const AppRouteChildren: AppRouteChildren = {
   AppConnectRoute: AppConnectRoute,
   AppContactsRoute: AppContactsRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppDataDeletionRoute: AppDataDeletionRoute,
   AppExpensesRoute: AppExpensesRoute,
+  AppHelpRoute: AppHelpRoute,
   AppHomeRoute: AppHomeRoute,
   AppLanguageRoute: AppLanguageRoute,
   AppNotesRoute: AppNotesRoute,
   AppNotificationsRoute: AppNotificationsRoute,
+  AppPrivacyRoute: AppPrivacyRoute,
   AppProfileRoute: AppProfileRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppShoppingRoute: AppShoppingRoute,
+  AppTermsRoute: AppTermsRoute,
   AppTranslatorRoute: AppTranslatorRoute,
   AppWalletRoute: AppWalletRoute,
   AppChatIdRoute: AppChatIdRoute,
@@ -589,3 +694,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

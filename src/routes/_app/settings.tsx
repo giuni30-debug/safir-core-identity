@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft, ChevronRight, User, Languages, Bell, LogOut, Trash2,
   Download, CheckCircle2, Palette, Image as ImageIcon, Sparkles, Sun, Zap, CircleOff, Brain,
-  Volume2, VolumeX, Vibrate, Play,
+  Volume2, VolumeX, Vibrate, Play, ShieldCheck, FileText, Database, LifeBuoy, Info,
 } from "lucide-react";
 import { useApp, type ThemeColor, type BgKind, type AnimKind } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -158,6 +158,23 @@ function SettingsPage() {
         <Row to="/ai-memory"     icon={Brain}     label={t("aiMemoryTitle")} />
       </div>
 
+      <p className="mt-8 mb-3 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        Privacy & Security
+      </p>
+      <div className="space-y-3">
+        <Row to="/privacy"       icon={ShieldCheck} label="Privacy Policy" />
+        <Row to="/terms"         icon={FileText}    label="Terms & Conditions" />
+        <Row to="/data-deletion" icon={Database}    label="Data & Account Deletion" />
+      </div>
+
+      <p className="mt-8 mb-3 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        Support
+      </p>
+      <div className="space-y-3">
+        <Row to="/help"  icon={LifeBuoy} label="Help Center" />
+        <Row to="/about" icon={Info}     label="About App" />
+      </div>
+
       <InstallRow />
 
       <div className="mt-8 space-y-3">
@@ -249,7 +266,7 @@ function OptionGrid<T extends string>({
 function Row({
   to, icon: Icon, label,
 }: {
-  to: "/profile" | "/language" | "/notifications" | "/ai-memory";
+  to: "/profile" | "/language" | "/notifications" | "/ai-memory" | "/privacy" | "/terms" | "/data-deletion" | "/help" | "/about";
   icon: React.ComponentType<{ className?: string }>;
   label: string;
 }) {
