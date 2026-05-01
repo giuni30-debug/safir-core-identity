@@ -1237,7 +1237,7 @@ function ChatPage() {
         open={sendMoneyOpen}
         onClose={() => setSendMoneyOpen(false)}
         presetContact={contact ? {
-          id: contact.id,
+          id: contactId,
           username: contact.username,
           display_name: contact.display_name,
           avatar_url: contact.avatar_url,
