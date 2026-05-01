@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { NeonFab } from "@/components/NeonFab";
 import { useWallet, useAnimatedNumber } from "@/hooks/useWallet";
 import { toast } from "sonner";
+import { useTrackScreen } from "@/hooks/useTrackScreen";
 
 export const Route = createFileRoute("/_app/expenses")({
   component: Expenses,
@@ -74,6 +75,7 @@ function formatDateInput(d: Date) {
 function Expenses() {
   const { t, lang } = useApp();
   const { balance } = useWallet();
+  useTrackScreen("expenses_opened");
   const [txs, setTxs] = useState<Tx[]>([]);
   const [filter, setFilter] = useState<"today" | "week" | "month">("month");
   const [catFilter, setCatFilter] = useState<string>("All");

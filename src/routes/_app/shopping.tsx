@@ -7,6 +7,7 @@ import {
   TrendingUp, History, Flame,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTrackScreen } from "@/hooks/useTrackScreen";
 
 
 export const Route = createFileRoute("/_app/shopping")({
@@ -160,6 +161,7 @@ function useAnimatedNumber(target: number, duration = 600) {
 function ShoppingPage() {
   const { t } = useApp();
   const navigate = useNavigate();
+  useTrackScreen("shopping_opened");
   const [items, setItems] = useState<Item[]>([]);
   const [budget, setBudget] = useState<number>(0);
   const [showAdd, setShowAdd] = useState(false);
