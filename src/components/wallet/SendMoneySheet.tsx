@@ -206,7 +206,7 @@ export function SendMoneySheet({ open, onClose, presetContact, onSent }: Props) 
                     onClick={() => { setPicked(c); setStep("amount"); }}
                     className="press-glow flex w-full items-center gap-3 rounded-2xl border border-border bg-card/30 p-2.5 text-left"
                   >
-                    <Avatar src={c.avatar_url} name={c.display_name} size={40} />
+                    <Avatar url={c.avatar_url} name={c.display_name} size={40} />
                     <div className="min-w-0 flex-1">
                       <p className="text-premium truncate text-sm font-semibold">{c.display_name}</p>
                       <p className="text-soft truncate text-[11px]">@{c.username}</p>
@@ -222,7 +222,7 @@ export function SendMoneySheet({ open, onClose, presetContact, onSent }: Props) 
         {step === "amount" && picked && (
           <div>
             <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border bg-card/30 p-3">
-              <Avatar src={picked.avatar_url} name={picked.display_name} size={44} />
+              <Avatar url={picked.avatar_url} name={picked.display_name} size={44} />
               <div className="min-w-0 flex-1">
                 <p className="text-soft text-[11px] uppercase tracking-widest">Sending to</p>
                 <p className="text-premium truncate text-sm font-semibold">{picked.display_name}</p>
@@ -313,7 +313,7 @@ export function SendMoneySheet({ open, onClose, presetContact, onSent }: Props) 
                 className="absolute right-0 top-1/2 -translate-y-1/2"
                 style={{ animation: "recv-pulse 1.1s ease-out" }}
               >
-                <Avatar src={picked.avatar_url} name={picked.display_name} size={56} />
+                <Avatar url={picked.avatar_url} name={picked.display_name} size={56} />
               </div>
             </div>
             <p className="text-neon-title mt-2 text-sm">Sending €{finalAmount.toFixed(2)}…</p>
