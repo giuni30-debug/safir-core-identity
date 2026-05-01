@@ -18,20 +18,10 @@ export const Route = createFileRoute("/_app/translator")({
 });
 
 const TR_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-translate`;
+const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 const SUPA_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-const LANGS = [
-  { code: "ro", label: "Română",   flag: "🇷🇴" },
-  { code: "en", label: "English",  flag: "🇬🇧" },
-  { code: "tr", label: "Türkçe",   flag: "🇹🇷" },
-  { code: "de", label: "Deutsch",  flag: "🇩🇪" },
-  { code: "fr", label: "Français", flag: "🇫🇷" },
-  { code: "es", label: "Español",  flag: "🇪🇸" },
-  { code: "it", label: "Italiano", flag: "🇮🇹" },
-  { code: "ru", label: "Русский",  flag: "🇷🇺" },
-  { code: "ar", label: "العربية",  flag: "🇸🇦" },
-  { code: "zh", label: "中文",      flag: "🇨🇳" },
-];
+import { LANG_CATALOG, getLangInfo } from "@/lib/i18n";
 
 type Mode = "text" | "voice" | "photo" | "document" | "conversation";
 type ConvLine = { speaker: "you" | "partner"; original: string; translated: string };
