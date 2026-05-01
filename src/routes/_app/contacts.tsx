@@ -25,13 +25,17 @@ type Contact = {
   avatar_url: string | null;
 };
 
+type MessageType = "text" | "voice" | "image" | "video" | "file";
+
+type LastMessage = {
+  text: string;
+  type: MessageType;
+  at: string;
+  fromMe: boolean;
+};
+
 type ContactRow = Contact & {
-  last?: {
-    text: string;
-    type: "text" | "voice" | "image" | "video" | "file";
-    at: string;
-    fromMe: boolean;
-  };
+  last?: LastMessage;
 };
 
 type SearchResult = Contact & { alreadyConnected: boolean };
