@@ -44,7 +44,56 @@ const CAT_EMOJI: Record<Category, string> = {
   other: "✨",
 };
 
-// Quick Add parser: extracts name + price (and optional qty) from free text.
+// ---- Smart category auto-detection ----
+const CATEGORY_KEYWORDS: Record<Category, string[]> = {
+  groceries: ["milk","bread","egg","cheese","butter","yogurt","apple","banana","tomato","potato","rice","pasta","chicken","beef","fish","coffee","tea","sugar","salt","oil","water","juice","wine","beer","chocolate","cookie","cereal","flour","onion","garlic","lapte","paine","oua","branza","cafea","apa","carne","ulei","faina"],
+  household: ["paper","towel","light","bulb","battery","candle","trash","bag","foil","plate","cup","fork","spoon","hartie","servete","bec","baterie"],
+  pharmacy: ["soap","shampoo","toothpaste","brush","detergent","bleach","cleaner","sponge","mask","vitamin","pill","sapun","sampon","clor","masca","vitamina"],
+  baby: ["diaper","wipes","baby","formula","pacifier","scutece","biberon"],
+  pets: ["dog","cat","pet","litter","kibble","caine","pisica"],
+  other: [],
+};
+function autoDetectCategory(name: string): Category {
+  const n = name.toLowerCase();
+  let best: Category = "other";
+  let bestScore = 0;
+  (Object.keys(CATEGORY_KEYWORDS) as Category[]).forEach((cat) => {
+    const score = CATEGORY_KEYWORDS[cat].reduce((s, kw) => s + (n.includes(kw) ? kw.length : 0), 0);
+    if (score > bestScore) { bestScore = score; best = cat; }
+  });
+  return best;
+}
+
+// ---- Sync to Expenses ----
+const EXPENSES_KEY = "spl_expenses_v1";
+const SHOP_CAT_TO_EXPENSE: Record<Category, string> = {
+  groceries: "Food", household: "Home", pharmacy: "Shopping",
+  baby: "Shopping", pets: "Shopping", other: "Shopping",
+};
+function syncBoughtToExpenses(item: Item) {
+  if (item.unitPrice <= 0) return;
+  try {
+    const raw = localStorage.getItem(EXPENSES_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    list.unshift({
+      id: `shop-${item.id}`,
+      name: item.qty > 1 ? `${item.name} ×${item.qty}` : item.name,
+      amount: -(item.qty * item.unitPrice),
+      category: SHOP_CAT_TO_EXPENSE[item.category],
+      date: new Date().toISOString(),
+    });
+    localStorage.setItem(EXPENSES_KEY, JSON.stringify(list));
+  } catch {}
+}
+function unsyncBoughtFromExpenses(itemId: string) {
+  try {
+    const raw = localStorage.getItem(EXPENSES_KEY);
+    if (!raw) return;
+    const list = JSON.parse(raw).filter((t: any) => t.id !== `shop-${itemId}`);
+    localStorage.setItem(EXPENSES_KEY, JSON.stringify(list));
+  } catch {}
+}
+
 // Examples: "milk 2€" → { name:"milk", price:2 }, "3 bread 1.5" → { name:"bread", qty:3, price:1.5 }
 export function parseQuickAdd(input: string): { name: string; qty?: number; price?: number } {
   const raw = input.trim().replace(/\s+/g, " ");
