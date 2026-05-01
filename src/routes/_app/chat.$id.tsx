@@ -726,14 +726,14 @@ function ChatPage() {
         </div>
 
         <FloatingHeaderButton
-          onClick={() => { if (contact) void startCall(contactId); }}
+          onClick={() => { track("call_button_tapped", { contactId }); if (contact) void startCall(contactId); }}
           disabled={!contact || inCall}
           ariaLabel="Audio call"
         >
           <Phone className="h-5 w-5" />
         </FloatingHeaderButton>
         <FloatingHeaderButton
-          onClick={() => { if (contact) void startVideoCall(contactId); }}
+          onClick={() => { track("video_button_tapped", { contactId }); if (contact) void startVideoCall(contactId); }}
           disabled={!contact || inCall}
           ariaLabel="Video call"
         >
