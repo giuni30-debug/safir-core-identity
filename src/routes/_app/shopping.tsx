@@ -232,7 +232,11 @@ function ShoppingPage() {
       {/* To-buy section */}
       <Section title={`🛍️ ${t("shopToBuy")}`} count={toBuy.length}>
         {toBuy.length === 0 ? (
-          <EmptyHero title={t("shopEmptyHero")} hint={t("shopEmptyHint")} />
+          <EmptyHero
+            title="Create your own shopping list"
+            hint="Add only what you need — tap + or use Quick Add."
+            onAdd={() => setShowAdd(true)}
+          />
         ) : (
           <ul className="space-y-2.5">
             {toBuy.map((item) => (
