@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Plus, X, TrendingUp, TrendingDown, Coffee, ShoppingBag, Car, Home, Utensils, Wallet, Receipt } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { EmptyState } from "@/components/EmptyState";
+import { NeonFab } from "@/components/NeonFab";
 
 export const Route = createFileRoute("/_app/expenses")({
   component: Expenses,
