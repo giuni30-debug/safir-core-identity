@@ -167,15 +167,6 @@ function ShoppingPage() {
     setTimeout(() => setNewId(null), 600);
     toast.success(t("shopItemAdded"));
   }
-  function addSuggestion(s: { name: string; category: Category; price: number }) {
-    addItem({ name: s.name, qty: 1, unitPrice: s.price, category: s.category });
-  }
-
-  // Hide suggestions already in list
-  const visibleSuggestions = useMemo(() => {
-    const taken = new Set(items.map((i) => i.name.toLowerCase()));
-    return SUGGESTIONS.filter((s) => !taken.has(s.name.toLowerCase())).slice(0, 4);
-  }, [items]);
 
   return (
     <div className="page-enter relative min-h-screen pb-32">
