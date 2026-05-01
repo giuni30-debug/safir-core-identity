@@ -249,7 +249,7 @@ function OptionGrid<T extends string>({
 function Row({
   to, icon: Icon, label,
 }: {
-  to: "/profile" | "/language" | "/notifications" | "/ai-memory";
+  to: "/profile" | "/language" | "/notifications" | "/ai-memory" | "/privacy" | "/terms" | "/data-deletion" | "/help" | "/about";
   icon: React.ComponentType<{ className?: string }>;
   label: string;
 }) {
