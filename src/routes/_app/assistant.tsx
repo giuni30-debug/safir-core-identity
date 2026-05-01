@@ -72,6 +72,13 @@ function AssistantPage() {
     const v = localStorage.getItem(AUTOSPEAK_KEY);
     return v === null ? true : v === "1";
   });
+  // Per-chat override: when true (default), AI ALWAYS replies in selected app language.
+  // When false, AI mirrors the user's input language.
+  const [replyInAppLang, setReplyInAppLang] = useState<boolean>(() => {
+    if (typeof localStorage === "undefined") return true;
+    const v = localStorage.getItem(REPLY_IN_APPLANG_KEY);
+    return v === null ? true : v === "1";
+  });
   const [speaking, setSpeaking] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const mediaRecRef = useRef<MediaRecorder | null>(null);
@@ -85,6 +92,11 @@ function AssistantPage() {
       localStorage.setItem(AUTOSPEAK_KEY, autoSpeak ? "1" : "0");
     }
   }, [autoSpeak]);
+  useEffect(() => {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(REPLY_IN_APPLANG_KEY, replyInAppLang ? "1" : "0");
+    }
+  }, [replyInAppLang]);
 
   const memory = useAiMemory();
 
