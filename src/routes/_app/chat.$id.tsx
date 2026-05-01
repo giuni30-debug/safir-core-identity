@@ -234,6 +234,7 @@ function ChatPage() {
   const [giftOpen, setGiftOpen] = useState(false);
   const [activeGift, setActiveGift] = useState<Gift | null>(null);
   const lastSeenGiftId = useRef<string | null>(null);
+  const [sendMoneyOpen, setSendMoneyOpen] = useState(false);
 
   // Reaction picker state
   const [reactionFor, setReactionFor] = useState<string | null>(null);
