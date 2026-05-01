@@ -42,15 +42,37 @@ const CAT_EMOJI: Record<Category, string> = {
   other: "✨",
 };
 
-// Suggestions pool (AI-style fake suggestions)
-const SUGGESTIONS: { name: string; category: Category; price: number }[] = [
-  { name: "Lapte 1L",        category: "groceries", price: 1.8 },
-  { name: "Pâine integrală", category: "groceries", price: 2.5 },
-  { name: "Detergent rufe",  category: "household", price: 12.9 },
-  { name: "Vitamina C",      category: "pharmacy",  price: 8.5 },
-  { name: "Scutece",         category: "baby",      price: 24.0 },
-  { name: "Hrană uscată",    category: "pets",      price: 18.5 },
-];
+// Quick Add parser: extracts name + price (and optional qty) from free text.
+// Examples: "milk 2€" → { name:"milk", price:2 }, "3 bread 1.5" → { name:"bread", qty:3, price:1.5 }
+export function parseQuickAdd(input: string): { name: string; qty?: number; price?: number } {
+  const raw = input.trim().replace(/\s+/g, " ");
+  if (!raw) return { name: "" };
+  const tokens = raw.split(" ");
+  let qty: number | undefined;
+  let price: number | undefined;
+  const nameParts: string[] = [];
+  for (const tok of tokens) {
+    // price: ends with €/$ or has decimal separator, or "€2", "2eur"
+    const priceMatch = tok.match(/^€?\$?(\d+(?:[.,]\d+)?)(?:€|\$|eur|ron|lei)?$/i);
+    if (priceMatch && (tok.includes("€") || tok.includes("$") || /[.,]/.test(tok) || /eur|ron|lei/i.test(tok))) {
+      price = parseFloat(priceMatch[1].replace(",", "."));
+      continue;
+    }
+    // bare integer at start = qty
+    if (qty === undefined && nameParts.length === 0 && /^\d+$/.test(tok)) {
+      qty = parseInt(tok, 10);
+      continue;
+    }
+    // bare integer/decimal anywhere else with no name yet decided as price → only if price not set
+    if (price === undefined && /^\d+(?:[.,]\d+)?$/.test(tok) && nameParts.length > 0) {
+      price = parseFloat(tok.replace(",", "."));
+      continue;
+    }
+    nameParts.push(tok);
+  }
+  return { name: nameParts.join(" ").trim(), qty, price };
+}
+
 
 function loadItems(): Item[] {
   try { return JSON.parse(localStorage.getItem(ITEMS_KEY) || "[]"); } catch { return []; }
