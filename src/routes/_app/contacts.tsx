@@ -73,14 +73,14 @@ function ContactsPage() {
       .order("created_at", { ascending: false })
       .limit(200);
 
-    const lastByPeer = new Map<string, ContactRow["last"]>();
+    const lastByPeer = new Map<string, LastMessage>();
     (msgs ?? []).forEach((m) => {
       const peer = m.sender_user_id === user.id ? m.receiver_user_id : m.sender_user_id;
       if (!ids.includes(peer)) return;
       if (lastByPeer.has(peer)) return;
       lastByPeer.set(peer, {
         text: m.message_text ?? "",
-        type: (m.message_type as ContactRow["last"]["type"]) ?? "text",
+        type: (m.message_type as MessageType) ?? "text",
         at: m.created_at,
         fromMe: m.sender_user_id === user.id,
       });
