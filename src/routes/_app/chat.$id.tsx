@@ -1233,6 +1233,17 @@ function ChatPage() {
 
       <GiftSheet open={giftOpen} onClose={() => setGiftOpen(false)} onSend={(g) => void sendGift(g)} />
       {activeGift && <GiftFX gift={activeGift} onDone={() => setActiveGift(null)} />}
+      <SendMoneySheet
+        open={sendMoneyOpen}
+        onClose={() => setSendMoneyOpen(false)}
+        presetContact={contact ? {
+          id: contact.id,
+          username: contact.username,
+          display_name: contact.display_name,
+          avatar_url: contact.avatar_url,
+        } : null}
+        onSent={(c, amt) => toast.success(`Sent €${amt.toFixed(2)} to ${c.display_name}`)}
+      />
     </div>
   );
 }
