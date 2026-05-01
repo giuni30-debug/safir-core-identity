@@ -12,6 +12,8 @@ import { useCall } from "@/contexts/CallContext";
 import { GiftSheet } from "@/components/chat/GiftSheet";
 import { GiftFX } from "@/components/chat/GiftFX";
 import { decodeGiftMessage, encodeGiftMessage, type Gift } from "@/components/chat/gifts";
+import { SendMoneySheet } from "@/components/wallet/SendMoneySheet";
+import { toast } from "sonner";
 import { usePeerPresence, formatLastSeen } from "@/hooks/usePresence";
 import { useTypingIndicator } from "@/hooks/useTyping";
 import { useReactions } from "@/hooks/useReactions";
