@@ -1,7 +1,11 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { translations, type Lang, type TKey } from "@/lib/i18n";
+import {
+  type Lang, type TKey,
+  resolve as resolveT,
+  ensureLanguageLoaded, subscribeI18n, getLangInfo,
+} from "@/lib/i18n";
 
 export type ThemeColor = "cyan" | "blue" | "purple" | "gold" | "emerald" | "red";
 export type BgKind = "gradient" | "image" | "neon";
@@ -80,14 +84,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [theme]);
 
-  const setLang = (l: Lang) => { setLangState(l); localStorage.setItem(LS.lang, l); };
+  const setLang = (l: Lang) => {
+    setLangState(l);
+    localStorage.setItem(LS.lang, l);
+    // Kick off AI translation load for non-native languages
+    void ensureLanguageLoaded(l);
+    // Update <html lang> + dir for accessibility / RTL
+    if (typeof document !== "undefined") {
+      const info = getLangInfo(l);
+      document.documentElement.setAttribute("lang", l);
+      document.documentElement.setAttribute("dir", info.rtl ? "rtl" : "ltr");
+    }
+  };
   const setTheme = (c: ThemeColor) => { setThemeState(c); localStorage.setItem(LS.theme, c); };
   const setBg = (b: BgKind) => { setBgState(b); localStorage.setItem(LS.bg, b); };
   const setAnim = (a: AnimKind) => { setAnimState(a); localStorage.setItem(LS.anim, a); };
   const setNeon = (n: NeonColor) => { setNeonState(n); localStorage.setItem(LS.neon, n); };
   const setNeonAnim = (v: boolean) => { setNeonAnimState(v); localStorage.setItem(LS.neonAnim, v ? "1" : "0"); };
 
-  const t = (k: TKey) => translations[lang][k] ?? translations.en[k];
+  // Re-render when AI translations finish loading
+  const [, force] = useState(0);
+  useEffect(() => subscribeI18n(() => force((n) => n + 1)), []);
+  // Ensure current language is loaded on mount + on change
+  useEffect(() => { void ensureLanguageLoaded(lang); }, [lang]);
+
+  const t = (k: TKey) => resolveT(lang, k);
 
   const loadProfile = async (uid: string) => {
     const { data } = await supabase

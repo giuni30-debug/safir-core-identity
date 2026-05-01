@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { messages, model, system, memory } = await req.json();
+    const { messages, model, system, memory, appLang, replyInAppLang } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(
@@ -20,13 +20,21 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Build a strict language directive when the user has chosen one in-app.
+    // - replyInAppLang === true (default): ALWAYS reply in appLang regardless of user's input language.
+    // - replyInAppLang === false: mirror the user's input language (legacy behaviour).
+    const langBlock = appLang
+      ? (replyInAppLang === false
+          ? `User's preferred app language is "${appLang}". Mirror the user's last input language when replying.`
+          : `MANDATORY: Reply ONLY in the language identified by code "${appLang}". Translate everything (including code comments and lists) into that language. Never reply in another language even if the user writes in a different one. If the language code is unfamiliar, use the standard ISO 639 language for that code.`)
+      : "";
+
     const sys =
       system ??
       `You are All Assist, a premium real-world AI assistant inside the Safir app.
 
 Behaviour rules:
 - Be clear, confident, natural and friendly. Avoid robotic phrasing.
-- Always reply in the user's language (auto-detect from their last message).
 - Use markdown when it improves clarity (lists, **bold**, code blocks).
 - Keep answers focused. Prefer the most useful 80% over exhaustive detail, unless the user asks for depth.
 
@@ -56,6 +64,7 @@ Style: warm, smart, premium — like a real assistant, not a chatbot.`;
           model: model || "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: sys },
+            ...(langBlock ? [{ role: "system", content: langBlock }] : []),
             ...(memory && typeof memory === "string" && memory.trim()
               ? [{ role: "system", content: memory }]
               : []),

@@ -5,7 +5,7 @@ import {
   ArrowLeft, Send, Paperclip, Image as ImageIcon, Sparkles,
   Plus, Wand2, Square, Search, Brain,
   History, Trash2, Settings as SettingsIcon, MessageSquare,
-  Mic, Volume2, VolumeX,
+  Mic, Volume2, VolumeX, Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -48,9 +48,10 @@ const TTS_URL   = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-
 const STT_URL   = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-stt`;
 const SUPA_KEY  = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const AUTOSPEAK_KEY = "safir.assistant.autospeak.v1";
+const REPLY_IN_APPLANG_KEY = "safir.assistant.replyInAppLang.v1";
 
 function AssistantPage() {
-  const { t, user } = useApp();
+  const { t, user, lang } = useApp();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -71,6 +72,13 @@ function AssistantPage() {
     const v = localStorage.getItem(AUTOSPEAK_KEY);
     return v === null ? true : v === "1";
   });
+  // Per-chat override: when true (default), AI ALWAYS replies in selected app language.
+  // When false, AI mirrors the user's input language.
+  const [replyInAppLang, setReplyInAppLang] = useState<boolean>(() => {
+    if (typeof localStorage === "undefined") return true;
+    const v = localStorage.getItem(REPLY_IN_APPLANG_KEY);
+    return v === null ? true : v === "1";
+  });
   const [speaking, setSpeaking] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const mediaRecRef = useRef<MediaRecorder | null>(null);
@@ -84,6 +92,11 @@ function AssistantPage() {
       localStorage.setItem(AUTOSPEAK_KEY, autoSpeak ? "1" : "0");
     }
   }, [autoSpeak]);
+  useEffect(() => {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(REPLY_IN_APPLANG_KEY, replyInAppLang ? "1" : "0");
+    }
+  }, [replyInAppLang]);
 
   const memory = useAiMemory();
 
@@ -108,6 +121,8 @@ function AssistantPage() {
         body: JSON.stringify({
           messages: history.map((m) => ({ role: m.role, content: m.content })),
           memory: memory.memoryPromptBlock(),
+          appLang: lang,
+          replyInAppLang,
         }),
       });
       if (resp.status === 503) { toast.error(t("aiNotConnected")); setLoading(false); return; }
@@ -814,6 +829,20 @@ function AssistantPage() {
           >
             {autoSpeak ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
             {speaking ? "Speaking…" : autoSpeak ? "Voice on" : "Voice off"}
+          </button>
+          <button
+            onClick={() => setReplyInAppLang((v) => !v)}
+            className="press-glow shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase"
+            style={replyInAppLang ? {
+              borderColor: "var(--theme-accent)",
+              color: "var(--theme-accent)",
+              background: "color-mix(in oklab, var(--theme-accent) 14%, transparent)",
+            } : { borderColor: "var(--border)", color: "#fff" }}
+            aria-label="Reply language"
+            title={replyInAppLang ? `Always reply in ${lang.toUpperCase()}` : "Mirror your language"}
+          >
+            <Globe className="h-3.5 w-3.5" />
+            {replyInAppLang ? lang.toUpperCase() : "AUTO"}
           </button>
           {messages.length > 0 && suggestions.slice(0, 2).map((s) => (
             <button

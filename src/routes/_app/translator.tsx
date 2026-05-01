@@ -18,20 +18,10 @@ export const Route = createFileRoute("/_app/translator")({
 });
 
 const TR_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-translate`;
+const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`;
 const SUPA_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-const LANGS = [
-  { code: "ro", label: "Română",   flag: "🇷🇴" },
-  { code: "en", label: "English",  flag: "🇬🇧" },
-  { code: "tr", label: "Türkçe",   flag: "🇹🇷" },
-  { code: "de", label: "Deutsch",  flag: "🇩🇪" },
-  { code: "fr", label: "Français", flag: "🇫🇷" },
-  { code: "es", label: "Español",  flag: "🇪🇸" },
-  { code: "it", label: "Italiano", flag: "🇮🇹" },
-  { code: "ru", label: "Русский",  flag: "🇷🇺" },
-  { code: "ar", label: "العربية",  flag: "🇸🇦" },
-  { code: "zh", label: "中文",      flag: "🇨🇳" },
-];
+import { LANG_CATALOG, getLangInfo } from "@/lib/i18n";
 
 type Mode = "text" | "voice" | "photo" | "document" | "conversation";
 type ConvLine = { speaker: "you" | "partner"; original: string; translated: string };
@@ -54,7 +44,7 @@ function TranslatorPage() {
   const docRef = useRef<HTMLInputElement>(null);
 
   const labelOf = (code: string) =>
-    code === "auto" ? t("trDetect") : LANGS.find((l) => l.code === code)?.label ?? code;
+    code === "auto" ? t("trDetect") : getLangInfo(code).name;
 
   function swap() {
     if (from === "auto") { toast.info(t("trDetect")); return; }
@@ -62,8 +52,8 @@ function TranslatorPage() {
     setSrc(dst); setDst(src);
   }
 
-  function speak(text: string, lang: string) {
-    if (!text || !("speechSynthesis" in window)) return;
+  function speakWebFallback(text: string, lang: string) {
+    if (!text || typeof window === "undefined" || !("speechSynthesis" in window)) return;
     try {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
@@ -72,22 +62,62 @@ function TranslatorPage() {
     } catch { /* ignore */ }
   }
 
-  async function callTranslate(text: string, fromLang: string, toLang: string) {
-    const resp = await fetch(TR_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(SUPA_KEY ? { Authorization: `Bearer ${SUPA_KEY}` } : {}),
-      },
-      body: JSON.stringify({ text, from: labelOf(fromLang), to: labelOf(toLang) }),
-    });
-    if (resp.status === 503) { toast.error(t("aiNotConnected")); return null; }
-    if (resp.status === 429) { toast.error("Rate limit exceeded"); return null; }
-    if (resp.status === 402) { toast.error("AI credits exhausted"); return null; }
-    if (!resp.ok) { toast.error(t("aiError")); return null; }
-    const data = await resp.json();
-    return (data.translation as string) || "";
+  async function speak(text: string, lang: string) {
+    if (!text) return;
+    // Try ElevenLabs first for natural premium voice
+    try {
+      const resp = await fetch(TTS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(SUPA_KEY ? { Authorization: `Bearer ${SUPA_KEY}` } : {}),
+        },
+        body: JSON.stringify({ text: text.slice(0, 1500) }),
+      });
+      if (!resp.ok) { speakWebFallback(text, lang); return; }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => URL.revokeObjectURL(url);
+      audio.onerror = () => { URL.revokeObjectURL(url); speakWebFallback(text, lang); };
+      await audio.play().catch(() => speakWebFallback(text, lang));
+    } catch {
+      speakWebFallback(text, lang);
+    }
   }
+
+  async function callTranslate(text: string, fromLang: string, toLang: string, attempt = 0): Promise<string | null> {
+    try {
+      const resp = await fetch(TR_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(SUPA_KEY ? { Authorization: `Bearer ${SUPA_KEY}` } : {}),
+        },
+        body: JSON.stringify({ text, from: labelOf(fromLang), to: labelOf(toLang) }),
+      });
+      if (resp.status === 503) { toast.error(t("aiNotConnected")); return null; }
+      if (resp.status === 429) { toast.error("Rate limit exceeded"); return null; }
+      if (resp.status === 402) { toast.error("AI credits exhausted"); return null; }
+      if (!resp.ok) {
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+          return callTranslate(text, fromLang, toLang, attempt + 1);
+        }
+        toast.error(t("aiError")); return null;
+      }
+      const data = await resp.json();
+      return (data.translation as string) || "";
+    } catch {
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        return callTranslate(text, fromLang, toLang, attempt + 1);
+      }
+      return null;
+    }
+  }
+
+
 
   async function translate() {
     const text = src.trim();
@@ -436,22 +466,28 @@ function TranslatorPage() {
 function LangSelect({
   value, onChange, includeAuto, label,
 }: { value: string; onChange: (v: string) => void; includeAuto?: boolean; label: string }) {
+  const current = value === "auto" ? null : getLangInfo(value);
   return (
     <label className="glass-card flex-1 px-3 py-2">
       <span className="text-soft block text-[9px] uppercase tracking-widest">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-transparent text-sm font-semibold outline-none"
-        style={{ color: "#fff" }}
-      >
-        {includeAuto && <option value="auto" className="bg-background">🌐 Auto</option>}
-        {LANGS.map((l) => (
-          <option key={l.code} value={l.code} className="bg-background">
-            {l.flag} {l.label}
-          </option>
-        ))}
-      </select>
+      <div className="flex items-center gap-2">
+        <span className="text-base leading-none">
+          {value === "auto" ? "🌐" : current?.flag}
+        </span>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-transparent text-sm font-semibold outline-none"
+          style={{ color: "#fff" }}
+        >
+          {includeAuto && <option value="auto" className="bg-background">🌐 Auto detect</option>}
+          {LANG_CATALOG.map((l) => (
+            <option key={l.code} value={l.code} className="bg-background">
+              {l.flag} {l.native} — {l.name}
+            </option>
+          ))}
+        </select>
+      </div>
     </label>
   );
 }
