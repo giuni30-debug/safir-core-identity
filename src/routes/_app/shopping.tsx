@@ -3,7 +3,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, Plus, Check, Trash2, X, Wallet as WalletIcon,
-  ShoppingBasket, Pencil, Minus, Sparkles, AlertTriangle,
+  ShoppingBasket, Pencil, Minus, Sparkles, AlertTriangle, Mic, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 
