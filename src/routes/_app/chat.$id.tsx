@@ -744,6 +744,13 @@ function ChatPage() {
         >
           <GiftIcon className="h-5 w-5" />
         </FloatingHeaderButton>
+        <FloatingHeaderButton
+          onClick={() => setSendMoneyOpen(true)}
+          disabled={!contact}
+          ariaLabel="Send money"
+        >
+          <WalletIcon className="h-5 w-5" />
+        </FloatingHeaderButton>
       </header>
 
       <div
