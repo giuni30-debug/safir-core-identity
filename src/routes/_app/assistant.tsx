@@ -830,7 +830,20 @@ function AssistantPage() {
             {autoSpeak ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
             {speaking ? "Speaking…" : autoSpeak ? "Voice on" : "Voice off"}
           </button>
-          {messages.length > 0 && suggestions.slice(0, 2).map((s) => (
+          <button
+            onClick={() => setReplyInAppLang((v) => !v)}
+            className="press-glow shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase"
+            style={replyInAppLang ? {
+              borderColor: "var(--theme-accent)",
+              color: "var(--theme-accent)",
+              background: "color-mix(in oklab, var(--theme-accent) 14%, transparent)",
+            } : { borderColor: "var(--border)", color: "#fff" }}
+            aria-label="Reply language"
+            title={replyInAppLang ? `Always reply in ${lang.toUpperCase()}` : "Mirror your language"}
+          >
+            <Globe className="h-3.5 w-3.5" />
+            {replyInAppLang ? lang.toUpperCase() : "AUTO"}
+          </button>
             <button
               key={s.key}
               onClick={() => setInput(s.prompt)}
