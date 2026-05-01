@@ -7,6 +7,7 @@ import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCall } from "@/contexts/CallContext";
+import { useTrackScreen } from "@/hooks/useTrackScreen";
 
 export const Route = createFileRoute("/_app/home")({
   component: Home,
@@ -22,6 +23,7 @@ function Home() {
   const { profile, t, user } = useApp();
   const navigate = useNavigate();
   const { startCall, startVideoCall } = useCall();
+  useTrackScreen("home_opened");
 
   // Recent quick contacts (top 3)
   const [quickContacts, setQuickContacts] = useState<
