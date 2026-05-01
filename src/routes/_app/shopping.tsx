@@ -83,6 +83,7 @@ function syncBoughtToExpenses(item: Item) {
       date: new Date().toISOString(),
     });
     localStorage.setItem(EXPENSES_KEY, JSON.stringify(list));
+    try { window.dispatchEvent(new CustomEvent("spl-expenses-changed")); } catch {}
   } catch {}
 }
 function unsyncBoughtFromExpenses(itemId: string) {
