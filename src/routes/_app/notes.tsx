@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Plus, Search, Pin, Trash2, X, NotebookPen } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { EmptyState } from "@/components/EmptyState";
+import { NeonFab } from "@/components/NeonFab";
 
 export const Route = createFileRoute("/_app/notes")({
   component: Notes,
@@ -120,13 +121,7 @@ function Notes() {
         ))}
       </div>
 
-      <button
-        onClick={create}
-        aria-label="Add note"
-        className="neon-circle press-glow fixed bottom-20 right-5 z-30 grid h-14 w-14 place-items-center rounded-full text-white"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
+      <NeonFab onClick={create} ariaLabel="Add note" />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Plus, X, TrendingUp, TrendingDown, Coffee, ShoppingBag, Car, Home, Utensils, Wallet, Receipt } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { EmptyState } from "@/components/EmptyState";
+import { NeonFab } from "@/components/NeonFab";
 
 export const Route = createFileRoute("/_app/expenses")({
   component: Expenses,
@@ -233,14 +234,7 @@ function Expenses() {
         })}
       </div>
 
-      {/* FAB */}
-      <button
-        onClick={() => setOpen(true)}
-        aria-label="Add expense"
-        className="neon-circle press-glow fixed bottom-20 right-5 z-30 grid h-14 w-14 place-items-center rounded-full text-white"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
+      <NeonFab onClick={() => setOpen(true)} ariaLabel="Add expense" />
 
       {open && <AddModal t={t} catLabel={catLabel} onClose={() => setOpen(false)} onAdd={add} />}
     </div>
