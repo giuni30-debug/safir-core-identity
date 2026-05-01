@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCall } from "@/contexts/CallContext";
 import { useTrackScreen } from "@/hooks/useTrackScreen";
+import { track } from "@/lib/analytics";
 
 export const Route = createFileRoute("/_app/home")({
   component: Home,
@@ -177,6 +178,7 @@ function Home() {
             icon={<Phone className="h-6 w-6" />}
             badge={<PulseRing color="oklch(0.78 0.18 145)" />}
             onClick={() => {
+              track("call_button_tapped", { from: "home" });
               if (quickContacts[0]) void startCall(quickContacts[0].id);
               else navigate({ to: "/contacts" });
             }}
@@ -188,6 +190,7 @@ function Home() {
             icon={<Video className="h-6 w-6" />}
             badge={<GlowFlicker color="oklch(0.78 0.18 320)" />}
             onClick={() => {
+              track("video_button_tapped", { from: "home" });
               if (quickContacts[0]) void startVideoCall(quickContacts[0].id);
               else navigate({ to: "/contacts" });
             }}
