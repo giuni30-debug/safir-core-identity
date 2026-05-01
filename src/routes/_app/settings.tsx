@@ -191,6 +191,7 @@ function SettingsPage() {
       <div className="space-y-3">
         <Row to="/help"  icon={LifeBuoy} label="Help Center" />
         <Row to="/about" icon={Info}     label="About App" />
+        <Row to="/admin" icon={Database} label="Analytics" />
       </div>
 
       <InstallRow />
