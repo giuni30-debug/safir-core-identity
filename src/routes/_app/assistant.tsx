@@ -844,6 +844,7 @@ function AssistantPage() {
             <Globe className="h-3.5 w-3.5" />
             {replyInAppLang ? lang.toUpperCase() : "AUTO"}
           </button>
+          {messages.length > 0 && suggestions.slice(0, 2).map((s) => (
             <button
               key={s.key}
               onClick={() => setInput(s.prompt)}
