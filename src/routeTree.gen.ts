@@ -22,6 +22,7 @@ import { Route as AppShoppingRouteImport } from './routes/_app/shopping'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppPrivacyRouteImport } from './routes/_app/privacy'
+import { Route as AppPremiumRouteImport } from './routes/_app/premium'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppNotesRouteImport } from './routes/_app/notes'
 import { Route as AppLanguageRouteImport } from './routes/_app/language'
@@ -103,6 +104,11 @@ const AppProfileRoute = AppProfileRouteImport.update({
 const AppPrivacyRoute = AppPrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPremiumRoute = AppPremiumRouteImport.update({
+  id: '/premium',
+  path: '/premium',
   getParentRoute: () => AppRoute,
 } as any)
 const AppNotificationsRoute = AppNotificationsRouteImport.update({
@@ -219,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/language': typeof AppLanguageRoute
   '/notes': typeof AppNotesRoute
   '/notifications': typeof AppNotificationsRoute
+  '/premium': typeof AppPremiumRoute
   '/privacy': typeof AppPrivacyRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
@@ -251,6 +258,7 @@ export interface FileRoutesByTo {
   '/language': typeof AppLanguageRoute
   '/notes': typeof AppNotesRoute
   '/notifications': typeof AppNotificationsRoute
+  '/premium': typeof AppPremiumRoute
   '/privacy': typeof AppPrivacyRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
@@ -285,6 +293,7 @@ export interface FileRoutesById {
   '/_app/language': typeof AppLanguageRoute
   '/_app/notes': typeof AppNotesRoute
   '/_app/notifications': typeof AppNotificationsRoute
+  '/_app/premium': typeof AppPremiumRoute
   '/_app/privacy': typeof AppPrivacyRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -319,6 +328,7 @@ export interface FileRouteTypes {
     | '/language'
     | '/notes'
     | '/notifications'
+    | '/premium'
     | '/privacy'
     | '/profile'
     | '/settings'
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/language'
     | '/notes'
     | '/notifications'
+    | '/premium'
     | '/privacy'
     | '/profile'
     | '/settings'
@@ -384,6 +395,7 @@ export interface FileRouteTypes {
     | '/_app/language'
     | '/_app/notes'
     | '/_app/notifications'
+    | '/_app/premium'
     | '/_app/privacy'
     | '/_app/profile'
     | '/_app/settings'
@@ -494,6 +506,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof AppPrivacyRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/premium': {
+      id: '/_app/premium'
+      path: '/premium'
+      fullPath: '/premium'
+      preLoaderRoute: typeof AppPremiumRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/notifications': {
@@ -643,6 +662,7 @@ interface AppRouteChildren {
   AppLanguageRoute: typeof AppLanguageRoute
   AppNotesRoute: typeof AppNotesRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
+  AppPremiumRoute: typeof AppPremiumRoute
   AppPrivacyRoute: typeof AppPrivacyRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -671,6 +691,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLanguageRoute: AppLanguageRoute,
   AppNotesRoute: AppNotesRoute,
   AppNotificationsRoute: AppNotificationsRoute,
+  AppPremiumRoute: AppPremiumRoute,
   AppPrivacyRoute: AppPrivacyRoute,
   AppProfileRoute: AppProfileRoute,
   AppSettingsRoute: AppSettingsRoute,

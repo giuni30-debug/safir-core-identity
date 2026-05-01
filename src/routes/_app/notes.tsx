@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Search, Pin, Trash2, X } from "lucide-react";
+import { ArrowLeft, Plus, Search, Pin, Trash2, X, NotebookPen } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
+import { EmptyState } from "@/components/EmptyState";
 
 export const Route = createFileRoute("/_app/notes")({
   component: Notes,
@@ -92,7 +93,15 @@ function Notes() {
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         {filtered.length === 0 && (
-          <p className="col-span-2 py-10 text-center text-sm text-muted-foreground">{t("noNotes")}</p>
+          <div className="col-span-2">
+            <EmptyState
+              icon={NotebookPen}
+              title="No notes yet"
+              subtitle="Capture ideas, plans and private thoughts. They stay only on your device."
+              ctaLabel="Create first note"
+              onCta={create}
+            />
+          </div>
         )}
         {filtered.map((n, i) => (
           <button
