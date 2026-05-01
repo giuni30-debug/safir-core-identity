@@ -248,6 +248,40 @@ function ShoppingPage() {
     addItem({ name: s.name, qty: 1, unitPrice: s.unitPrice, category: s.category });
   }
 
+  // ---- Smart suggestions from real history ----
+  const [historyTick, setHistoryTick] = useState(0);
+  useEffect(() => { setHistoryTick((x) => x + 1); }, [items]);
+  const history = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("spl_shop_history_v1");
+      const map = raw ? JSON.parse(raw) : {};
+      return Object.entries(map).map(([k, v]: any) => ({ key: k, ...v })) as Array<{
+        key: string; name: string; category: Category; unitPrice: number; count: number; lastAt: number;
+      }>;
+    } catch { return []; }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyTick]);
+  const activeNames = useMemo(() => new Set(items.map((i) => i.name.trim().toLowerCase())), [items]);
+  const recentSuggestions = useMemo(
+    () => history.filter((h) => !activeNames.has(h.key)).sort((a, b) => b.lastAt - a.lastAt).slice(0, 6),
+    [history, activeNames],
+  );
+  const frequentSuggestions = useMemo(
+    () => history.filter((h) => h.count >= 2 && !activeNames.has(h.key)).sort((a, b) => b.count - a.count).slice(0, 6),
+    [history, activeNames],
+  );
+
+  // ---- Mini analytics: this week + top category ----
+  const weekAnalytics = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 86400000;
+    const weekItems = history.filter((h) => h.lastAt >= weekAgo);
+    const total = weekItems.reduce((s, h) => s + h.unitPrice * h.count, 0);
+    const catTotals: Record<string, number> = {};
+    weekItems.forEach((h) => { catTotals[h.category] = (catTotals[h.category] ?? 0) + h.unitPrice * h.count; });
+    let topCat: Category | null = null; let topVal = 0;
+    Object.entries(catTotals).forEach(([c, v]) => { if (v > topVal) { topVal = v; topCat = c as Category; } });
+    return { total, topCat, count: weekItems.length };
+  }, [history]);
 
   return (
     <div className="page-enter relative min-h-screen pb-32">
