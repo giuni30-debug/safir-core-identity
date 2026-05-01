@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, UserPlus, Search, X, Users } from "lucide-react";
+import { ArrowLeft, UserPlus, Search, X, Users, Image as ImageIcon, Mic, Video, Paperclip } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
+import { usePeerPresence } from "@/hooks/usePresence";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/contacts")({
@@ -24,15 +25,22 @@ type Contact = {
   avatar_url: string | null;
 };
 
+type ContactRow = Contact & {
+  last?: {
+    text: string;
+    type: "text" | "voice" | "image" | "video" | "file";
+    at: string;
+    fromMe: boolean;
+  };
+};
+
 type SearchResult = Contact & { alreadyConnected: boolean };
 
 function ContactsPage() {
   const { t, user } = useApp();
   const navigate = useNavigate();
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Inline "Add contact" sheet (was the /connect page)
   const [addOpen, setAddOpen] = useState(false);
 
   const loadContacts = async () => {
@@ -52,7 +60,41 @@ function ContactsPage() {
       .from("profiles")
       .select("id, username, display_name, avatar_url")
       .in("id", ids);
-    setContacts(profs ?? []);
+
+    // Fetch last message per peer (single query, then group client-side)
+    const { data: msgs } = await supabase
+      .from("messages")
+      .select("sender_user_id, receiver_user_id, message_text, message_type, created_at")
+      .or(`sender_user_id.in.(${ids.join(",")}),receiver_user_id.in.(${ids.join(",")})`)
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    const lastByPeer = new Map<string, ContactRow["last"]>();
+    (msgs ?? []).forEach((m) => {
+      const peer = m.sender_user_id === user.id ? m.receiver_user_id : m.sender_user_id;
+      if (!ids.includes(peer)) return;
+      if (lastByPeer.has(peer)) return;
+      lastByPeer.set(peer, {
+        text: m.message_text ?? "",
+        type: (m.message_type as ContactRow["last"]["type"]) ?? "text",
+        at: m.created_at,
+        fromMe: m.sender_user_id === user.id,
+      });
+    });
+
+    const rows: ContactRow[] = (profs ?? []).map((p) => ({
+      ...p,
+      last: lastByPeer.get(p.id),
+    }));
+    // Sort: most recent message first, then alphabetical
+    rows.sort((a, b) => {
+      if (a.last && b.last) return b.last.at.localeCompare(a.last.at);
+      if (a.last) return -1;
+      if (b.last) return 1;
+      return a.display_name.localeCompare(b.display_name);
+    });
+
+    setContacts(rows);
     setLoading(false);
   };
 
@@ -87,7 +129,7 @@ function ContactsPage() {
         </button>
       </header>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-6 space-y-2.5">
         {loading && <p className="text-center text-xs text-muted-foreground">…</p>}
 
         {!loading && contacts.length === 0 && (
@@ -100,33 +142,99 @@ function ContactsPage() {
           />
         )}
 
-        {contacts.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => navigate({ to: "/chat/$id", params: { id: c.id } })}
-            className="press-glow glass-card glass-card-hover flex w-full items-center gap-3 p-3 text-left"
-          >
-            <Avatar url={c.avatar_url} name={c.display_name} size={44} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">{c.display_name}</p>
-              <p className="truncate text-xs text-muted-foreground">@{c.username}</p>
-            </div>
-            <span className="rounded-full border border-border px-3 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-              {t("connected")}
-            </span>
-          </button>
+        {contacts.map((c, i) => (
+          <ContactRow key={c.id} contact={c} index={i} onOpen={() => navigate({ to: "/chat/$id", params: { id: c.id } })} />
         ))}
       </div>
 
       {addOpen && (
         <AddContactSheet
           onClose={() => setAddOpen(false)}
-          onConnected={() => {
-            void loadContacts();
-          }}
+          onConnected={() => void loadContacts()}
         />
       )}
     </div>
+  );
+}
+
+function ContactRow({
+  contact,
+  index,
+  onOpen,
+}: {
+  contact: ContactRow;
+  index: number;
+  onOpen: () => void;
+}) {
+  const presence = usePeerPresence(contact.id);
+
+  let preview: React.ReactNode = (
+    <span className="text-muted-foreground/70 italic">Tap to start chatting</span>
+  );
+  if (contact.last) {
+    const prefix = contact.last.fromMe ? "You: " : "";
+    if (contact.last.type === "voice") {
+      preview = (
+        <span className="inline-flex items-center gap-1">
+          <Mic className="h-3 w-3" /> {prefix}Voice message
+        </span>
+      );
+    } else if (contact.last.type === "image") {
+      preview = (
+        <span className="inline-flex items-center gap-1">
+          <ImageIcon className="h-3 w-3" /> {prefix}Photo
+        </span>
+      );
+    } else if (contact.last.type === "video") {
+      preview = (
+        <span className="inline-flex items-center gap-1">
+          <Video className="h-3 w-3" /> {prefix}Video
+        </span>
+      );
+    } else if (contact.last.type === "file") {
+      preview = (
+        <span className="inline-flex items-center gap-1">
+          <Paperclip className="h-3 w-3" /> {prefix}File
+        </span>
+      );
+    } else {
+      preview = (
+        <span>
+          {prefix}
+          {contact.last.text}
+        </span>
+      );
+    }
+  }
+
+  const time = contact.last
+    ? new Date(contact.last.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "";
+
+  return (
+    <button
+      onClick={onOpen}
+      className="press-glow glass-card glass-card-hover flex w-full items-center gap-3 p-3 text-left"
+      style={{ animation: `fade-in 0.3s ease-out ${index * 40}ms both` }}
+    >
+      <div className="relative shrink-0">
+        <Avatar url={contact.avatar_url} name={contact.display_name} size={48} />
+        <span
+          className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background"
+          style={{
+            background: presence.isOnline ? "#34d399" : "#6b7280",
+            boxShadow: presence.isOnline ? "0 0 8px #34d399" : "none",
+          }}
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-semibold">{contact.display_name}</p>
+          {time && <span className="shrink-0 text-[10px] text-muted-foreground">{time}</span>}
+        </div>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">{preview}</p>
+      </div>
+    </button>
   );
 }
 
