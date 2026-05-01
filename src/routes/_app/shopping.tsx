@@ -4,8 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, Plus, Check, Trash2, X, Wallet as WalletIcon,
   ShoppingBasket, Pencil, Minus, Sparkles, AlertTriangle, Mic, Zap,
+  TrendingUp, History, Flame,
 } from "lucide-react";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/_app/shopping")({
   component: ShoppingPage,
@@ -42,7 +44,56 @@ const CAT_EMOJI: Record<Category, string> = {
   other: "✨",
 };
 
-// Quick Add parser: extracts name + price (and optional qty) from free text.
+// ---- Smart category auto-detection ----
+const CATEGORY_KEYWORDS: Record<Category, string[]> = {
+  groceries: ["milk","bread","egg","cheese","butter","yogurt","apple","banana","tomato","potato","rice","pasta","chicken","beef","fish","coffee","tea","sugar","salt","oil","water","juice","wine","beer","chocolate","cookie","cereal","flour","onion","garlic","lapte","paine","oua","branza","cafea","apa","carne","ulei","faina"],
+  household: ["paper","towel","light","bulb","battery","candle","trash","bag","foil","plate","cup","fork","spoon","hartie","servete","bec","baterie"],
+  pharmacy: ["soap","shampoo","toothpaste","brush","detergent","bleach","cleaner","sponge","mask","vitamin","pill","sapun","sampon","clor","masca","vitamina"],
+  baby: ["diaper","wipes","baby","formula","pacifier","scutece","biberon"],
+  pets: ["dog","cat","pet","litter","kibble","caine","pisica"],
+  other: [],
+};
+function autoDetectCategory(name: string): Category {
+  const n = name.toLowerCase();
+  let best: Category = "other";
+  let bestScore = 0;
+  (Object.keys(CATEGORY_KEYWORDS) as Category[]).forEach((cat) => {
+    const score = CATEGORY_KEYWORDS[cat].reduce((s, kw) => s + (n.includes(kw) ? kw.length : 0), 0);
+    if (score > bestScore) { bestScore = score; best = cat; }
+  });
+  return best;
+}
+
+// ---- Sync to Expenses ----
+const EXPENSES_KEY = "spl_expenses_v1";
+const SHOP_CAT_TO_EXPENSE: Record<Category, string> = {
+  groceries: "Food", household: "Home", pharmacy: "Shopping",
+  baby: "Shopping", pets: "Shopping", other: "Shopping",
+};
+function syncBoughtToExpenses(item: Item) {
+  if (item.unitPrice <= 0) return;
+  try {
+    const raw = localStorage.getItem(EXPENSES_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    list.unshift({
+      id: `shop-${item.id}`,
+      name: item.qty > 1 ? `${item.name} ×${item.qty}` : item.name,
+      amount: -(item.qty * item.unitPrice),
+      category: SHOP_CAT_TO_EXPENSE[item.category],
+      date: new Date().toISOString(),
+    });
+    localStorage.setItem(EXPENSES_KEY, JSON.stringify(list));
+  } catch {}
+}
+function unsyncBoughtFromExpenses(itemId: string) {
+  try {
+    const raw = localStorage.getItem(EXPENSES_KEY);
+    if (!raw) return;
+    const list = JSON.parse(raw).filter((t: any) => t.id !== `shop-${itemId}`);
+    localStorage.setItem(EXPENSES_KEY, JSON.stringify(list));
+  } catch {}
+}
+
 // Examples: "milk 2€" → { name:"milk", price:2 }, "3 bread 1.5" → { name:"bread", qty:3, price:1.5 }
 export function parseQuickAdd(input: string): { name: string; qty?: number; price?: number } {
   const raw = input.trim().replace(/\s+/g, " ");
@@ -140,19 +191,45 @@ function ShoppingPage() {
     pets: t("catPets"), other: t("catOther"),
   } as Record<Category, string>)[c];
 
+  function recordPurchase(item: Item) {
+    try {
+      const KEY = "spl_shop_history_v1";
+      const raw = localStorage.getItem(KEY);
+      const map: Record<string, { name: string; category: Category; unitPrice: number; count: number; lastAt: number }> =
+        raw ? JSON.parse(raw) : {};
+      const k = item.name.trim().toLowerCase();
+      const prev = map[k];
+      map[k] = {
+        name: item.name,
+        category: item.category,
+        unitPrice: item.unitPrice || prev?.unitPrice || 0,
+        count: (prev?.count ?? 0) + 1,
+        lastAt: Date.now(),
+      };
+      localStorage.setItem(KEY, JSON.stringify(map));
+    } catch {}
+  }
+
   function toggleBought(id: string) {
     const item = items.find((i) => i.id === id);
     if (item && !item.bought) {
       setBurstId(id);
       setTimeout(() => setBurstId(null), 700);
+      const updated = { ...item, bought: true };
+      syncBoughtToExpenses(updated);
+      recordPurchase(updated);
+    } else if (item && item.bought) {
+      unsyncBoughtFromExpenses(item.id);
     }
     update(items.map((i) => (i.id === id ? { ...i, bought: !i.bought } : i)));
   }
   function deleteItem(id: string) {
+    unsyncBoughtFromExpenses(id);
     update(items.filter((i) => i.id !== id));
     toast.success(t("shopItemDeleted"));
   }
   function clearBought() {
+    bought.forEach((b) => unsyncBoughtFromExpenses(b.id));
     update(items.filter((i) => !i.bought));
   }
   function changeQty(id: string, delta: number) {
@@ -167,6 +244,44 @@ function ShoppingPage() {
     setTimeout(() => setNewId(null), 600);
     toast.success(t("shopItemAdded"));
   }
+  function addFromSuggestion(s: { name: string; category: Category; unitPrice: number }) {
+    addItem({ name: s.name, qty: 1, unitPrice: s.unitPrice, category: s.category });
+  }
+
+  // ---- Smart suggestions from real history ----
+  const [historyTick, setHistoryTick] = useState(0);
+  useEffect(() => { setHistoryTick((x) => x + 1); }, [items]);
+  const history = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("spl_shop_history_v1");
+      const map = raw ? JSON.parse(raw) : {};
+      return Object.entries(map).map(([k, v]: any) => ({ key: k, ...v })) as Array<{
+        key: string; name: string; category: Category; unitPrice: number; count: number; lastAt: number;
+      }>;
+    } catch { return []; }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyTick]);
+  const activeNames = useMemo(() => new Set(items.map((i) => i.name.trim().toLowerCase())), [items]);
+  const recentSuggestions = useMemo(
+    () => history.filter((h) => !activeNames.has(h.key)).sort((a, b) => b.lastAt - a.lastAt).slice(0, 6),
+    [history, activeNames],
+  );
+  const frequentSuggestions = useMemo(
+    () => history.filter((h) => h.count >= 2 && !activeNames.has(h.key)).sort((a, b) => b.count - a.count).slice(0, 6),
+    [history, activeNames],
+  );
+
+  // ---- Mini analytics: this week + top category ----
+  const weekAnalytics = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 86400000;
+    const weekItems = history.filter((h) => h.lastAt >= weekAgo);
+    const total = weekItems.reduce((s, h) => s + h.unitPrice * h.count, 0);
+    const catTotals: Record<string, number> = {};
+    weekItems.forEach((h) => { catTotals[h.category] = (catTotals[h.category] ?? 0) + h.unitPrice * h.count; });
+    let topCat: Category | null = null; let topVal = 0;
+    Object.entries(catTotals).forEach(([c, v]) => { if (v > topVal) { topVal = v; topCat = c as Category; } });
+    return { total, topCat, count: weekItems.length };
+  }, [history]);
 
   return (
     <div className="page-enter relative min-h-screen pb-32">
@@ -233,8 +348,8 @@ function ShoppingPage() {
       <Section title={`🛍️ ${t("shopToBuy")}`} count={toBuy.length}>
         {toBuy.length === 0 ? (
           <EmptyHero
-            title="Create your own shopping list"
-            hint="Add only what you need — tap + or use Quick Add."
+            title="Start building your smart shopping list"
+            hint="Add products in seconds — type, paste, or speak them."
             onAdd={() => setShowAdd(true)}
           />
         ) : (
@@ -285,6 +400,54 @@ function ShoppingPage() {
         </Section>
       )}
 
+      {/* Smart suggestions — only when real history exists */}
+      {(frequentSuggestions.length > 0 || recentSuggestions.length > 0) && (
+        <section className="mx-4 mt-6">
+          {frequentSuggestions.length > 0 && (
+            <>
+              <h2 className="text-premium mb-2 flex items-center gap-1.5 text-xs uppercase tracking-widest">
+                <Flame className="h-3.5 w-3.5" style={{ color: "var(--theme-accent)" }} />
+                Frequently used
+              </h2>
+              <div className="mb-4 flex flex-wrap gap-1.5">
+                {frequentSuggestions.map((s) => (
+                  <SuggestionChip key={s.key} name={s.name} emoji={CAT_EMOJI[s.category]} onAdd={() => addFromSuggestion(s)} />
+                ))}
+              </div>
+            </>
+          )}
+          {recentSuggestions.length > 0 && (
+            <>
+              <h2 className="text-premium mb-2 flex items-center gap-1.5 text-xs uppercase tracking-widest">
+                <History className="h-3.5 w-3.5" style={{ color: "var(--theme-accent)" }} />
+                Recently bought
+              </h2>
+              <div className="flex flex-wrap gap-1.5">
+                {recentSuggestions.map((s) => (
+                  <SuggestionChip key={s.key} name={s.name} emoji={CAT_EMOJI[s.category]} onAdd={() => addFromSuggestion(s)} />
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
+      {/* Mini analytics */}
+      {weekAnalytics.count > 0 && (
+        <section className="mx-4 mt-6">
+          <h2 className="text-premium mb-2 flex items-center gap-1.5 text-xs uppercase tracking-widest">
+            <TrendingUp className="h-3.5 w-3.5" style={{ color: "var(--theme-accent)" }} />
+            This week
+          </h2>
+          <div className="grid grid-cols-2 gap-2">
+            <StatCard label="Spending" value={`€${weekAnalytics.total.toFixed(2)}`} accent />
+            <StatCard
+              label="Top category"
+              value={weekAnalytics.topCat ? `${CAT_EMOJI[weekAnalytics.topCat]} ${catLabel(weekAnalytics.topCat)}` : "—"}
+            />
+          </div>
+        </section>
+      )}
 
 
       {/* Floating add button */}
@@ -380,6 +543,24 @@ function Section({ title, count, children, action }: { title: string; count: num
       </div>
       {children}
     </section>
+  );
+}
+
+function SuggestionChip({ name, emoji, onAdd }: { name: string; emoji: string; onAdd: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onAdd}
+      className="press-glow inline-flex items-center gap-1.5 rounded-full border bg-card/40 px-3 py-1.5 text-xs font-medium text-white transition-all hover:scale-[1.03]"
+      style={{
+        borderColor: "color-mix(in oklab, var(--theme-accent) 35%, transparent)",
+        boxShadow: "0 0 10px color-mix(in oklab, var(--theme-accent) 20%, transparent)",
+      }}
+    >
+      <span>{emoji}</span>
+      <span className="truncate max-w-[140px]">{name}</span>
+      <Plus className="h-3 w-3" style={{ color: "var(--theme-accent)" }} />
+    </button>
   );
 }
 
@@ -641,9 +822,17 @@ function ItemModal({
   const [qty, setQty] = useState(String(initial?.qty ?? 1));
   const [price, setPrice] = useState(String(initial?.unitPrice ?? ""));
   const [category, setCategory] = useState<Category>(initial?.category ?? "groceries");
+  const [catTouched, setCatTouched] = useState(!!initial);
   const [note, setNote] = useState(initial?.note ?? "");
   const [quick, setQuick] = useState("");
   const [listening, setListening] = useState(false);
+
+  // Auto-detect category from name when user hasn't manually picked
+  useEffect(() => {
+    if (catTouched || !name.trim()) return;
+    const detected = autoDetectCategory(name);
+    if (detected !== "other") setCategory(detected);
+  }, [name, catTouched]);
 
   const cats: Category[] = ["groceries", "household", "pharmacy", "baby", "pets", "other"];
   const catLabel = (c: Category) => ({
@@ -780,7 +969,7 @@ function ItemModal({
             const active = category === c;
             return (
               <button
-                key={c} type="button" onClick={() => setCategory(c)}
+                key={c} type="button" onClick={() => { setCategory(c); setCatTouched(true); }}
                 className="rounded-full border px-3 py-1.5 text-xs transition-all press-glow"
                 style={active
                   ? {
