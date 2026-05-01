@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Plus, X, MapPin, Clock, Check, Trash2, Pencil, CalendarClock } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { EmptyState } from "@/components/EmptyState";
+import { NeonFab } from "@/components/NeonFab";
 
 export const Route = createFileRoute("/_app/appointments")({
   component: Appointments,
@@ -99,13 +100,10 @@ function Appointments() {
         />
       )}
 
-      <button
+      <NeonFab
         onClick={() => { setEditing(null); setOpen(true); }}
-        aria-label="Add appointment"
-        className="neon-circle press-glow fixed bottom-20 right-5 z-30 grid h-14 w-14 place-items-center rounded-full text-white"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
+        ariaLabel="Add appointment"
+      />
 
       {open && (
         <ApptModal
