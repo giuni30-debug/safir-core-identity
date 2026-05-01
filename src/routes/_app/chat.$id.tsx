@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
 import {
   ArrowLeft, Send, Mic, Square, Trash2, Play, Pause,
   Plus, Image as ImageIcon, Video as VideoIcon, FileIcon, X, Download, Phone,
-  Gift as GiftIcon, Check, CheckCheck, SmilePlus,
+  Gift as GiftIcon, Check, CheckCheck, SmilePlus, Wallet as WalletIcon,
 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,8 @@ import { useCall } from "@/contexts/CallContext";
 import { GiftSheet } from "@/components/chat/GiftSheet";
 import { GiftFX } from "@/components/chat/GiftFX";
 import { decodeGiftMessage, encodeGiftMessage, type Gift } from "@/components/chat/gifts";
+import { SendMoneySheet } from "@/components/wallet/SendMoneySheet";
+import { toast } from "sonner";
 import { usePeerPresence, formatLastSeen } from "@/hooks/usePresence";
 import { useTypingIndicator } from "@/hooks/useTyping";
 import { useReactions } from "@/hooks/useReactions";
@@ -232,6 +234,7 @@ function ChatPage() {
   const [giftOpen, setGiftOpen] = useState(false);
   const [activeGift, setActiveGift] = useState<Gift | null>(null);
   const lastSeenGiftId = useRef<string | null>(null);
+  const [sendMoneyOpen, setSendMoneyOpen] = useState(false);
 
   // Reaction picker state
   const [reactionFor, setReactionFor] = useState<string | null>(null);
@@ -741,6 +744,13 @@ function ChatPage() {
         >
           <GiftIcon className="h-5 w-5" />
         </FloatingHeaderButton>
+        <FloatingHeaderButton
+          onClick={() => setSendMoneyOpen(true)}
+          disabled={!contact}
+          ariaLabel="Send money"
+        >
+          <WalletIcon className="h-5 w-5" />
+        </FloatingHeaderButton>
       </header>
 
       <div
@@ -1223,6 +1233,17 @@ function ChatPage() {
 
       <GiftSheet open={giftOpen} onClose={() => setGiftOpen(false)} onSend={(g) => void sendGift(g)} />
       {activeGift && <GiftFX gift={activeGift} onDone={() => setActiveGift(null)} />}
+      <SendMoneySheet
+        open={sendMoneyOpen}
+        onClose={() => setSendMoneyOpen(false)}
+        presetContact={contact ? {
+          id: contactId,
+          username: contact.username,
+          display_name: contact.display_name,
+          avatar_url: contact.avatar_url,
+        } : null}
+        onSent={(c, amt) => toast.success(`Sent €${amt.toFixed(2)} to ${c.display_name}`)}
+      />
     </div>
   );
 }
