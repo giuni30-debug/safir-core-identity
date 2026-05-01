@@ -52,14 +52,69 @@ function TranslatorPage() {
     setSrc(dst); setDst(src);
   }
 
-  function speak(text: string, lang: string) {
-    if (!text || !("speechSynthesis" in window)) return;
+  function speakWebFallback(text: string, lang: string) {
+    if (!text || typeof window === "undefined" || !("speechSynthesis" in window)) return;
     try {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = lang === "auto" ? navigator.language : lang;
       window.speechSynthesis.speak(u);
     } catch { /* ignore */ }
+  }
+
+  async function speak(text: string, lang: string) {
+    if (!text) return;
+    // Try ElevenLabs first for natural premium voice
+    try {
+      const resp = await fetch(TTS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(SUPA_KEY ? { Authorization: `Bearer ${SUPA_KEY}` } : {}),
+        },
+        body: JSON.stringify({ text: text.slice(0, 1500) }),
+      });
+      if (!resp.ok) { speakWebFallback(text, lang); return; }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => URL.revokeObjectURL(url);
+      audio.onerror = () => { URL.revokeObjectURL(url); speakWebFallback(text, lang); };
+      await audio.play().catch(() => speakWebFallback(text, lang));
+    } catch {
+      speakWebFallback(text, lang);
+    }
+  }
+
+  async function callTranslate(text: string, fromLang: string, toLang: string, attempt = 0): Promise<string | null> {
+    try {
+      const resp = await fetch(TR_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(SUPA_KEY ? { Authorization: `Bearer ${SUPA_KEY}` } : {}),
+        },
+        body: JSON.stringify({ text, from: labelOf(fromLang), to: labelOf(toLang) }),
+      });
+      if (resp.status === 503) { toast.error(t("aiNotConnected")); return null; }
+      if (resp.status === 429) { toast.error("Rate limit exceeded"); return null; }
+      if (resp.status === 402) { toast.error("AI credits exhausted"); return null; }
+      if (!resp.ok) {
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+          return callTranslate(text, fromLang, toLang, attempt + 1);
+        }
+        toast.error(t("aiError")); return null;
+      }
+      const data = await resp.json();
+      return (data.translation as string) || "";
+    } catch {
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        return callTranslate(text, fromLang, toLang, attempt + 1);
+      }
+      return null;
+    }
   }
 
   async function callTranslate(text: string, fromLang: string, toLang: string) {
