@@ -121,6 +121,8 @@ function AssistantPage() {
         body: JSON.stringify({
           messages: history.map((m) => ({ role: m.role, content: m.content })),
           memory: memory.memoryPromptBlock(),
+          appLang: lang,
+          replyInAppLang,
         }),
       });
       if (resp.status === 503) { toast.error(t("aiNotConnected")); setLoading(false); return; }
