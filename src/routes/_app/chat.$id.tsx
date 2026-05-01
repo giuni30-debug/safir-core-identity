@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
 import {
   ArrowLeft, Send, Mic, Square, Trash2, Play, Pause,
   Plus, Image as ImageIcon, Video as VideoIcon, FileIcon, X, Download, Phone,
-  Gift as GiftIcon, Check, CheckCheck, SmilePlus,
+  Gift as GiftIcon, Check, CheckCheck, SmilePlus, Wallet as WalletIcon,
 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
