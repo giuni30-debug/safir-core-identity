@@ -5,7 +5,7 @@ import {
   ArrowLeft, Send, Paperclip, Image as ImageIcon, Sparkles,
   Plus, Wand2, Square, Search, Brain,
   History, Trash2, Settings as SettingsIcon, MessageSquare,
-  Mic, Volume2, VolumeX,
+  Mic, Volume2, VolumeX, Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -48,9 +48,10 @@ const TTS_URL   = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-
 const STT_URL   = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-stt`;
 const SUPA_KEY  = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const AUTOSPEAK_KEY = "safir.assistant.autospeak.v1";
+const REPLY_IN_APPLANG_KEY = "safir.assistant.replyInAppLang.v1";
 
 function AssistantPage() {
-  const { t, user } = useApp();
+  const { t, user, lang } = useApp();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
