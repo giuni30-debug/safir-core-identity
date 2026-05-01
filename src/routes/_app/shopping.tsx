@@ -822,9 +822,17 @@ function ItemModal({
   const [qty, setQty] = useState(String(initial?.qty ?? 1));
   const [price, setPrice] = useState(String(initial?.unitPrice ?? ""));
   const [category, setCategory] = useState<Category>(initial?.category ?? "groceries");
+  const [catTouched, setCatTouched] = useState(!!initial);
   const [note, setNote] = useState(initial?.note ?? "");
   const [quick, setQuick] = useState("");
   const [listening, setListening] = useState(false);
+
+  // Auto-detect category from name when user hasn't manually picked
+  useEffect(() => {
+    if (catTouched || !name.trim()) return;
+    const detected = autoDetectCategory(name);
+    if (detected !== "other") setCategory(detected);
+  }, [name, catTouched]);
 
   const cats: Category[] = ["groceries", "household", "pharmacy", "baby", "pets", "other"];
   const catLabel = (c: Category) => ({
