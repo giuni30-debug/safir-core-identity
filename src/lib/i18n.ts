@@ -1,4 +1,11 @@
-export type Lang = "en" | "ro" | "tr" | "de";
+// Lang is a free-form ISO-639-1 code. The app ships 4 fully-native dictionaries
+// (en/ro/tr/de) plus an AI translation fallback for ~130 more.
+export type Lang = string;
+export type NativeLang = "en" | "ro" | "tr" | "de";
+export const NATIVE_LANGS: NativeLang[] = ["en", "ro", "tr", "de"];
+export function isNativeLang(c: string): c is NativeLang {
+  return (NATIVE_LANGS as string[]).includes(c);
+}
 
 const en = {
   appName: "Safir Private Life",
@@ -1185,3 +1192,303 @@ const de: Record<keyof typeof en, string> = {
 export const translations = { en, ro, tr, de } as const;
 
 export type TKey = keyof typeof en;
+
+// =====================================================================
+// GLOBAL LANGUAGE CATALOG — 130+ languages with native + English names
+// Used by the language picker and translator. The app fully supports the
+// 4 native dictionaries above; everything else uses the AI translation
+// cache layer (see translateBatchAndCache below).
+// =====================================================================
+
+export type LangInfo = {
+  code: string;       // ISO 639-1 (or 639-3 fallback)
+  name: string;       // English name
+  native: string;     // Endonym
+  flag: string;       // Emoji flag
+  rtl?: boolean;
+};
+
+export const LANG_CATALOG: LangInfo[] = [
+  { code: "en", name: "English", native: "English", flag: "🇬🇧" },
+  { code: "ro", name: "Romanian", native: "Română", flag: "🇷🇴" },
+  { code: "tr", name: "Turkish", native: "Türkçe", flag: "🇹🇷" },
+  { code: "de", name: "German", native: "Deutsch", flag: "🇩🇪" },
+  { code: "es", name: "Spanish", native: "Español", flag: "🇪🇸" },
+  { code: "fr", name: "French", native: "Français", flag: "🇫🇷" },
+  { code: "it", name: "Italian", native: "Italiano", flag: "🇮🇹" },
+  { code: "pt", name: "Portuguese", native: "Português", flag: "🇵🇹" },
+  { code: "pt-BR", name: "Portuguese (Brazil)", native: "Português (Brasil)", flag: "🇧🇷" },
+  { code: "nl", name: "Dutch", native: "Nederlands", flag: "🇳🇱" },
+  { code: "pl", name: "Polish", native: "Polski", flag: "🇵🇱" },
+  { code: "ru", name: "Russian", native: "Русский", flag: "🇷🇺" },
+  { code: "uk", name: "Ukrainian", native: "Українська", flag: "🇺🇦" },
+  { code: "cs", name: "Czech", native: "Čeština", flag: "🇨🇿" },
+  { code: "sk", name: "Slovak", native: "Slovenčina", flag: "🇸🇰" },
+  { code: "hu", name: "Hungarian", native: "Magyar", flag: "🇭🇺" },
+  { code: "bg", name: "Bulgarian", native: "Български", flag: "🇧🇬" },
+  { code: "sr", name: "Serbian", native: "Српски", flag: "🇷🇸" },
+  { code: "hr", name: "Croatian", native: "Hrvatski", flag: "🇭🇷" },
+  { code: "sl", name: "Slovenian", native: "Slovenščina", flag: "🇸🇮" },
+  { code: "bs", name: "Bosnian", native: "Bosanski", flag: "🇧🇦" },
+  { code: "mk", name: "Macedonian", native: "Македонски", flag: "🇲🇰" },
+  { code: "sq", name: "Albanian", native: "Shqip", flag: "🇦🇱" },
+  { code: "el", name: "Greek", native: "Ελληνικά", flag: "🇬🇷" },
+  { code: "sv", name: "Swedish", native: "Svenska", flag: "🇸🇪" },
+  { code: "no", name: "Norwegian", native: "Norsk", flag: "🇳🇴" },
+  { code: "da", name: "Danish", native: "Dansk", flag: "🇩🇰" },
+  { code: "fi", name: "Finnish", native: "Suomi", flag: "🇫🇮" },
+  { code: "is", name: "Icelandic", native: "Íslenska", flag: "🇮🇸" },
+  { code: "et", name: "Estonian", native: "Eesti", flag: "🇪🇪" },
+  { code: "lv", name: "Latvian", native: "Latviešu", flag: "🇱🇻" },
+  { code: "lt", name: "Lithuanian", native: "Lietuvių", flag: "🇱🇹" },
+  { code: "ga", name: "Irish", native: "Gaeilge", flag: "🇮🇪" },
+  { code: "cy", name: "Welsh", native: "Cymraeg", flag: "🏴󠁧󠁢󠁷󠁬󠁳󠁿" },
+  { code: "gd", name: "Scottish Gaelic", native: "Gàidhlig", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" },
+  { code: "mt", name: "Maltese", native: "Malti", flag: "🇲🇹" },
+  { code: "eu", name: "Basque", native: "Euskara", flag: "🇪🇸" },
+  { code: "ca", name: "Catalan", native: "Català", flag: "🇪🇸" },
+  { code: "gl", name: "Galician", native: "Galego", flag: "🇪🇸" },
+  { code: "ar", name: "Arabic", native: "العربية", flag: "🇸🇦", rtl: true },
+  { code: "he", name: "Hebrew", native: "עברית", flag: "🇮🇱", rtl: true },
+  { code: "fa", name: "Persian", native: "فارسی", flag: "🇮🇷", rtl: true },
+  { code: "ur", name: "Urdu", native: "اردو", flag: "🇵🇰", rtl: true },
+  { code: "ps", name: "Pashto", native: "پښتو", flag: "🇦🇫", rtl: true },
+  { code: "ku", name: "Kurdish", native: "Kurdî", flag: "🇮🇶" },
+  { code: "az", name: "Azerbaijani", native: "Azərbaycanca", flag: "🇦🇿" },
+  { code: "hy", name: "Armenian", native: "Հայերեն", flag: "🇦🇲" },
+  { code: "ka", name: "Georgian", native: "ქართული", flag: "🇬🇪" },
+  { code: "kk", name: "Kazakh", native: "Қазақша", flag: "🇰🇿" },
+  { code: "ky", name: "Kyrgyz", native: "Кыргызча", flag: "🇰🇬" },
+  { code: "uz", name: "Uzbek", native: "Oʻzbekcha", flag: "🇺🇿" },
+  { code: "tk", name: "Turkmen", native: "Türkmençe", flag: "🇹🇲" },
+  { code: "tg", name: "Tajik", native: "Тоҷикӣ", flag: "🇹🇯" },
+  { code: "mn", name: "Mongolian", native: "Монгол", flag: "🇲🇳" },
+  { code: "hi", name: "Hindi", native: "हिन्दी", flag: "🇮🇳" },
+  { code: "bn", name: "Bengali", native: "বাংলা", flag: "🇧🇩" },
+  { code: "pa", name: "Punjabi", native: "ਪੰਜਾਬੀ", flag: "🇮🇳" },
+  { code: "gu", name: "Gujarati", native: "ગુજરાતી", flag: "🇮🇳" },
+  { code: "mr", name: "Marathi", native: "मराठी", flag: "🇮🇳" },
+  { code: "ta", name: "Tamil", native: "தமிழ்", flag: "🇮🇳" },
+  { code: "te", name: "Telugu", native: "తెలుగు", flag: "🇮🇳" },
+  { code: "kn", name: "Kannada", native: "ಕನ್ನಡ", flag: "🇮🇳" },
+  { code: "ml", name: "Malayalam", native: "മലയാളം", flag: "🇮🇳" },
+  { code: "or", name: "Odia", native: "ଓଡ଼ିଆ", flag: "🇮🇳" },
+  { code: "as", name: "Assamese", native: "অসমীয়া", flag: "🇮🇳" },
+  { code: "ne", name: "Nepali", native: "नेपाली", flag: "🇳🇵" },
+  { code: "si", name: "Sinhala", native: "සිංහල", flag: "🇱🇰" },
+  { code: "my", name: "Burmese", native: "မြန်မာ", flag: "🇲🇲" },
+  { code: "th", name: "Thai", native: "ไทย", flag: "🇹🇭" },
+  { code: "lo", name: "Lao", native: "ລາວ", flag: "🇱🇦" },
+  { code: "km", name: "Khmer", native: "ខ្មែរ", flag: "🇰🇭" },
+  { code: "vi", name: "Vietnamese", native: "Tiếng Việt", flag: "🇻🇳" },
+  { code: "id", name: "Indonesian", native: "Bahasa Indonesia", flag: "🇮🇩" },
+  { code: "ms", name: "Malay", native: "Bahasa Melayu", flag: "🇲🇾" },
+  { code: "tl", name: "Filipino", native: "Filipino", flag: "🇵🇭" },
+  { code: "jv", name: "Javanese", native: "Basa Jawa", flag: "🇮🇩" },
+  { code: "su", name: "Sundanese", native: "Basa Sunda", flag: "🇮🇩" },
+  { code: "zh", name: "Chinese (Simplified)", native: "简体中文", flag: "🇨🇳" },
+  { code: "zh-TW", name: "Chinese (Traditional)", native: "繁體中文", flag: "🇹🇼" },
+  { code: "yue", name: "Cantonese", native: "粵語", flag: "🇭🇰" },
+  { code: "ja", name: "Japanese", native: "日本語", flag: "🇯🇵" },
+  { code: "ko", name: "Korean", native: "한국어", flag: "🇰🇷" },
+  { code: "sw", name: "Swahili", native: "Kiswahili", flag: "🇰🇪" },
+  { code: "am", name: "Amharic", native: "አማርኛ", flag: "🇪🇹" },
+  { code: "ti", name: "Tigrinya", native: "ትግርኛ", flag: "🇪🇷" },
+  { code: "om", name: "Oromo", native: "Afaan Oromoo", flag: "🇪🇹" },
+  { code: "so", name: "Somali", native: "Soomaali", flag: "🇸🇴" },
+  { code: "ha", name: "Hausa", native: "Hausa", flag: "🇳🇬" },
+  { code: "yo", name: "Yoruba", native: "Yorùbá", flag: "🇳🇬" },
+  { code: "ig", name: "Igbo", native: "Igbo", flag: "🇳🇬" },
+  { code: "zu", name: "Zulu", native: "isiZulu", flag: "🇿🇦" },
+  { code: "xh", name: "Xhosa", native: "isiXhosa", flag: "🇿🇦" },
+  { code: "af", name: "Afrikaans", native: "Afrikaans", flag: "🇿🇦" },
+  { code: "st", name: "Sesotho", native: "Sesotho", flag: "🇱🇸" },
+  { code: "sn", name: "Shona", native: "ChiShona", flag: "🇿🇼" },
+  { code: "rw", name: "Kinyarwanda", native: "Ikinyarwanda", flag: "🇷🇼" },
+  { code: "lg", name: "Luganda", native: "Luganda", flag: "🇺🇬" },
+  { code: "mg", name: "Malagasy", native: "Malagasy", flag: "🇲🇬" },
+  { code: "ny", name: "Chichewa", native: "Chichewa", flag: "🇲🇼" },
+  { code: "wo", name: "Wolof", native: "Wolof", flag: "🇸🇳" },
+  { code: "ff", name: "Fulah", native: "Fulfulde", flag: "🇸🇳" },
+  { code: "ber", name: "Berber", native: "ⵜⴰⵎⴰⵣⵉⵖⵜ", flag: "🇲🇦" },
+  { code: "ht", name: "Haitian Creole", native: "Kreyòl Ayisyen", flag: "🇭🇹" },
+  { code: "qu", name: "Quechua", native: "Runa Simi", flag: "🇵🇪" },
+  { code: "gn", name: "Guarani", native: "Avañe'ẽ", flag: "🇵🇾" },
+  { code: "ay", name: "Aymara", native: "Aymar aru", flag: "🇧🇴" },
+  { code: "eo", name: "Esperanto", native: "Esperanto", flag: "🌍" },
+  { code: "la", name: "Latin", native: "Latina", flag: "🏛️" },
+  { code: "lb", name: "Luxembourgish", native: "Lëtzebuergesch", flag: "🇱🇺" },
+  { code: "fo", name: "Faroese", native: "Føroyskt", flag: "🇫🇴" },
+  { code: "fy", name: "Frisian", native: "Frysk", flag: "🇳🇱" },
+  { code: "co", name: "Corsican", native: "Corsu", flag: "🇫🇷" },
+  { code: "br", name: "Breton", native: "Brezhoneg", flag: "🇫🇷" },
+  { code: "oc", name: "Occitan", native: "Occitan", flag: "🇫🇷" },
+  { code: "rm", name: "Romansh", native: "Rumantsch", flag: "🇨🇭" },
+  { code: "se", name: "Northern Sami", native: "Davvisámegiella", flag: "🇳🇴" },
+  { code: "ceb", name: "Cebuano", native: "Cebuano", flag: "🇵🇭" },
+  { code: "haw", name: "Hawaiian", native: "ʻŌlelo Hawaiʻi", flag: "🇺🇸" },
+  { code: "mi", name: "Maori", native: "Te Reo Māori", flag: "🇳🇿" },
+  { code: "sm", name: "Samoan", native: "Gagana Sāmoa", flag: "🇼🇸" },
+  { code: "to", name: "Tongan", native: "Lea Faka-Tonga", flag: "🇹🇴" },
+  { code: "fj", name: "Fijian", native: "Vosa Vakaviti", flag: "🇫🇯" },
+  { code: "be", name: "Belarusian", native: "Беларуская", flag: "🇧🇾" },
+  { code: "yi", name: "Yiddish", native: "ייִדיש", flag: "🇮🇱", rtl: true },
+  { code: "sd", name: "Sindhi", native: "سنڌي", flag: "🇵🇰", rtl: true },
+  { code: "dv", name: "Dhivehi", native: "ދިވެހި", flag: "🇲🇻", rtl: true },
+  { code: "ug", name: "Uyghur", native: "ئۇيغۇرچە", flag: "🇨🇳", rtl: true },
+  { code: "bo", name: "Tibetan", native: "བོད་སྐད་", flag: "🇨🇳" },
+  { code: "dz", name: "Dzongkha", native: "རྫོང་ཁ", flag: "🇧🇹" },
+  { code: "ckb", name: "Sorani Kurdish", native: "کوردیی ناوەندی", flag: "🇮🇶", rtl: true },
+];
+
+export function getLangInfo(code: string): LangInfo {
+  return LANG_CATALOG.find((l) => l.code === code)
+      ?? LANG_CATALOG.find((l) => l.code.toLowerCase() === code.toLowerCase())
+      ?? { code, name: code, native: code, flag: "🌐" };
+}
+
+// =====================================================================
+// AI TRANSLATION CACHE (for the 130+ non-native languages)
+// Strings are translated once via the ai-translate edge function and
+// cached in localStorage so subsequent loads are instant. Until a key
+// is cached, the English source string is returned (graceful degrade).
+// =====================================================================
+
+const CACHE_KEY = "spl_i18n_cache_v2";
+const CACHE_VERSION = 2;
+
+type Cache = Record<string, Record<string, string>>; // lang → key → translated
+
+function readCache(): Cache {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (parsed?.__v !== CACHE_VERSION) return {};
+    delete parsed.__v;
+    return parsed as Cache;
+  } catch { return {}; }
+}
+function writeCache(c: Cache) {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ...c, __v: CACHE_VERSION }));
+  } catch { /* ignore quota */ }
+}
+
+let memCache: Cache | null = null;
+function getCache(): Cache { return (memCache ??= readCache()); }
+
+export function getCachedTranslation(lang: string, key: string): string | undefined {
+  return getCache()[lang]?.[key];
+}
+
+export function setCachedTranslations(lang: string, entries: Record<string, string>) {
+  const cache = getCache();
+  cache[lang] = { ...(cache[lang] ?? {}), ...entries };
+  memCache = cache;
+  writeCache(cache);
+}
+
+// Subscriber pattern so React re-renders when new translations land
+const subs = new Set<() => void>();
+export function subscribeI18n(cb: () => void): () => void {
+  subs.add(cb);
+  return () => subs.delete(cb);
+}
+function notify() { subs.forEach((c) => { try { c(); } catch { /* ignore */ } }); }
+
+// Pending batch fetches per language to avoid duplicate calls
+const inflight = new Map<string, Promise<void>>();
+
+async function postTranslate(text: string, to: string, attempt = 0): Promise<string | null> {
+  try {
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-translate`;
+    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(key ? { Authorization: `Bearer ${key}` } : {}),
+      },
+      body: JSON.stringify({ text, from: "English", to }),
+    });
+    if (!resp.ok) {
+      if (attempt < 2 && (resp.status >= 500 || resp.status === 429)) {
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+        return postTranslate(text, to, attempt + 1);
+      }
+      return null;
+    }
+    const data = await resp.json();
+    return (data.translation as string) || null;
+  } catch {
+    if (attempt < 2) {
+      await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+      return postTranslate(text, to, attempt + 1);
+    }
+    return null;
+  }
+}
+
+/**
+ * Ensure UI strings for `lang` are translated and cached. Translates the
+ * full English dictionary in one batched call (delimited) for efficiency.
+ */
+export function ensureLanguageLoaded(lang: string): Promise<void> {
+  if (isNativeLang(lang) || lang === "en") return Promise.resolve();
+  const cache = getCache();
+  const have = cache[lang] ? Object.keys(cache[lang]).length : 0;
+  const total = Object.keys(en).length;
+  if (have >= total) return Promise.resolve();
+
+  const existing = inflight.get(lang);
+  if (existing) return existing;
+
+  const langInfo = getLangInfo(lang);
+  const targetName = langInfo.name;
+
+  const keys = Object.keys(en) as TKey[];
+  const SEP = "\n¦¦¦\n";
+  const payload = keys.map((k) => en[k]).join(SEP);
+
+  const promise = (async () => {
+    const out = await postTranslate(payload, targetName);
+    if (!out) { inflight.delete(lang); return; }
+    const parts = out.split(SEP);
+    if (parts.length !== keys.length) {
+      // Fallback: translate one-by-one if delimiter survived poorly
+      const entries: Record<string, string> = {};
+      for (const k of keys.slice(0, 80)) {
+        const single = await postTranslate(en[k], targetName);
+        if (single) entries[k] = single;
+      }
+      if (Object.keys(entries).length) {
+        setCachedTranslations(lang, entries);
+        notify();
+      }
+      inflight.delete(lang);
+      return;
+    }
+    const entries: Record<string, string> = {};
+    keys.forEach((k, i) => { entries[k] = parts[i]?.trim() || en[k]; });
+    setCachedTranslations(lang, entries);
+    notify();
+    inflight.delete(lang);
+  })();
+
+  inflight.set(lang, promise);
+  return promise;
+}
+
+/**
+ * Resolve a translated string for the active language.
+ * - Native langs: from in-memory dictionary.
+ * - AI langs: from cache; falls back to English while loading.
+ */
+export function resolve(lang: string, key: TKey): string {
+  if (isNativeLang(lang)) return translations[lang][key] ?? translations.en[key];
+  const cached = getCachedTranslation(lang, key);
+  return cached ?? translations.en[key];
+}
