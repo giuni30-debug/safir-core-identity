@@ -83,6 +83,7 @@ function syncBoughtToExpenses(item: Item) {
       date: new Date().toISOString(),
     });
     localStorage.setItem(EXPENSES_KEY, JSON.stringify(list));
+    try { window.dispatchEvent(new CustomEvent("spl-expenses-changed")); } catch {}
   } catch {}
 }
 function unsyncBoughtFromExpenses(itemId: string) {
@@ -91,6 +92,7 @@ function unsyncBoughtFromExpenses(itemId: string) {
     if (!raw) return;
     const list = JSON.parse(raw).filter((t: any) => t.id !== `shop-${itemId}`);
     localStorage.setItem(EXPENSES_KEY, JSON.stringify(list));
+    try { window.dispatchEvent(new CustomEvent("spl-expenses-changed")); } catch {}
   } catch {}
 }
 
