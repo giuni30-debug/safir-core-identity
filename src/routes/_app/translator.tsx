@@ -117,22 +117,7 @@ function TranslatorPage() {
     }
   }
 
-  async function callTranslate(text: string, fromLang: string, toLang: string) {
-    const resp = await fetch(TR_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(SUPA_KEY ? { Authorization: `Bearer ${SUPA_KEY}` } : {}),
-      },
-      body: JSON.stringify({ text, from: labelOf(fromLang), to: labelOf(toLang) }),
-    });
-    if (resp.status === 503) { toast.error(t("aiNotConnected")); return null; }
-    if (resp.status === 429) { toast.error("Rate limit exceeded"); return null; }
-    if (resp.status === 402) { toast.error("AI credits exhausted"); return null; }
-    if (!resp.ok) { toast.error(t("aiError")); return null; }
-    const data = await resp.json();
-    return (data.translation as string) || "";
-  }
+
 
   async function translate() {
     const text = src.trim();
