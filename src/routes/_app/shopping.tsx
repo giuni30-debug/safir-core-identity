@@ -4,8 +4,29 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, Plus, Check, Trash2, X, Wallet as WalletIcon,
   ShoppingBasket, Pencil, Minus, Sparkles, AlertTriangle, Mic, Zap,
+  TrendingUp, History, Flame,
 } from "lucide-react";
 import { toast } from "sonner";
+
+// ---- Smart category auto-detection ----
+const CATEGORY_KEYWORDS: Record<Category, string[]> = {
+  groceries: ["milk","bread","egg","cheese","butter","yogurt","apple","banana","tomato","potato","rice","pasta","chicken","beef","fish","coffee","tea","sugar","salt","oil","water","juice","wine","beer","chocolate","cookie","cereal","flour","onion","garlic","lapte","paine","oua","branza","cafea","apa","carne","ulei","faina"],
+  household: ["paper","towel","light","bulb","battery","candle","trash","bag","foil","plate","cup","fork","spoon","hartie","hârtie","servete","șervete","becul","bec","baterie"],
+  pharmacy: ["soap","shampoo","toothpaste","brush","detergent","bleach","cleaner","sponge","gel","mask","vitamin","pill","sapun","săpun","sampon","șampon","pasta","detergent","clor","masca","mască","vitamina"],
+  baby: ["diaper","wipes","baby","formula","pacifier","scutece","biberon"],
+  pets: ["dog","cat","pet","litter","kibble","caine","câine","pisica","pisică","mancare animale","hrana caine"],
+  other: [],
+};
+function autoDetectCategory(name: string): Category {
+  const n = name.toLowerCase();
+  let best: Category = "other";
+  let bestScore = 0;
+  (Object.keys(CATEGORY_KEYWORDS) as Category[]).forEach((cat) => {
+    const score = CATEGORY_KEYWORDS[cat].reduce((s, kw) => s + (n.includes(kw) ? kw.length : 0), 0);
+    if (score > bestScore) { bestScore = score; best = cat; }
+  });
+  return best;
+}
 
 export const Route = createFileRoute("/_app/shopping")({
   component: ShoppingPage,
