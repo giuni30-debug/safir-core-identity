@@ -191,19 +191,45 @@ function ShoppingPage() {
     pets: t("catPets"), other: t("catOther"),
   } as Record<Category, string>)[c];
 
+  function recordPurchase(item: Item) {
+    try {
+      const KEY = "spl_shop_history_v1";
+      const raw = localStorage.getItem(KEY);
+      const map: Record<string, { name: string; category: Category; unitPrice: number; count: number; lastAt: number }> =
+        raw ? JSON.parse(raw) : {};
+      const k = item.name.trim().toLowerCase();
+      const prev = map[k];
+      map[k] = {
+        name: item.name,
+        category: item.category,
+        unitPrice: item.unitPrice || prev?.unitPrice || 0,
+        count: (prev?.count ?? 0) + 1,
+        lastAt: Date.now(),
+      };
+      localStorage.setItem(KEY, JSON.stringify(map));
+    } catch {}
+  }
+
   function toggleBought(id: string) {
     const item = items.find((i) => i.id === id);
     if (item && !item.bought) {
       setBurstId(id);
       setTimeout(() => setBurstId(null), 700);
+      const updated = { ...item, bought: true };
+      syncBoughtToExpenses(updated);
+      recordPurchase(updated);
+    } else if (item && item.bought) {
+      unsyncBoughtFromExpenses(item.id);
     }
     update(items.map((i) => (i.id === id ? { ...i, bought: !i.bought } : i)));
   }
   function deleteItem(id: string) {
+    unsyncBoughtFromExpenses(id);
     update(items.filter((i) => i.id !== id));
     toast.success(t("shopItemDeleted"));
   }
   function clearBought() {
+    bought.forEach((b) => unsyncBoughtFromExpenses(b.id));
     update(items.filter((i) => !i.bought));
   }
   function changeQty(id: string, delta: number) {
@@ -218,6 +244,10 @@ function ShoppingPage() {
     setTimeout(() => setNewId(null), 600);
     toast.success(t("shopItemAdded"));
   }
+  function addFromSuggestion(s: { name: string; category: Category; unitPrice: number }) {
+    addItem({ name: s.name, qty: 1, unitPrice: s.unitPrice, category: s.category });
+  }
+
 
   return (
     <div className="page-enter relative min-h-screen pb-32">
