@@ -642,6 +642,8 @@ function ItemModal({
   const [price, setPrice] = useState(String(initial?.unitPrice ?? ""));
   const [category, setCategory] = useState<Category>(initial?.category ?? "groceries");
   const [note, setNote] = useState(initial?.note ?? "");
+  const [quick, setQuick] = useState("");
+  const [listening, setListening] = useState(false);
 
   const cats: Category[] = ["groceries", "household", "pharmacy", "baby", "pets", "other"];
   const catLabel = (c: Category) => ({
@@ -650,12 +652,56 @@ function ItemModal({
     pets: t("catPets"), other: t("catOther"),
   } as Record<Category, string>)[c];
 
+  function applyQuick(text: string) {
+    const parsed = parseQuickAdd(text);
+    if (parsed.name) setName(parsed.name);
+    if (parsed.qty !== undefined) setQty(String(parsed.qty));
+    if (parsed.price !== undefined) setPrice(String(parsed.price));
+  }
+
+  function startVoice() {
+    const SR =
+      (typeof window !== "undefined" &&
+        ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)) ||
+      null;
+    if (!SR) {
+      toast.error("Voice input not supported on this device");
+      return;
+    }
+    const rec = new SR();
+    rec.lang = navigator.language || "en-US";
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    setListening(true);
+    rec.onresult = (e: any) => {
+      const transcript = e.results?.[0]?.[0]?.transcript ?? "";
+      if (transcript) {
+        setQuick(transcript);
+        applyQuick(transcript);
+        toast.success("Heard: " + transcript);
+      }
+    };
+    rec.onerror = () => { setListening(false); toast.error("Couldn't hear you"); };
+    rec.onend = () => setListening(false);
+    try { rec.start(); } catch { setListening(false); }
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
-    const q = Math.max(1, parseInt(qty) || 1);
-    const p = Math.max(0, parseFloat(price) || 0);
-    onSave({ name: name.trim(), qty: q, unitPrice: p, category, note: note.trim() || undefined });
+    let finalName = name.trim();
+    let finalQty = qty;
+    let finalPrice = price;
+    // If user only typed in Quick Add, parse it on submit too
+    if (!finalName && quick.trim()) {
+      const parsed = parseQuickAdd(quick);
+      finalName = parsed.name;
+      if (parsed.qty !== undefined) finalQty = String(parsed.qty);
+      if (parsed.price !== undefined) finalPrice = String(parsed.price);
+    }
+    if (!finalName) return;
+    const q = Math.max(1, parseInt(finalQty) || 1);
+    const p = Math.max(0, parseFloat(finalPrice) || 0);
+    onSave({ name: finalName, qty: q, unitPrice: p, category, note: note.trim() || undefined });
   }
 
   return (
@@ -673,8 +719,44 @@ function ItemModal({
           </button>
         </div>
 
+        {/* Quick Add — only when creating new */}
+        {!initial && (
+          <div className="mb-3">
+            <p className="text-soft mb-1 flex items-center gap-1 text-[11px] uppercase tracking-widest">
+              <Zap className="h-3 w-3" style={{ color: "var(--theme-accent)" }} /> Quick Add
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                value={quick}
+                onChange={(e) => { setQuick(e.target.value); applyQuick(e.target.value); }}
+                placeholder='Try "milk 2€" or "3 bread 1.5"'
+                className="flex-1 rounded-xl border bg-background/40 px-3 py-2.5 text-sm outline-none focus:border-[var(--theme-accent)]"
+                style={{ borderColor: "color-mix(in oklab, var(--theme-accent) 35%, transparent)" }}
+              />
+              <button
+                type="button"
+                onClick={startVoice}
+                aria-label="Voice input"
+                className="press-glow grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+                style={{
+                  background: listening
+                    ? "var(--theme-accent)"
+                    : "color-mix(in oklab, var(--theme-accent) 14%, transparent)",
+                  border: "1px solid color-mix(in oklab, var(--theme-accent) 45%, transparent)",
+                  boxShadow: listening
+                    ? "0 0 24px color-mix(in oklab, var(--theme-accent) 70%, transparent)"
+                    : undefined,
+                  animation: listening ? "glow-pulse 1.2s ease-in-out infinite" : undefined,
+                }}
+              >
+                <Mic className="h-4 w-4" style={{ color: listening ? "#fff" : "var(--theme-accent)" }} />
+              </button>
+            </div>
+          </div>
+        )}
+
         <input
-          autoFocus value={name} onChange={(e) => setName(e.target.value)}
+          autoFocus={!!initial} value={name} onChange={(e) => setName(e.target.value)}
           placeholder={t("shopItemName")}
           className="mb-2 w-full rounded-xl border border-border bg-background/40 px-3 py-2.5 text-sm outline-none focus:border-[var(--theme-accent)]"
         />
