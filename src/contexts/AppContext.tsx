@@ -6,6 +6,7 @@ import {
   resolve as resolveT,
   ensureLanguageLoaded, subscribeI18n, getLangInfo,
 } from "@/lib/i18n";
+import { initAnalytics, setAnalyticsUser, track } from "@/lib/analytics";
 
 export type ThemeColor = "cyan" | "blue" | "purple" | "gold" | "emerald" | "red";
 export type BgKind = "gradient" | "image" | "neon";
@@ -123,11 +124,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (session?.user) await loadProfile(session.user.id);
   };
 
+  // Analytics init (once per browser session)
+  useEffect(() => { initAnalytics(); }, []);
+
   // Auth listener
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((e, s) => {
       setSession(s);
+      setAnalyticsUser(s?.user?.id ?? null);
       if (s?.user) {
+        if (e === "SIGNED_IN") track("login", { userId: s.user.id });
         // defer DB call
         setTimeout(() => loadProfile(s.user.id), 0);
       } else {
@@ -136,6 +142,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
+      setAnalyticsUser(data.session?.user?.id ?? null);
       if (data.session?.user) loadProfile(data.session.user.id);
       setLoading(false);
     });
