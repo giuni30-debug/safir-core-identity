@@ -969,7 +969,7 @@ function ItemModal({
             const active = category === c;
             return (
               <button
-                key={c} type="button" onClick={() => setCategory(c)}
+                key={c} type="button" onClick={() => { setCategory(c); setCatTouched(true); }}
                 className="rounded-full border px-3 py-1.5 text-xs transition-all press-glow"
                 style={active
                   ? {
