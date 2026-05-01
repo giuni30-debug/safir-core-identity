@@ -570,6 +570,19 @@
   75%  { transform: scale(0.95); }
   100% { transform: scale(1); opacity: 1; }
 }
+@keyframes money-fly {
+  0%   { left: 0%;   transform: translateY(-50%) scale(0.6) rotate(-12deg); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { left: calc(100% - 56px); transform: translateY(-50%) scale(1.1) rotate(8deg); opacity: 0; }
+}
+@keyframes recv-pulse {
+  0%   { transform: translateY(-50%) scale(0.95); filter: drop-shadow(0 0 0 transparent); }
+  60%  { transform: translateY(-50%) scale(1.0); }
+  100% { transform: translateY(-50%) scale(1.18); filter: drop-shadow(0 0 18px var(--theme-accent)); }
+}
+@keyframes processing-spin {
+  to { transform: rotate(360deg); }
+}
 @keyframes gift-shake {
   0%, 100% { transform: translate(0, 0); }
   10% { transform: translate(-2px, 1px); }
