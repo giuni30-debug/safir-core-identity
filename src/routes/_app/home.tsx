@@ -219,20 +219,20 @@ function Home() {
 
       {/* Centerpiece: Logo + tagline (compact to make room for module cards) */}
 
-      <div className="relative z-10 flex flex-col items-center gap-5 pt-2">
+      <div className="relative z-10 flex flex-1 min-h-0 flex-col items-center justify-center gap-2 py-2">
         {/* Sapphire S logo */}
         <div className="relative grid place-items-center" aria-hidden>
           <div
-            className="absolute h-[220px] w-[220px] rounded-full"
+            className="absolute h-[160px] w-[160px] rounded-full"
             style={{
               background:
                 "radial-gradient(closest-side, oklch(0.70 0.18 250 / 38%), transparent 70%)",
-              filter: "blur(30px)",
+              filter: "blur(28px)",
               animation: "logo-breath 4.5s ease-in-out infinite",
             }}
           />
           <div
-            className="relative grid h-32 w-32 place-items-center rounded-full"
+            className="relative grid h-20 w-20 place-items-center rounded-full"
             style={{
               background:
                 "linear-gradient(160deg, oklch(1 0 0 / 12%), oklch(0.70 0.18 250 / 18%) 60%, oklch(0 0 0 / 25%))",
@@ -240,13 +240,13 @@ function Home() {
               backdropFilter: "blur(20px) saturate(160%)",
               WebkitBackdropFilter: "blur(20px) saturate(160%)",
               boxShadow:
-                "0 0 60px oklch(0.70 0.18 250 / 55%), inset 0 1px 0 oklch(1 0 0 / 25%), inset 0 -20px 40px oklch(0 0 0 / 35%)",
+                "0 0 50px oklch(0.70 0.18 250 / 55%), inset 0 1px 0 oklch(1 0 0 / 25%), inset 0 -16px 32px oklch(0 0 0 / 35%)",
               animation: "logo-breath 4.5s ease-in-out infinite",
             }}
           >
             <span
               style={{
-                fontSize: 72,
+                fontSize: 48,
                 fontWeight: 200,
                 lineHeight: 1,
                 letterSpacing: "-0.05em",
@@ -266,40 +266,40 @@ function Home() {
         </div>
 
         {/* Tagline */}
-        <div className="flex flex-col items-center gap-1 text-center">
+        <div className="flex flex-col items-center gap-0.5 text-center">
           <h1
-            className="text-xl font-light tracking-[0.04em] text-white"
+            className="text-base font-light tracking-[0.04em] text-white"
             style={{ textShadow: "0 0 18px oklch(0.70 0.18 250 / 55%)" }}
           >
             {t("homeTagline")}
           </h1>
-          <p className="text-[10px] font-light tracking-[0.3em] text-white/50 uppercase">
+          <p className="text-[9px] font-light tracking-[0.3em] text-white/50 uppercase">
             {t("homeSubline")}
           </p>
         </div>
       </div>
 
       {/* Module selection cards */}
-      <div className="relative z-10 mt-6 flex flex-col gap-3">
+      <div className="relative z-10 mt-2 flex shrink-0 flex-col gap-2">
         <p className="text-soft text-center text-[10px] font-semibold uppercase tracking-[0.3em]">
           {t("homeChooseModule")}
         </p>
         <ModuleCard
-          icon={<Shield className="h-7 w-7" />}
+          icon={<Shield className="h-6 w-6" />}
           title={t("modPrivateLife")}
           desc={t("modPrivateLifeDesc")}
           accent="oklch(0.70 0.18 250)"
           onClick={() => navigate({ to: "/dashboard" })}
         />
         <ModuleCard
-          icon={<Sparkles className="h-7 w-7" />}
+          icon={<Sparkles className="h-6 w-6" />}
           title={t("modAllAssist")}
           desc={t("modAllAssistDesc")}
           accent="oklch(0.78 0.18 320)"
           onClick={() => navigate({ to: "/assistant" })}
         />
         <ModuleCard
-          icon={<Languages className="h-7 w-7" />}
+          icon={<Languages className="h-6 w-6" />}
           title={t("modTranslator")}
           desc={t("modTranslatorDesc")}
           accent="oklch(0.78 0.16 165)"
@@ -308,8 +308,8 @@ function Home() {
       </div>
 
       {/* Bottom CTA */}
-      <div className="relative z-10 mt-5 flex flex-col items-center gap-2 pb-2">
-        <p className="text-[10px] font-light tracking-[0.25em] text-white/40 uppercase">
+      <div className="relative z-10 mt-2 flex shrink-0 flex-col items-center pb-1">
+        <p className="text-[9px] font-light tracking-[0.25em] text-white/40 uppercase">
           {t("orSwipeLeft")}
         </p>
       </div>
