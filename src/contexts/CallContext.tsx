@@ -97,6 +97,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const peerIdRef = useRef<string | null>(null);
   const remoteDescSetRef = useRef(false);
   const elapsedTimerRef = useRef<number | null>(null);
+  const ringTimeoutRef = useRef<number | null>(null);
   const facingRef = useRef<"user" | "environment">("user");
 
   const releaseLocalAudioProcessing = useCallback(() => {
