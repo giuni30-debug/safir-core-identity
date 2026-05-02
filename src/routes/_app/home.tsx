@@ -70,7 +70,7 @@ function Home() {
 
   return (
     <div
-      className="relative flex min-h-full flex-col"
+      className="home-static relative flex flex-col"
       style={{
         transform: `translateX(${translate}px) scale(${1 - progress * 0.04})`,
         filter: `blur(${progress * 2}px)`,
