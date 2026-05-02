@@ -292,7 +292,7 @@ function Row({
   label: string;
 }) {
   return (
-    <Link to={to} className="press-glow glass-card glass-card-hover flex items-center gap-3 p-4">
+    <Link to={to} className="press-glow glass-premium flex items-center gap-3 p-4">
       <div
         className="grid h-9 w-9 place-items-center rounded-xl"
         style={{
