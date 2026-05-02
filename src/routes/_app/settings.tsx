@@ -68,7 +68,12 @@ function SettingsPage() {
 
   return (
     <div>
-      <header className="flex items-center gap-3">
+      <motion.header
+        variants={fadeUp}
+        initial="hidden"
+        animate="show"
+        className="flex items-center gap-3"
+      >
         <Link
           to="/home"
           aria-label="Back"
@@ -77,21 +82,26 @@ function SettingsPage() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-xl font-semibold">{t("settings")}</h1>
+          <h1 className="text-xl font-semibold text-gradient">{t("settings")}</h1>
           <p className="text-xs text-muted-foreground">{t("premiumPanel")}</p>
         </div>
-      </header>
+      </motion.header>
 
       {/* ===== Account ===== */}
       <p className="mt-8 mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {t("account")}
       </p>
-      <div className="space-y-3">
-        <Row to="/profile"       icon={User}      label={t("profile")} />
-        <Row to="/language"      icon={Languages} label={t("language")} />
-        <Row to="/notifications" icon={Bell}      label={t("notifications")} />
-        <Row to="/ai-memory"     icon={Brain}     label={t("aiMemoryTitle")} />
-      </div>
+      <motion.div
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+        className="space-y-3"
+      >
+        <motion.div variants={fadeUp}><Row to="/profile"       icon={User}      label={t("profile")} /></motion.div>
+        <motion.div variants={fadeUp}><Row to="/language"      icon={Languages} label={t("language")} /></motion.div>
+        <motion.div variants={fadeUp}><Row to="/notifications" icon={Bell}      label={t("notifications")} /></motion.div>
+        <motion.div variants={fadeUp}><Row to="/ai-memory"     icon={Brain}     label={t("aiMemoryTitle")} /></motion.div>
+      </motion.div>
 
       {/* ===== Appearance ===== */}
       <p className="mt-8 mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
