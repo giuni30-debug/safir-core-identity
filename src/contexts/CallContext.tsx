@@ -731,6 +731,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           elapsed={elapsed}
           muted={muted}
           cameraOn={cameraOn}
+          speakerOn={speakerOn}
           hasRemoteVideo={hasRemoteVideo}
           error={error}
           info={info}
@@ -741,6 +742,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           onEnd={() => handleEnd("ended")}
           onToggleMute={toggleMute}
           onToggleCamera={toggleCamera}
+          onToggleSpeaker={toggleSpeaker}
           onSwitchCamera={switchCamera}
         />
       )}
