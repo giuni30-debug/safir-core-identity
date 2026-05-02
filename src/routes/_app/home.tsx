@@ -268,8 +268,7 @@ function Home() {
         {/* Tagline */}
         <div className="flex flex-col items-center gap-0.5 text-center">
           <h1
-            className="text-base font-light tracking-[0.04em] text-white"
-            style={{ textShadow: "0 0 18px oklch(0.70 0.18 250 / 55%)" }}
+            className="font-display text-base font-light tracking-[-0.02em] text-gradient"
           >
             {t("homeTagline")}
           </h1>

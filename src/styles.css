@@ -1,6 +1,8 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+/* Premium typography: Inter (body) + Space Grotesk (display) */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
@@ -39,93 +41,132 @@
   --animate-float: float 6s ease-in-out infinite;
 }
 
-/* Default = dark theme (Safir Private Life is dark-first) */
+/* Default = premium dark (navy base + violet primary + cyan/pink accents) */
 :root {
   --radius: 1.25rem;
 
-  /* Deep black base */
-  --background: oklch(0.12 0.01 240);
-  --foreground: oklch(0.98 0.005 240);
+  /* Typography */
+  --font-display: "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
-  --card: oklch(0.16 0.012 240);
-  --card-foreground: oklch(0.98 0.005 240);
-  --popover: oklch(0.14 0.012 240);
-  --popover-foreground: oklch(0.98 0.005 240);
+  /* Deep navy base — slight blue tint, never pure black */
+  --background: oklch(0.13 0.025 270);
+  --foreground: oklch(0.98 0.005 270);
 
-  /* Neon cyan accent */
-  --primary: oklch(0.82 0.16 200);
-  --primary-foreground: oklch(0.12 0.01 240);
+  --card: oklch(0.17 0.028 270);
+  --card-foreground: oklch(0.98 0.005 270);
+  --popover: oklch(0.15 0.028 270);
+  --popover-foreground: oklch(0.98 0.005 270);
 
-  --secondary: oklch(0.22 0.015 240);
-  --secondary-foreground: oklch(0.98 0.005 240);
+  /* Primary = violet (Linear/Vercel feel) */
+  --primary: oklch(0.68 0.21 295);
+  --primary-foreground: oklch(0.13 0.025 270);
 
-  --muted: oklch(0.2 0.012 240);
-  --muted-foreground: oklch(0.65 0.02 240);
+  --secondary: oklch(0.22 0.028 270);
+  --secondary-foreground: oklch(0.98 0.005 270);
 
-  --accent: oklch(0.82 0.16 200);
-  --accent-foreground: oklch(0.12 0.01 240);
+  --muted: oklch(0.2 0.022 270);
+  --muted-foreground: oklch(0.7 0.04 270);
+
+  /* Accent = neon cyan */
+  --accent: oklch(0.82 0.15 200);
+  --accent-foreground: oklch(0.13 0.025 270);
 
   --destructive: oklch(0.65 0.22 25);
-  --destructive-foreground: oklch(0.98 0.005 240);
+  --destructive-foreground: oklch(0.98 0.005 270);
 
   --border: oklch(1 0 0 / 8%);
   --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.82 0.16 200);
+  --ring: oklch(0.68 0.21 295);
 
+  /* Glass tokens */
   --glass: oklch(1 0 0 / 4%);
   --glass-border: oklch(1 0 0 / 10%);
+  --glass-blur: blur(20px) saturate(160%);
+  --glass-bg: linear-gradient(135deg, oklch(1 0 0 / 6%) 0%, oklch(1 0 0 / 2%) 100%);
 
   /* Theme accent (overridable by appearance setting) */
-  --theme-accent: oklch(0.82 0.16 200);
-  --theme-glow: oklch(0.82 0.16 200 / 50%);
+  --theme-accent: oklch(0.68 0.21 295);
+  --theme-glow: oklch(0.68 0.21 295 / 50%);
+  --theme-secondary: oklch(0.82 0.15 200);  /* cyan companion */
+  --theme-tertiary: oklch(0.72 0.22 350);   /* pink accent */
 
+  /* Background system */
   --gradient-bg: radial-gradient(
-      ellipse at top,
-      oklch(0.18 0.04 220) 0%,
-      oklch(0.1 0.01 240) 60%
+      ellipse 80% 60% at 50% 0%,
+      oklch(0.22 0.08 285) 0%,
+      oklch(0.13 0.025 270) 55%
     );
-  --gradient-primary: linear-gradient(
-    135deg,
-    var(--theme-accent),
-    oklch(from var(--theme-accent) calc(l + 0.1) c h)
-  );
-  --shadow-glow: 0 0 40px oklch(from var(--theme-accent) l c h / 30%);
+  --gradient-mesh:
+    radial-gradient(at 20% 15%, oklch(0.68 0.21 295 / 28%) 0px, transparent 50%),
+    radial-gradient(at 80% 25%, oklch(0.82 0.15 200 / 22%) 0px, transparent 50%),
+    radial-gradient(at 75% 85%, oklch(0.72 0.22 350 / 20%) 0px, transparent 50%),
+    radial-gradient(at 15% 80%, oklch(0.6 0.2 260 / 22%) 0px, transparent 50%);
+  --gradient-primary: linear-gradient(135deg, var(--theme-accent), var(--theme-secondary));
+  --gradient-aurora: linear-gradient(135deg,
+    oklch(0.68 0.21 295) 0%,
+    oklch(0.72 0.22 350) 50%,
+    oklch(0.82 0.15 200) 100%);
+
+  /* Shadows */
+  --shadow-glow: 0 0 40px oklch(from var(--theme-accent) l c h / 35%);
+  --shadow-elegant: 0 10px 30px -10px oklch(from var(--theme-accent) l c h / 40%);
   --shadow-card: 0 8px 32px oklch(0 0 0 / 50%);
+  --shadow-glass: 0 10px 40px -10px oklch(0 0 0 / 60%), 0 0 0 1px oklch(1 0 0 / 6%) inset;
 }
 
 /* Theme color variants */
+[data-theme="violet"] {
+  --theme-accent: oklch(0.68 0.21 295);
+  --theme-glow: oklch(0.68 0.21 295 / 50%);
+  --primary: oklch(0.68 0.21 295);
+  --ring: oklch(0.68 0.21 295);
+}
 [data-theme="cyan"] {
   --theme-accent: oklch(0.82 0.16 200);
+  --theme-glow: oklch(0.82 0.16 200 / 50%);
   --primary: oklch(0.82 0.16 200);
   --ring: oklch(0.82 0.16 200);
   --accent: oklch(0.82 0.16 200);
 }
 [data-theme="blue"] {
   --theme-accent: oklch(0.7 0.18 250);
+  --theme-glow: oklch(0.7 0.18 250 / 50%);
   --primary: oklch(0.7 0.18 250);
   --ring: oklch(0.7 0.18 250);
   --accent: oklch(0.7 0.18 250);
 }
 [data-theme="purple"] {
   --theme-accent: oklch(0.7 0.2 300);
+  --theme-glow: oklch(0.7 0.2 300 / 50%);
   --primary: oklch(0.7 0.2 300);
   --ring: oklch(0.7 0.2 300);
   --accent: oklch(0.7 0.2 300);
 }
+[data-theme="pink"] {
+  --theme-accent: oklch(0.72 0.22 350);
+  --theme-glow: oklch(0.72 0.22 350 / 50%);
+  --primary: oklch(0.72 0.22 350);
+  --ring: oklch(0.72 0.22 350);
+  --accent: oklch(0.72 0.22 350);
+}
 [data-theme="gold"] {
   --theme-accent: oklch(0.82 0.16 85);
+  --theme-glow: oklch(0.82 0.16 85 / 50%);
   --primary: oklch(0.82 0.16 85);
   --ring: oklch(0.82 0.16 85);
   --accent: oklch(0.82 0.16 85);
 }
 [data-theme="emerald"] {
   --theme-accent: oklch(0.75 0.18 160);
+  --theme-glow: oklch(0.75 0.18 160 / 50%);
   --primary: oklch(0.75 0.18 160);
   --ring: oklch(0.75 0.18 160);
   --accent: oklch(0.75 0.18 160);
 }
 [data-theme="red"] {
   --theme-accent: oklch(0.7 0.22 25);
+  --theme-glow: oklch(0.7 0.22 25 / 50%);
   --primary: oklch(0.7 0.22 25);
   --ring: oklch(0.7 0.22 25);
   --accent: oklch(0.7 0.22 25);
@@ -265,11 +306,18 @@
     background: var(--background);
     color: var(--foreground);
     min-height: 100dvh;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
-      "Inter", system-ui, sans-serif;
+    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     overscroll-behavior-y: none;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+  /* Display font + negative tracking on headings (Linear/Vercel feel) */
+  h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  h1 { letter-spacing: -0.03em; }
   body {
     background-image: var(--gradient-bg);
     background-attachment: fixed;
@@ -836,3 +884,114 @@
   100% { opacity: 1; transform: translateX(0); }
 }
 .mode-slide { animation: mode-slide 0.32s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* ============================================================
+   PREMIUM v2 — Apple × Linear × Vercel system
+   ============================================================ */
+@layer components {
+  /* Glass card refined — softer, less neon-pulse, more glass */
+  .glass-premium {
+    position: relative;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-glass);
+    transition:
+      transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.4s ease;
+  }
+  .glass-premium:hover {
+    transform: translateY(-2px) scale(1.02);
+    border-color: color-mix(in oklab, var(--theme-accent) 40%, var(--glass-border));
+    box-shadow:
+      0 20px 60px -10px oklch(0 0 0 / 60%),
+      0 0 0 1px color-mix(in oklab, var(--theme-accent) 25%, transparent),
+      0 0 30px color-mix(in oklab, var(--theme-accent) 30%, transparent);
+  }
+
+  /* Mesh gradient backdrop — animated, very slow drift */
+  .mesh-bg {
+    position: absolute;
+    inset: -20%;
+    background: var(--gradient-mesh);
+    filter: blur(60px) saturate(140%);
+    opacity: 0.85;
+    animation: mesh-drift 28s ease-in-out infinite;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  /* Aurora blob — large blurred gradient orb */
+  .aurora-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px) saturate(140%);
+    opacity: 0.55;
+    pointer-events: none;
+    will-change: transform;
+  }
+  .aurora-blob.violet {
+    background: oklch(0.68 0.21 295);
+    animation: aurora-float-1 24s ease-in-out infinite;
+  }
+  .aurora-blob.cyan {
+    background: oklch(0.82 0.15 200);
+    animation: aurora-float-2 32s ease-in-out infinite;
+  }
+  .aurora-blob.pink {
+    background: oklch(0.72 0.22 350);
+    animation: aurora-float-3 40s ease-in-out infinite;
+  }
+
+  /* Headline gradient text — Linear-style */
+  .text-gradient {
+    background: linear-gradient(135deg,
+      oklch(0.98 0.01 270) 0%,
+      oklch(0.85 0.12 295) 50%,
+      oklch(0.78 0.16 200) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+  }
+
+  /* Premium hairline divider */
+  .hairline {
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent,
+      color-mix(in oklab, var(--theme-accent) 35%, transparent) 50%,
+      transparent);
+  }
+
+  /* Stat pill (admin/dashboard) */
+  .stat-pill {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: 1.25rem;
+    box-shadow: var(--shadow-glass);
+  }
+}
+
+@keyframes mesh-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%      { transform: translate3d(2%, -3%, 0) scale(1.05); }
+  66%      { transform: translate3d(-3%, 2%, 0) scale(0.98); }
+}
+@keyframes aurora-float-1 {
+  0%, 100% { transform: translate3d(-10%, -10%, 0) scale(1); }
+  50%      { transform: translate3d(15%, 10%, 0) scale(1.15); }
+}
+@keyframes aurora-float-2 {
+  0%, 100% { transform: translate3d(20%, 20%, 0) scale(1.1); }
+  50%      { transform: translate3d(-15%, -10%, 0) scale(0.95); }
+}
+@keyframes aurora-float-3 {
+  0%, 100% { transform: translate3d(10%, -20%, 0) scale(0.95); }
+  50%      { transform: translate3d(-20%, 15%, 0) scale(1.1); }
+}

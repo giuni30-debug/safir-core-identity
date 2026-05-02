@@ -171,7 +171,7 @@ export function BackgroundFX() {
     );
   }
 
-  // ── DEFAULT BG (gradient/image) — always render overlays so no screen feels empty ──
+  // ── DEFAULT BG (gradient/image) — premium mesh + aurora blobs ──
   return (
     <div
       ref={layerRef}
@@ -181,6 +181,26 @@ export function BackgroundFX() {
         willChange: "transform",
       }}
     >
+      {/* Animated gradient mesh — Linear/Vercel style */}
+      <div className="mesh-bg" aria-hidden />
+
+      {/* Slow-drifting aurora blobs — violet, cyan, pink */}
+      <div
+        className="aurora-blob violet"
+        aria-hidden
+        style={{ top: "-15%", left: "-10%", width: "55vmax", height: "55vmax" }}
+      />
+      <div
+        className="aurora-blob cyan"
+        aria-hidden
+        style={{ top: "20%", right: "-15%", width: "50vmax", height: "50vmax" }}
+      />
+      <div
+        className="aurora-blob pink"
+        aria-hidden
+        style={{ bottom: "-20%", left: "20%", width: "45vmax", height: "45vmax" }}
+      />
+
       {/* Glow overlay (kept when anim === 'glow') */}
       {anim === "glow" && (
         <>
