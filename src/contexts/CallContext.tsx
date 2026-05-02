@@ -1,7 +1,7 @@
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from "react";
-import { Phone, PhoneOff, Mic, MicOff, Video as VideoIcon, VideoOff, SwitchCamera } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Video as VideoIcon, VideoOff, SwitchCamera, Volume2, VolumeX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
@@ -81,6 +81,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [info, setInfo] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(true);
+  const [speakerOn, setSpeakerOn] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
 
@@ -96,6 +97,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const peerIdRef = useRef<string | null>(null);
   const remoteDescSetRef = useRef(false);
   const elapsedTimerRef = useRef<number | null>(null);
+  const ringTimeoutRef = useRef<number | null>(null);
   const facingRef = useRef<"user" | "environment">("user");
 
   const releaseLocalAudioProcessing = useCallback(() => {
@@ -121,9 +123,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     remoteDescSetRef.current = false;
     if (elapsedTimerRef.current) window.clearInterval(elapsedTimerRef.current);
     elapsedTimerRef.current = null;
+    if (ringTimeoutRef.current) window.clearTimeout(ringTimeoutRef.current);
+    ringTimeoutRef.current = null;
     setElapsed(0);
     setMuted(false);
     setCameraOn(true);
+    setSpeakerOn(false);
     setHasRemoteVideo(false);
     facingRef.current = "user";
   }, [releaseLocalAudioProcessing]);
@@ -411,6 +416,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         status: "calling",
         media,
       });
+
+      // Ringing timeout: if no answer in 30s, mark as missed/failed
+      if (ringTimeoutRef.current) window.clearTimeout(ringTimeoutRef.current);
+      ringTimeoutRef.current = window.setTimeout(() => {
+        if (callIdRef.current === call.id) {
+          setError("Call failed. Please try again");
+          handleEnd("missed");
+        }
+      }, 30000);
     },
     [myId, state.kind, buildPeer, sendSignal, getLocalMedia, unlockCallAudio, setSpeakerphoneOff],
   );
@@ -486,6 +500,47 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setCameraOn(next);
   };
 
+  const toggleSpeaker = useCallback(async () => {
+    const next = !speakerOn;
+    setSpeakerOn(next);
+    // Native (iOS/Android via Capacitor)
+    if (isNativePlatform()) {
+      try {
+        await setNativeSpeakerphone(next);
+      } catch (e) {
+        console.warn("[call] toggleSpeaker native failed", e);
+        // retry once
+        try { await setNativeSpeakerphone(next); } catch { /* fallback silent */ }
+      }
+      return;
+    }
+    // Web fallback: try setSinkId on remote audio element
+    const targets = [remoteAudioRef.current, remoteVideoRef.current].filter(Boolean) as AudioSinkElement[];
+    try {
+      const devices = await navigator.mediaDevices?.enumerateDevices?.();
+      if (!devices) return;
+      const outputs = devices.filter((d) => d.kind === "audiooutput");
+      let sinkId = "";
+      if (next) {
+        // Speaker: prefer default/speaker
+        const speaker = outputs.find((d) => /speaker|loudspeaker|difuzor|default/i.test(d.label));
+        sinkId = speaker?.deviceId || "default";
+      } else {
+        const earpiece = outputs.find((d) =>
+          /earpiece|receiver|communication|cască|casca/i.test(d.label),
+        );
+        sinkId = earpiece?.deviceId || "communications";
+      }
+      await Promise.all(targets.map(async (t) => {
+        if (typeof t.setSinkId === "function") {
+          try { await t.setSinkId(sinkId); } catch { /* ignore */ }
+        }
+      }));
+    } catch (e) {
+      console.warn("[call] toggleSpeaker web failed", e);
+    }
+  }, [speakerOn]);
+
   const switchCamera = useCallback(async () => {
     const pc = pcRef.current;
     const stream = localStreamRef.current;
@@ -528,7 +583,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const start = state.startedAt;
       elapsedTimerRef.current = window.setInterval(() => {
         setElapsed(Math.floor((Date.now() - start) / 1000));
-      }, 500);
+      }, 1000);
       return () => {
         if (elapsedTimerRef.current) window.clearInterval(elapsedTimerRef.current);
       };
@@ -599,6 +654,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (sig.signal_type === "accept") {
+            if (ringTimeoutRef.current) {
+              window.clearTimeout(ringTimeoutRef.current);
+              ringTimeoutRef.current = null;
+            }
             setState((cur) =>
               cur.kind === "outgoing"
                 ? { kind: "active", callId: cur.callId, peer: cur.peer, role: "caller", startedAt: Date.now(), media: cur.media }
@@ -672,6 +731,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           elapsed={elapsed}
           muted={muted}
           cameraOn={cameraOn}
+          speakerOn={speakerOn}
           hasRemoteVideo={hasRemoteVideo}
           error={error}
           info={info}
@@ -682,6 +742,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           onEnd={() => handleEnd("ended")}
           onToggleMute={toggleMute}
           onToggleCamera={toggleCamera}
+          onToggleSpeaker={toggleSpeaker}
           onSwitchCamera={switchCamera}
         />
       )}
@@ -696,14 +757,15 @@ function fmtElapsed(s: number) {
 }
 
 function CallOverlay({
-  state, elapsed, muted, cameraOn, hasRemoteVideo, error, info,
+  state, elapsed, muted, cameraOn, speakerOn, hasRemoteVideo, error, info,
   remoteVideoRef, localVideoRef,
-  onAccept, onDecline, onEnd, onToggleMute, onToggleCamera, onSwitchCamera,
+  onAccept, onDecline, onEnd, onToggleMute, onToggleCamera, onToggleSpeaker, onSwitchCamera,
 }: {
   state: Exclude<CallState, { kind: "idle" }>;
   elapsed: number;
   muted: boolean;
   cameraOn: boolean;
+  speakerOn: boolean;
   hasRemoteVideo: boolean;
   error: string | null;
   info: string | null;
@@ -714,6 +776,7 @@ function CallOverlay({
   onEnd: () => void;
   onToggleMute: () => void;
   onToggleCamera: () => void;
+  onToggleSpeaker: () => void;
   onSwitchCamera: () => void;
 }) {
   const peer = state.peer;
@@ -722,8 +785,8 @@ function CallOverlay({
     state.kind === "incoming"
       ? `Incoming ${isVideo ? "video" : "audio"} call`
       : state.kind === "outgoing"
-      ? "Calling…"
-      : fmtElapsed(elapsed);
+      ? (state.status === "ringing" ? "Ringing…" : "Calling…")
+      : `Connected · ${fmtElapsed(elapsed)}`;
 
   return (
     <div className="fixed inset-0 z-[90] flex flex-col items-center justify-between bg-background/95 px-6 py-12 backdrop-blur-xl">
@@ -804,8 +867,13 @@ function CallOverlay({
             <button
               onClick={onToggleMute}
               disabled={state.kind !== "active"}
-              className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card/60 backdrop-blur disabled:opacity-40"
-              aria-label="Mute"
+              className={`grid h-14 w-14 place-items-center rounded-full border backdrop-blur disabled:opacity-40 transition-colors ${
+                muted
+                  ? "border-destructive/60 bg-destructive/20 text-destructive"
+                  : "border-border bg-card/60"
+              }`}
+              aria-label={muted ? "Unmute" : "Mute"}
+              aria-pressed={muted}
             >
               {muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
             </button>
@@ -818,7 +886,22 @@ function CallOverlay({
               >
                 {cameraOn ? <VideoIcon className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
               </button>
-            ) : null}
+            ) : (
+              <button
+                onClick={onToggleSpeaker}
+                disabled={state.kind !== "active"}
+                className={`grid h-14 w-14 place-items-center rounded-full border backdrop-blur disabled:opacity-40 transition-colors ${
+                  speakerOn
+                    ? "border-primary/60 bg-primary/20 text-primary"
+                    : "border-border bg-card/60"
+                }`}
+                aria-label={speakerOn ? "Speaker on" : "Speaker off"}
+                aria-pressed={speakerOn}
+                style={speakerOn ? { boxShadow: "var(--shadow-glow)" } : undefined}
+              >
+                {speakerOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+              </button>
+            )}
             <button
               onClick={onEnd}
               className="grid h-16 w-16 place-items-center rounded-full bg-destructive text-destructive-foreground shadow-lg"
