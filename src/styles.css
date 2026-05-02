@@ -116,38 +116,57 @@
 }
 
 /* Theme color variants */
+[data-theme="violet"] {
+  --theme-accent: oklch(0.68 0.21 295);
+  --theme-glow: oklch(0.68 0.21 295 / 50%);
+  --primary: oklch(0.68 0.21 295);
+  --ring: oklch(0.68 0.21 295);
+}
 [data-theme="cyan"] {
   --theme-accent: oklch(0.82 0.16 200);
+  --theme-glow: oklch(0.82 0.16 200 / 50%);
   --primary: oklch(0.82 0.16 200);
   --ring: oklch(0.82 0.16 200);
   --accent: oklch(0.82 0.16 200);
 }
 [data-theme="blue"] {
   --theme-accent: oklch(0.7 0.18 250);
+  --theme-glow: oklch(0.7 0.18 250 / 50%);
   --primary: oklch(0.7 0.18 250);
   --ring: oklch(0.7 0.18 250);
   --accent: oklch(0.7 0.18 250);
 }
 [data-theme="purple"] {
   --theme-accent: oklch(0.7 0.2 300);
+  --theme-glow: oklch(0.7 0.2 300 / 50%);
   --primary: oklch(0.7 0.2 300);
   --ring: oklch(0.7 0.2 300);
   --accent: oklch(0.7 0.2 300);
 }
+[data-theme="pink"] {
+  --theme-accent: oklch(0.72 0.22 350);
+  --theme-glow: oklch(0.72 0.22 350 / 50%);
+  --primary: oklch(0.72 0.22 350);
+  --ring: oklch(0.72 0.22 350);
+  --accent: oklch(0.72 0.22 350);
+}
 [data-theme="gold"] {
   --theme-accent: oklch(0.82 0.16 85);
+  --theme-glow: oklch(0.82 0.16 85 / 50%);
   --primary: oklch(0.82 0.16 85);
   --ring: oklch(0.82 0.16 85);
   --accent: oklch(0.82 0.16 85);
 }
 [data-theme="emerald"] {
   --theme-accent: oklch(0.75 0.18 160);
+  --theme-glow: oklch(0.75 0.18 160 / 50%);
   --primary: oklch(0.75 0.18 160);
   --ring: oklch(0.75 0.18 160);
   --accent: oklch(0.75 0.18 160);
 }
 [data-theme="red"] {
   --theme-accent: oklch(0.7 0.22 25);
+  --theme-glow: oklch(0.7 0.22 25 / 50%);
   --primary: oklch(0.7 0.22 25);
   --ring: oklch(0.7 0.22 25);
   --accent: oklch(0.7 0.22 25);
