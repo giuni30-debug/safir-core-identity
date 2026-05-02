@@ -123,9 +123,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     remoteDescSetRef.current = false;
     if (elapsedTimerRef.current) window.clearInterval(elapsedTimerRef.current);
     elapsedTimerRef.current = null;
+    if (ringTimeoutRef.current) window.clearTimeout(ringTimeoutRef.current);
+    ringTimeoutRef.current = null;
     setElapsed(0);
     setMuted(false);
     setCameraOn(true);
+    setSpeakerOn(false);
     setHasRemoteVideo(false);
     facingRef.current = "user";
   }, [releaseLocalAudioProcessing]);
