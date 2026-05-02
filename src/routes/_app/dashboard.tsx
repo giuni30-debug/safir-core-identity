@@ -85,37 +85,43 @@ function Dashboard() {
 
       {/* Tiles */}
       <div className="flex flex-1 items-center">
-        <div className="grid w-full grid-cols-2 gap-3">
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          className="grid w-full grid-cols-2 gap-3"
+        >
           {tiles.map(({ to, icon: Icon, label, color }, i) => (
-            <Link
-              key={i}
-              to={to}
-              className="glass-card glass-card-hover tile-press flex aspect-square flex-col items-start justify-between gap-4 p-4"
-              style={{
-                ["--theme-accent" as any]: color,
-                ["--theme-glow" as any]: color,
-                borderRadius: "20px",
-              }}
-            >
-              <div
-                className="grid h-11 w-11 place-items-center rounded-2xl"
+            <motion.div key={i} variants={fadeUp} {...hoverLift}>
+              <Link
+                to={to}
+                className="glass-premium tile-press flex aspect-square flex-col items-start justify-between gap-4 p-4"
                 style={{
-                  background:
-                    "linear-gradient(135deg, color-mix(in oklab, var(--theme-accent) 28%, transparent), color-mix(in oklab, var(--theme-accent) 8%, transparent))",
-                  color: "var(--theme-accent)",
-                  boxShadow:
-                    "0 0 18px color-mix(in oklab, var(--theme-accent) 45%, transparent), inset 0 0 8px color-mix(in oklab, var(--theme-accent) 20%, transparent)",
+                  ["--theme-accent" as any]: color,
+                  ["--theme-glow" as any]: color,
+                  borderRadius: "20px",
                 }}
               >
-                <Icon
-                  className="h-5 w-5"
-                  style={{ filter: "drop-shadow(0 0 6px color-mix(in oklab, var(--theme-accent) 60%, transparent))" }}
-                />
-              </div>
-              <span className="text-premium text-alive text-sm font-semibold tracking-wide">{label}</span>
-            </Link>
+                <div
+                  className="grid h-11 w-11 place-items-center rounded-2xl"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, color-mix(in oklab, var(--theme-accent) 28%, transparent), color-mix(in oklab, var(--theme-accent) 8%, transparent))",
+                    color: "var(--theme-accent)",
+                    boxShadow:
+                      "0 0 18px color-mix(in oklab, var(--theme-accent) 45%, transparent), inset 0 0 8px color-mix(in oklab, var(--theme-accent) 20%, transparent)",
+                  }}
+                >
+                  <Icon
+                    className="h-5 w-5"
+                    style={{ filter: "drop-shadow(0 0 6px color-mix(in oklab, var(--theme-accent) 60%, transparent))" }}
+                  />
+                </div>
+                <span className="text-premium text-alive text-sm font-semibold tracking-wide">{label}</span>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </div>
   );
