@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useApp } from "@/contexts/AppContext";
-import { Avatar } from "@/components/Avatar";
-import { Settings, ArrowRight, Shield, Sparkles, Languages, MessageCircle, Phone, Video } from "lucide-react";
+import { ArrowRight, Shield, Sparkles, Languages, MessageCircle, Phone, Video } from "lucide-react";
 import { HomeInstallBanner } from "@/components/HomeInstallBanner";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useEffect, useMemo, useState } from "react";
