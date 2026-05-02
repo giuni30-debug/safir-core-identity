@@ -34,12 +34,12 @@ function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-10 border-b border-white/10 bg-background/80 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-white/10 bg-background/60 backdrop-blur-2xl">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
           <Link to="/settings" className="rounded-full p-2 hover:bg-white/5" aria-label="Back">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-lg font-semibold">Analytics</h1>
+          <h1 className="text-lg font-semibold text-gradient">Analytics</h1>
           <button
             type="button"
             onClick={() => { if (confirm("Clear all analytics data?")) clearEvents(); }}
@@ -51,12 +51,17 @@ function AdminPage() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard icon={<Activity className="h-4 w-4" />} label="App opens" value={stats.totalAppOpens} />
-          <StatCard icon={<BarChart3 className="h-4 w-4" />} label="Events" value={stats.totalEvents} />
-          <StatCard icon={<Users className="h-4 w-4" />} label="Users (24h)" value={stats.activeUsers24h} />
-          <StatCard icon={<Users className="h-4 w-4" />} label="Users (all)" value={stats.activeUsers} />
-        </section>
+        <motion.section
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+        >
+          <motion.div variants={fadeUp}><StatCard icon={<Activity className="h-4 w-4" />} label="App opens" value={stats.totalAppOpens} /></motion.div>
+          <motion.div variants={fadeUp}><StatCard icon={<BarChart3 className="h-4 w-4" />} label="Events" value={stats.totalEvents} /></motion.div>
+          <motion.div variants={fadeUp}><StatCard icon={<Users className="h-4 w-4" />} label="Users (24h)" value={stats.activeUsers24h} /></motion.div>
+          <motion.div variants={fadeUp}><StatCard icon={<Users className="h-4 w-4" />} label="Users (all)" value={stats.activeUsers} /></motion.div>
+        </motion.section>
 
         <Card title="Most used modules" icon={<BarChart3 className="h-4 w-4" />}>
           {stats.moduleCounts.length === 0 ? (
@@ -129,21 +134,26 @@ function AdminPage() {
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-      <div className="flex items-center gap-1.5 text-xs text-white/60">{icon}{label}</div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
+    <div className="stat-pill p-3">
+      <div className="flex items-center gap-1.5 text-xs text-white/70">{icon}{label}</div>
+      <div className="mt-1 text-2xl font-semibold tabular-nums text-gradient">{value}</div>
     </div>
   );
 }
 
 function Card({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/80">
+    <motion.section
+      variants={fadeUp}
+      initial="hidden"
+      animate="show"
+      className="glass-premium p-4"
+    >
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/90">
         {icon}{title}
       </h2>
       {children}
-    </section>
+    </motion.section>
   );
 }
 
