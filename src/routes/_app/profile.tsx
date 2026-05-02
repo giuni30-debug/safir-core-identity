@@ -96,7 +96,7 @@ function ProfilePage() {
         <Link to="/settings" aria-label="Back" className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-card/40">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-xl font-semibold">{t("profile")}</h1>
+        <h1 className="text-xl font-semibold text-gradient">{t("profile")}</h1>
       </header>
 
       <div className="mt-8 flex flex-col items-center gap-4">
