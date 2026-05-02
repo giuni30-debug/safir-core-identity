@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft, ChevronRight, User, Languages, Bell, LogOut, Trash2,
@@ -12,6 +13,7 @@ import { toast } from "sonner";
 import { useSoundPrefs } from "@/hooks/useSoundPrefs";
 import { playSound, vibrate } from "@/lib/sound";
 import { useTrackScreen } from "@/hooks/useTrackScreen";
+import { fadeUp, stagger } from "@/lib/motion";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
