@@ -491,6 +491,47 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setCameraOn(next);
   };
 
+  const toggleSpeaker = useCallback(async () => {
+    const next = !speakerOn;
+    setSpeakerOn(next);
+    // Native (iOS/Android via Capacitor)
+    if (isNativePlatform()) {
+      try {
+        await setNativeSpeakerphone(next);
+      } catch (e) {
+        console.warn("[call] toggleSpeaker native failed", e);
+        // retry once
+        try { await setNativeSpeakerphone(next); } catch { /* fallback silent */ }
+      }
+      return;
+    }
+    // Web fallback: try setSinkId on remote audio element
+    const targets = [remoteAudioRef.current, remoteVideoRef.current].filter(Boolean) as AudioSinkElement[];
+    try {
+      const devices = await navigator.mediaDevices?.enumerateDevices?.();
+      if (!devices) return;
+      const outputs = devices.filter((d) => d.kind === "audiooutput");
+      let sinkId = "";
+      if (next) {
+        // Speaker: prefer default/speaker
+        const speaker = outputs.find((d) => /speaker|loudspeaker|difuzor|default/i.test(d.label));
+        sinkId = speaker?.deviceId || "default";
+      } else {
+        const earpiece = outputs.find((d) =>
+          /earpiece|receiver|communication|cască|casca/i.test(d.label),
+        );
+        sinkId = earpiece?.deviceId || "communications";
+      }
+      await Promise.all(targets.map(async (t) => {
+        if (typeof t.setSinkId === "function") {
+          try { await t.setSinkId(sinkId); } catch { /* ignore */ }
+        }
+      }));
+    } catch (e) {
+      console.warn("[call] toggleSpeaker web failed", e);
+    }
+  }, [speakerOn]);
+
   const switchCamera = useCallback(async () => {
     const pc = pcRef.current;
     const stream = localStreamRef.current;
