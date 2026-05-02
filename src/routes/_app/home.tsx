@@ -323,7 +323,7 @@ function ModuleCard({
   return (
     <button
       onClick={onClick}
-      className="press-glow group relative flex w-full items-center gap-4 rounded-2xl p-4 text-left transition-transform"
+      className="press-glow group relative flex w-full items-center gap-3 rounded-2xl p-2.5 text-left transition-transform"
       style={{
         background:
           "linear-gradient(135deg, oklch(1 0 0 / 8%) 0%, oklch(1 0 0 / 3%) 100%)",
@@ -334,7 +334,7 @@ function ModuleCard({
       }}
     >
       <div
-        className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-white"
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white"
         style={{
           background: `linear-gradient(135deg, ${accent}, color-mix(in oklab, ${accent} 50%, #000))`,
           boxShadow: `0 0 18px ${accent}, inset 0 1px 0 oklch(1 0 0 / 25%)`,
