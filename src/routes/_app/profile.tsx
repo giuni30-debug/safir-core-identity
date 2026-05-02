@@ -100,7 +100,65 @@ function ProfilePage() {
       </header>
 
       <div className="mt-8 flex flex-col items-center gap-4">
-        <Avatar url={avatar || profile?.avatar_url} name={name || "U"} size={96} />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="relative rounded-full transition active:scale-95 disabled:opacity-60"
+          style={{ boxShadow: "var(--shadow-glow)" }}
+          aria-label="Change avatar"
+        >
+          <Avatar url={avatar || profile?.avatar_url} name={name || "U"} size={96} />
+          <span
+            className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground"
+            style={{ boxShadow: "var(--shadow-glow)" }}
+          >
+            <Camera className="h-4 w-4" />
+          </span>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void handleAvatarFile(f);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="user"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void handleAvatarFile(f);
+            e.target.value = "";
+          }}
+        />
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 rounded-2xl border border-border bg-card/40 px-4 py-2 text-xs font-medium transition hover:bg-card/60 disabled:opacity-50"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            {uploading ? "…" : "Upload from device"}
+          </button>
+          <button
+            type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 rounded-2xl border border-border bg-card/40 px-4 py-2 text-xs font-medium transition hover:bg-card/60 disabled:opacity-50"
+          >
+            <Camera className="h-3.5 w-3.5" />
+            Camera
+          </button>
+        </div>
       </div>
 
       <div className="mt-8 space-y-4">
