@@ -533,7 +533,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const start = state.startedAt;
       elapsedTimerRef.current = window.setInterval(() => {
         setElapsed(Math.floor((Date.now() - start) / 1000));
-      }, 500);
+      }, 1000);
       return () => {
         if (elapsedTimerRef.current) window.clearInterval(elapsedTimerRef.current);
       };
