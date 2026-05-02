@@ -757,14 +757,15 @@ function fmtElapsed(s: number) {
 }
 
 function CallOverlay({
-  state, elapsed, muted, cameraOn, hasRemoteVideo, error, info,
+  state, elapsed, muted, cameraOn, speakerOn, hasRemoteVideo, error, info,
   remoteVideoRef, localVideoRef,
-  onAccept, onDecline, onEnd, onToggleMute, onToggleCamera, onSwitchCamera,
+  onAccept, onDecline, onEnd, onToggleMute, onToggleCamera, onToggleSpeaker, onSwitchCamera,
 }: {
   state: Exclude<CallState, { kind: "idle" }>;
   elapsed: number;
   muted: boolean;
   cameraOn: boolean;
+  speakerOn: boolean;
   hasRemoteVideo: boolean;
   error: string | null;
   info: string | null;
@@ -775,6 +776,7 @@ function CallOverlay({
   onEnd: () => void;
   onToggleMute: () => void;
   onToggleCamera: () => void;
+  onToggleSpeaker: () => void;
   onSwitchCamera: () => void;
 }) {
   const peer = state.peer;
@@ -783,8 +785,8 @@ function CallOverlay({
     state.kind === "incoming"
       ? `Incoming ${isVideo ? "video" : "audio"} call`
       : state.kind === "outgoing"
-      ? "Calling…"
-      : fmtElapsed(elapsed);
+      ? (state.status === "ringing" ? "Ringing…" : "Calling…")
+      : `Connected · ${fmtElapsed(elapsed)}`;
 
   return (
     <div className="fixed inset-0 z-[90] flex flex-col items-center justify-between bg-background/95 px-6 py-12 backdrop-blur-xl">
