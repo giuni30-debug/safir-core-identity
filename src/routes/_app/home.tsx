@@ -344,12 +344,12 @@ function ModuleCard({
       </div>
       <div className="min-w-0 flex-1">
         <p
-          className="text-base font-bold tracking-wide text-white"
+          className="text-sm font-bold tracking-wide text-white"
           style={{ textShadow: `0 0 12px color-mix(in oklab, ${accent} 60%, transparent)` }}
         >
           {title}
         </p>
-        <p className="text-soft mt-0.5 text-xs">{desc}</p>
+        <p className="text-soft mt-0.5 text-[11px] leading-tight">{desc}</p>
       </div>
       <ArrowRight
         className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-1"
