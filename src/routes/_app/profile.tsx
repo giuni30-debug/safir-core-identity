@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, Camera, Upload } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar } from "@/components/Avatar";
