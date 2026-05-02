@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_app/home")({
 });
 
 function Home() {
-  const { profile, t, user } = useApp();
+  const { t, user } = useApp();
   const navigate = useNavigate();
   const { startCall, startVideoCall } = useCall();
   useTrackScreen("home_opened");
