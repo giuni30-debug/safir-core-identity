@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Activity, Users, BarChart3, AlertTriangle, Clock, Trash2 } from "lucide-react";
 import {
   getStats, getEvents, clearEvents, subscribe,
   type AnalyticsStats, type AnalyticsEvent,
 } from "@/lib/analytics";
+import { fadeUp, stagger } from "@/lib/motion";
 
 export const Route = createFileRoute("/_app/admin")({
   component: AdminPage,
