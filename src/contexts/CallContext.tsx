@@ -867,8 +867,13 @@ function CallOverlay({
             <button
               onClick={onToggleMute}
               disabled={state.kind !== "active"}
-              className="grid h-14 w-14 place-items-center rounded-full border border-border bg-card/60 backdrop-blur disabled:opacity-40"
-              aria-label="Mute"
+              className={`grid h-14 w-14 place-items-center rounded-full border backdrop-blur disabled:opacity-40 transition-colors ${
+                muted
+                  ? "border-destructive/60 bg-destructive/20 text-destructive"
+                  : "border-border bg-card/60"
+              }`}
+              aria-label={muted ? "Unmute" : "Mute"}
+              aria-pressed={muted}
             >
               {muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
             </button>
