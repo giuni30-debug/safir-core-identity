@@ -881,7 +881,22 @@ function CallOverlay({
               >
                 {cameraOn ? <VideoIcon className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
               </button>
-            ) : null}
+            ) : (
+              <button
+                onClick={onToggleSpeaker}
+                disabled={state.kind !== "active"}
+                className={`grid h-14 w-14 place-items-center rounded-full border backdrop-blur disabled:opacity-40 transition-colors ${
+                  speakerOn
+                    ? "border-primary/60 bg-primary/20 text-primary"
+                    : "border-border bg-card/60"
+                }`}
+                aria-label={speakerOn ? "Speaker on" : "Speaker off"}
+                aria-pressed={speakerOn}
+                style={speakerOn ? { boxShadow: "var(--shadow-glow)" } : undefined}
+              >
+                {speakerOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+              </button>
+            )}
             <button
               onClick={onEnd}
               className="grid h-16 w-16 place-items-center rounded-full bg-destructive text-destructive-foreground shadow-lg"
