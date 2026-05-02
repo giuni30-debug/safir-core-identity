@@ -884,3 +884,114 @@
   100% { opacity: 1; transform: translateX(0); }
 }
 .mode-slide { animation: mode-slide 0.32s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* ============================================================
+   PREMIUM v2 — Apple × Linear × Vercel system
+   ============================================================ */
+@layer components {
+  /* Glass card refined — softer, less neon-pulse, more glass */
+  .glass-premium {
+    position: relative;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-glass);
+    transition:
+      transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.4s ease;
+  }
+  .glass-premium:hover {
+    transform: translateY(-2px) scale(1.02);
+    border-color: color-mix(in oklab, var(--theme-accent) 40%, var(--glass-border));
+    box-shadow:
+      0 20px 60px -10px oklch(0 0 0 / 60%),
+      0 0 0 1px color-mix(in oklab, var(--theme-accent) 25%, transparent),
+      0 0 30px color-mix(in oklab, var(--theme-accent) 30%, transparent);
+  }
+
+  /* Mesh gradient backdrop — animated, very slow drift */
+  .mesh-bg {
+    position: absolute;
+    inset: -20%;
+    background: var(--gradient-mesh);
+    filter: blur(60px) saturate(140%);
+    opacity: 0.85;
+    animation: mesh-drift 28s ease-in-out infinite;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  /* Aurora blob — large blurred gradient orb */
+  .aurora-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px) saturate(140%);
+    opacity: 0.55;
+    pointer-events: none;
+    will-change: transform;
+  }
+  .aurora-blob.violet {
+    background: oklch(0.68 0.21 295);
+    animation: aurora-float-1 24s ease-in-out infinite;
+  }
+  .aurora-blob.cyan {
+    background: oklch(0.82 0.15 200);
+    animation: aurora-float-2 32s ease-in-out infinite;
+  }
+  .aurora-blob.pink {
+    background: oklch(0.72 0.22 350);
+    animation: aurora-float-3 40s ease-in-out infinite;
+  }
+
+  /* Headline gradient text — Linear-style */
+  .text-gradient {
+    background: linear-gradient(135deg,
+      oklch(0.98 0.01 270) 0%,
+      oklch(0.85 0.12 295) 50%,
+      oklch(0.78 0.16 200) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+  }
+
+  /* Premium hairline divider */
+  .hairline {
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent,
+      color-mix(in oklab, var(--theme-accent) 35%, transparent) 50%,
+      transparent);
+  }
+
+  /* Stat pill (admin/dashboard) */
+  .stat-pill {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: 1.25rem;
+    box-shadow: var(--shadow-glass);
+  }
+}
+
+@keyframes mesh-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%      { transform: translate3d(2%, -3%, 0) scale(1.05); }
+  66%      { transform: translate3d(-3%, 2%, 0) scale(0.98); }
+}
+@keyframes aurora-float-1 {
+  0%, 100% { transform: translate3d(-10%, -10%, 0) scale(1); }
+  50%      { transform: translate3d(15%, 10%, 0) scale(1.15); }
+}
+@keyframes aurora-float-2 {
+  0%, 100% { transform: translate3d(20%, 20%, 0) scale(1.1); }
+  50%      { transform: translate3d(-15%, -10%, 0) scale(0.95); }
+}
+@keyframes aurora-float-3 {
+  0%, 100% { transform: translate3d(10%, -20%, 0) scale(0.95); }
+  50%      { transform: translate3d(-20%, 15%, 0) scale(1.1); }
+}
