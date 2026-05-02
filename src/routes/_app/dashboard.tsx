@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
 import {
   ArrowLeft, Settings, Users, MessagesSquare, Calendar,
@@ -6,6 +7,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
+import { fadeUp, stagger, hoverLift } from "@/lib/motion";
 
 export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
