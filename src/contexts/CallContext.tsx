@@ -81,6 +81,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [info, setInfo] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(true);
+  const [speakerOn, setSpeakerOn] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
 
