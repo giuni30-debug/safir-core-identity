@@ -1,7 +1,7 @@
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from "react";
-import { Phone, PhoneOff, Mic, MicOff, Video as VideoIcon, VideoOff, SwitchCamera } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Video as VideoIcon, VideoOff, SwitchCamera, Volume2, VolumeX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
