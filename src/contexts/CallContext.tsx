@@ -416,6 +416,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         status: "calling",
         media,
       });
+
+      // Ringing timeout: if no answer in 30s, mark as missed/failed
+      if (ringTimeoutRef.current) window.clearTimeout(ringTimeoutRef.current);
+      ringTimeoutRef.current = window.setTimeout(() => {
+        if (callIdRef.current === call.id) {
+          setError("Call failed. Please try again");
+          handleEnd("missed");
+        }
+      }, 30000);
     },
     [myId, state.kind, buildPeer, sendSignal, getLocalMedia, unlockCallAudio, setSpeakerphoneOff],
   );
