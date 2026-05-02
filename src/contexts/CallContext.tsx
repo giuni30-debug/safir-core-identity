@@ -654,6 +654,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (sig.signal_type === "accept") {
+            if (ringTimeoutRef.current) {
+              window.clearTimeout(ringTimeoutRef.current);
+              ringTimeoutRef.current = null;
+            }
             setState((cur) =>
               cur.kind === "outgoing"
                 ? { kind: "active", callId: cur.callId, peer: cur.peer, role: "caller", startedAt: Date.now(), media: cur.media }
