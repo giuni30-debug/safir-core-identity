@@ -112,21 +112,6 @@ function Home() {
         ))}
       </div>
 
-      {/* Top bar (kept minimal — profile + settings still accessible) */}
-      <header className="relative z-10 flex items-center gap-3 py-1">
-        <button onClick={() => navigate({ to: "/profile" })} aria-label="Profile">
-          <Avatar url={profile?.avatar_url} name={profile?.display_name ?? "U"} size={40} />
-        </button>
-        <div className="min-w-0 flex-1" />
-        <Link
-          to="/settings"
-          aria-label="Settings"
-          className="press-glow grid h-10 w-10 place-items-center rounded-2xl border border-border bg-card/40"
-        >
-          <Settings className="h-5 w-5" />
-        </Link>
-      </header>
-
       <HomeInstallBanner />
 
       {/* Communication Hero panel */}
