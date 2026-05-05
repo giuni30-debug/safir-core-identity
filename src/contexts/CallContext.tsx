@@ -746,6 +746,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           muted={muted}
           cameraOn={cameraOn}
           speakerOn={speakerOn}
+          canToggleSpeaker={canControlAudioOutput()}
           hasRemoteVideo={hasRemoteVideo}
           error={error}
           info={info}
