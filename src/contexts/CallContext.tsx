@@ -902,7 +902,7 @@ function CallOverlay({
               >
                 {cameraOn ? <VideoIcon className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
               </button>
-            ) : (
+            ) : canToggleSpeaker ? (
               <button
                 onClick={onToggleSpeaker}
                 disabled={state.kind !== "active"}
@@ -917,7 +917,7 @@ function CallOverlay({
               >
                 {speakerOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
               </button>
-            )}
+            ) : null}
             <button
               onClick={onEnd}
               className="grid h-16 w-16 place-items-center rounded-full bg-destructive text-destructive-foreground shadow-lg"
