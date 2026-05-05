@@ -503,28 +503,34 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   const toggleSpeaker = useCallback(async () => {
     const next = !speakerOn;
-    setSpeakerOn(next);
-    // Native (iOS/Android via Capacitor)
-    if (isNativePlatform()) {
-      try {
-        await setNativeSpeakerphone(next);
-      } catch (e) {
-        console.warn("[call] toggleSpeaker native failed", e);
-        // retry once
-        try { await setNativeSpeakerphone(next); } catch { /* fallback silent */ }
+
+    // 1. Try native plugin (real loudspeaker ↔ earpiece switch)
+    if (isNativeAudioRoutingAvailable()) {
+      const ok = await setNativeSpeakerphone(next);
+      if (ok) {
+        setSpeakerOn(next);
+        return;
       }
+    }
+
+    // 2. Web fallback: HTMLMediaElement.setSinkId (Chrome desktop only)
+    const targets = [remoteAudioRef.current, remoteVideoRef.current].filter(Boolean) as AudioSinkElement[];
+    const supportsSink = targets.some((t) => typeof t.setSinkId === "function");
+    if (!supportsSink) {
+      // No real control available — keep state unchanged and tell user
+      setInfo(
+        next
+          ? "Speaker control unavailable on this device — output stays as system default."
+          : "Earpiece routing not available in this build.",
+      );
       return;
     }
-    // Web fallback: try setSinkId on remote audio element
-    const targets = [remoteAudioRef.current, remoteVideoRef.current].filter(Boolean) as AudioSinkElement[];
     try {
       const devices = await navigator.mediaDevices?.enumerateDevices?.();
-      if (!devices) return;
-      const outputs = devices.filter((d) => d.kind === "audiooutput");
-      let sinkId = "";
+      const outputs = (devices ?? []).filter((d) => d.kind === "audiooutput");
+      let sinkId: string;
       if (next) {
-        // Speaker: prefer default/speaker
-        const speaker = outputs.find((d) => /speaker|loudspeaker|difuzor|default/i.test(d.label));
+        const speaker = outputs.find((d) => /speaker|loudspeaker|difuzor/i.test(d.label));
         sinkId = speaker?.deviceId || "default";
       } else {
         const earpiece = outputs.find((d) =>
@@ -532,13 +538,20 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         );
         sinkId = earpiece?.deviceId || "communications";
       }
+      let switched = false;
       await Promise.all(targets.map(async (t) => {
         if (typeof t.setSinkId === "function") {
-          try { await t.setSinkId(sinkId); } catch { /* ignore */ }
+          try {
+            await t.setSinkId(sinkId);
+            switched = true;
+          } catch { /* ignore individual failures */ }
         }
       }));
+      if (switched) setSpeakerOn(next);
+      else setInfo("Audio routing not supported by this browser.");
     } catch (e) {
       console.warn("[call] toggleSpeaker web failed", e);
+      setInfo("Could not change audio output.");
     }
   }, [speakerOn]);
 
