@@ -9,7 +9,8 @@ import {
   startNativeCallSession,
   endNativeCallSession,
   setNativeSpeakerphone,
-  isNativePlatform,
+  isNativeAudioRoutingAvailable,
+  canControlAudioOutput,
 } from "@/lib/nativeAudio";
 
 type ContactProfile = {
@@ -238,12 +239,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [forceNativeCallAudioSession, prepareCallAudioElement]);
 
   const setSpeakerphoneOff = useCallback(() => {
-    // Pe mobil nativ (Capacitor): forțează casca prin AVAudioSession / AudioManager
-    if (isNativePlatform()) {
+    // Pe mobil nativ cu plugin instalat: forțează casca prin AVAudioSession / AudioManager
+    if (isNativeAudioRoutingAvailable()) {
       void startNativeCallSession();
       void setNativeSpeakerphone(false);
     }
-    // Pe web: continuă cu fallback-ul existent
+    // Web / fallback: încearcă routing prin setSinkId("communications")
     forceNativeCallAudioSession();
     void applyAudioRouting();
   }, [applyAudioRouting, forceNativeCallAudioSession]);
@@ -502,28 +503,34 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   const toggleSpeaker = useCallback(async () => {
     const next = !speakerOn;
-    setSpeakerOn(next);
-    // Native (iOS/Android via Capacitor)
-    if (isNativePlatform()) {
-      try {
-        await setNativeSpeakerphone(next);
-      } catch (e) {
-        console.warn("[call] toggleSpeaker native failed", e);
-        // retry once
-        try { await setNativeSpeakerphone(next); } catch { /* fallback silent */ }
+
+    // 1. Try native plugin (real loudspeaker ↔ earpiece switch)
+    if (isNativeAudioRoutingAvailable()) {
+      const ok = await setNativeSpeakerphone(next);
+      if (ok) {
+        setSpeakerOn(next);
+        return;
       }
+    }
+
+    // 2. Web fallback: HTMLMediaElement.setSinkId (Chrome desktop only)
+    const targets = [remoteAudioRef.current, remoteVideoRef.current].filter(Boolean) as AudioSinkElement[];
+    const supportsSink = targets.some((t) => typeof t.setSinkId === "function");
+    if (!supportsSink) {
+      // No real control available — keep state unchanged and tell user
+      setInfo(
+        next
+          ? "Speaker control unavailable on this device — output stays as system default."
+          : "Earpiece routing not available in this build.",
+      );
       return;
     }
-    // Web fallback: try setSinkId on remote audio element
-    const targets = [remoteAudioRef.current, remoteVideoRef.current].filter(Boolean) as AudioSinkElement[];
     try {
       const devices = await navigator.mediaDevices?.enumerateDevices?.();
-      if (!devices) return;
-      const outputs = devices.filter((d) => d.kind === "audiooutput");
-      let sinkId = "";
+      const outputs = (devices ?? []).filter((d) => d.kind === "audiooutput");
+      let sinkId: string;
       if (next) {
-        // Speaker: prefer default/speaker
-        const speaker = outputs.find((d) => /speaker|loudspeaker|difuzor|default/i.test(d.label));
+        const speaker = outputs.find((d) => /speaker|loudspeaker|difuzor/i.test(d.label));
         sinkId = speaker?.deviceId || "default";
       } else {
         const earpiece = outputs.find((d) =>
@@ -531,13 +538,20 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         );
         sinkId = earpiece?.deviceId || "communications";
       }
+      let switched = false;
       await Promise.all(targets.map(async (t) => {
         if (typeof t.setSinkId === "function") {
-          try { await t.setSinkId(sinkId); } catch { /* ignore */ }
+          try {
+            await t.setSinkId(sinkId);
+            switched = true;
+          } catch { /* ignore individual failures */ }
         }
       }));
+      if (switched) setSpeakerOn(next);
+      else setInfo("Audio routing not supported by this browser.");
     } catch (e) {
       console.warn("[call] toggleSpeaker web failed", e);
+      setInfo("Could not change audio output.");
     }
   }, [speakerOn]);
 
@@ -732,6 +746,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           muted={muted}
           cameraOn={cameraOn}
           speakerOn={speakerOn}
+          canToggleSpeaker={canControlAudioOutput()}
           hasRemoteVideo={hasRemoteVideo}
           error={error}
           info={info}
@@ -757,7 +772,7 @@ function fmtElapsed(s: number) {
 }
 
 function CallOverlay({
-  state, elapsed, muted, cameraOn, speakerOn, hasRemoteVideo, error, info,
+  state, elapsed, muted, cameraOn, speakerOn, canToggleSpeaker, hasRemoteVideo, error, info,
   remoteVideoRef, localVideoRef,
   onAccept, onDecline, onEnd, onToggleMute, onToggleCamera, onToggleSpeaker, onSwitchCamera,
 }: {
@@ -766,6 +781,7 @@ function CallOverlay({
   muted: boolean;
   cameraOn: boolean;
   speakerOn: boolean;
+  canToggleSpeaker: boolean;
   hasRemoteVideo: boolean;
   error: string | null;
   info: string | null;
@@ -886,7 +902,7 @@ function CallOverlay({
               >
                 {cameraOn ? <VideoIcon className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
               </button>
-            ) : (
+            ) : canToggleSpeaker ? (
               <button
                 onClick={onToggleSpeaker}
                 disabled={state.kind !== "active"}
@@ -901,7 +917,7 @@ function CallOverlay({
               >
                 {speakerOn ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
               </button>
-            )}
+            ) : null}
             <button
               onClick={onEnd}
               className="grid h-16 w-16 place-items-center rounded-full bg-destructive text-destructive-foreground shadow-lg"

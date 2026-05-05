@@ -47,8 +47,37 @@ const NativeAudioRouting = registerPlugin<NativeAudioRoutingPlugin>(
 
 export const isNativePlatform = () => Capacitor.isNativePlatform();
 
+// Verifică dacă plugin-ul nativ NativeAudioRouting e efectiv înregistrat.
+// (APK-ul de test încarcă preview-ul live → plugin-ul Kotlin/Swift poate
+// lipsi chiar dacă isNativePlatform() returnează true.)
+export const isNativeAudioRoutingAvailable = (): boolean => {
+  if (!Capacitor.isNativePlatform()) return false;
+  try {
+    return Capacitor.isPluginAvailable?.('NativeAudioRouting') ?? false;
+  } catch {
+    return false;
+  }
+};
+
+// Detectează dacă putem comuta efectiv outputul audio (cască vs difuzor).
+// - Native cu plugin instalat → da
+// - Web cu HTMLMediaElement.setSinkId → da (Chrome desktop)
+// - În rest (WebView Android/iOS fără plugin, Safari mobile) → nu
+export const canControlAudioOutput = (): boolean => {
+  if (isNativeAudioRoutingAvailable()) return true;
+  if (typeof document === 'undefined') return false;
+  try {
+    const el = document.createElement('audio') as HTMLAudioElement & {
+      setSinkId?: (id: string) => Promise<void>;
+    };
+    return typeof el.setSinkId === 'function';
+  } catch {
+    return false;
+  }
+};
+
 export const startNativeCallSession = async () => {
-  if (!isNativePlatform()) return;
+  if (!isNativeAudioRoutingAvailable()) return;
   try {
     await NativeAudioRouting.startCallSession();
   } catch (e) {
@@ -57,7 +86,7 @@ export const startNativeCallSession = async () => {
 };
 
 export const endNativeCallSession = async () => {
-  if (!isNativePlatform()) return;
+  if (!isNativeAudioRoutingAvailable()) return;
   try {
     await NativeAudioRouting.endCallSession();
   } catch (e) {
@@ -65,17 +94,19 @@ export const endNativeCallSession = async () => {
   }
 };
 
-export const setNativeSpeakerphone = async (enabled: boolean) => {
-  if (!isNativePlatform()) return;
+export const setNativeSpeakerphone = async (enabled: boolean): Promise<boolean> => {
+  if (!isNativeAudioRoutingAvailable()) return false;
   try {
     await NativeAudioRouting.setSpeakerphone({ enabled });
+    return true;
   } catch (e) {
     console.warn('[NativeAudio] setSpeakerphone failed', e);
+    return false;
   }
 };
 
 export const getNativeSpeakerphone = async (): Promise<boolean> => {
-  if (!isNativePlatform()) return false;
+  if (!isNativeAudioRoutingAvailable()) return false;
   try {
     const { enabled } = await NativeAudioRouting.isSpeakerphoneOn();
     return enabled;
