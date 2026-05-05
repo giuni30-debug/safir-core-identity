@@ -239,12 +239,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [forceNativeCallAudioSession, prepareCallAudioElement]);
 
   const setSpeakerphoneOff = useCallback(() => {
-    // Pe mobil nativ (Capacitor): forțează casca prin AVAudioSession / AudioManager
-    if (isNativePlatform()) {
+    // Pe mobil nativ cu plugin instalat: forțează casca prin AVAudioSession / AudioManager
+    if (isNativeAudioRoutingAvailable()) {
       void startNativeCallSession();
       void setNativeSpeakerphone(false);
     }
-    // Pe web: continuă cu fallback-ul existent
+    // Web / fallback: încearcă routing prin setSinkId("communications")
     forceNativeCallAudioSession();
     void applyAudioRouting();
   }, [applyAudioRouting, forceNativeCallAudioSession]);
