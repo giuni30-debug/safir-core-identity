@@ -772,7 +772,7 @@ function fmtElapsed(s: number) {
 }
 
 function CallOverlay({
-  state, elapsed, muted, cameraOn, speakerOn, hasRemoteVideo, error, info,
+  state, elapsed, muted, cameraOn, speakerOn, canToggleSpeaker, hasRemoteVideo, error, info,
   remoteVideoRef, localVideoRef,
   onAccept, onDecline, onEnd, onToggleMute, onToggleCamera, onToggleSpeaker, onSwitchCamera,
 }: {
@@ -781,6 +781,7 @@ function CallOverlay({
   muted: boolean;
   cameraOn: boolean;
   speakerOn: boolean;
+  canToggleSpeaker: boolean;
   hasRemoteVideo: boolean;
   error: string | null;
   info: string | null;
