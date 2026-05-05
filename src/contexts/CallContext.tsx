@@ -9,7 +9,8 @@ import {
   startNativeCallSession,
   endNativeCallSession,
   setNativeSpeakerphone,
-  isNativePlatform,
+  isNativeAudioRoutingAvailable,
+  canControlAudioOutput,
 } from "@/lib/nativeAudio";
 
 type ContactProfile = {
