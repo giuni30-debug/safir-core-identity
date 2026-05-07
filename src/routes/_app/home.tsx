@@ -217,7 +217,6 @@ function Home() {
         </div>
       </section>
 
-      <AffiliateOffersCard />
 
       {/* Centerpiece: Logo + tagline (compact to make room for module cards) */}
 
