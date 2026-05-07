@@ -42,6 +42,7 @@ import { Route as AppAiMemoryRouteImport } from './routes/_app/ai-memory'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppAboutRouteImport } from './routes/_app/about'
 import { Route as AppChatIdRouteImport } from './routes/_app/chat.$id'
+import { Route as AppAdminAffiliatesRouteImport } from './routes/_app/admin.affiliates'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -207,6 +208,11 @@ const AppChatIdRoute = AppChatIdRouteImport.update({
   path: '/chat/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminAffiliatesRoute = AppAdminAffiliatesRouteImport.update({
+  id: '/affiliates',
+  path: '/affiliates',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -215,7 +221,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/about': typeof AppAboutRoute
-  '/admin': typeof AppAdminRoute
+  '/admin': typeof AppAdminRouteWithChildren
   '/ai-memory': typeof AppAiMemoryRoute
   '/appearance': typeof AppAppearanceRoute
   '/appointments': typeof AppAppointmentsRoute
@@ -240,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof AppTermsRoute
   '/translator': typeof AppTranslatorRoute
   '/wallet': typeof AppWalletRoute
+  '/admin/affiliates': typeof AppAdminAffiliatesRoute
   '/chat/$id': typeof AppChatIdRoute
 }
 export interface FileRoutesByTo {
@@ -249,7 +256,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/about': typeof AppAboutRoute
-  '/admin': typeof AppAdminRoute
+  '/admin': typeof AppAdminRouteWithChildren
   '/ai-memory': typeof AppAiMemoryRoute
   '/appearance': typeof AppAppearanceRoute
   '/appointments': typeof AppAppointmentsRoute
@@ -274,6 +281,7 @@ export interface FileRoutesByTo {
   '/terms': typeof AppTermsRoute
   '/translator': typeof AppTranslatorRoute
   '/wallet': typeof AppWalletRoute
+  '/admin/affiliates': typeof AppAdminAffiliatesRoute
   '/chat/$id': typeof AppChatIdRoute
 }
 export interface FileRoutesById {
@@ -285,7 +293,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_app/about': typeof AppAboutRoute
-  '/_app/admin': typeof AppAdminRoute
+  '/_app/admin': typeof AppAdminRouteWithChildren
   '/_app/ai-memory': typeof AppAiMemoryRoute
   '/_app/appearance': typeof AppAppearanceRoute
   '/_app/appointments': typeof AppAppointmentsRoute
@@ -310,6 +318,7 @@ export interface FileRoutesById {
   '/_app/terms': typeof AppTermsRoute
   '/_app/translator': typeof AppTranslatorRoute
   '/_app/wallet': typeof AppWalletRoute
+  '/_app/admin/affiliates': typeof AppAdminAffiliatesRoute
   '/_app/chat/$id': typeof AppChatIdRoute
 }
 export interface FileRouteTypes {
@@ -346,6 +355,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/translator'
     | '/wallet'
+    | '/admin/affiliates'
     | '/chat/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -380,6 +390,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/translator'
     | '/wallet'
+    | '/admin/affiliates'
     | '/chat/$id'
   id:
     | '__root__'
@@ -415,6 +426,7 @@ export interface FileRouteTypes {
     | '/_app/terms'
     | '/_app/translator'
     | '/_app/wallet'
+    | '/_app/admin/affiliates'
     | '/_app/chat/$id'
   fileRoutesById: FileRoutesById
 }
@@ -660,12 +672,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppChatIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin/affiliates': {
+      id: '/_app/admin/affiliates'
+      path: '/affiliates'
+      fullPath: '/admin/affiliates'
+      preLoaderRoute: typeof AppAdminAffiliatesRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
   }
 }
 
+interface AppAdminRouteChildren {
+  AppAdminAffiliatesRoute: typeof AppAdminAffiliatesRoute
+}
+
+const AppAdminRouteChildren: AppAdminRouteChildren = {
+  AppAdminAffiliatesRoute: AppAdminAffiliatesRoute,
+}
+
+const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
+  AppAdminRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAboutRoute: typeof AppAboutRoute
-  AppAdminRoute: typeof AppAdminRoute
+  AppAdminRoute: typeof AppAdminRouteWithChildren
   AppAiMemoryRoute: typeof AppAiMemoryRoute
   AppAppearanceRoute: typeof AppAppearanceRoute
   AppAppointmentsRoute: typeof AppAppointmentsRoute
@@ -695,7 +726,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAboutRoute: AppAboutRoute,
-  AppAdminRoute: AppAdminRoute,
+  AppAdminRoute: AppAdminRouteWithChildren,
   AppAiMemoryRoute: AppAiMemoryRoute,
   AppAppearanceRoute: AppAppearanceRoute,
   AppAppointmentsRoute: AppAppointmentsRoute,
@@ -736,12 +767,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
