@@ -42,6 +42,7 @@ export const Route = createRootRoute({
       { name: "apple-mobile-web-app-title", content: "Safir" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "format-detection", content: "telephone=no" },
+      { name: "google-adsense-account", content: "ca-pub-9572973279989176" },
       // Open Graph
       { property: "og:title", content: "Safir Private Life" },
       { property: "og:description", content: "A premium private life companion. Connect, chat, and organize your world." },
@@ -59,6 +60,13 @@ export const Route = createRootRoute({
       { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/icon-192.png" },
       { rel: "icon", type: "image/png", sizes: "512x512", href: "/icons/icon-512.png" },
       { rel: "apple-touch-icon", sizes: "180x180", href: "/icons/apple-touch-icon.png" },
+    ],
+    scripts: [
+      {
+        async: true,
+        src: "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9572973279989176",
+        crossOrigin: "anonymous",
+      },
     ],
   }),
   shellComponent: RootShell,
