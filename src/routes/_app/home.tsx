@@ -3,7 +3,6 @@ import { useApp } from "@/contexts/AppContext";
 import { Avatar } from "@/components/Avatar";
 import { ArrowRight, Shield, Sparkles, Languages, MessageCircle, Phone, Video } from "lucide-react";
 import { HomeInstallBanner } from "@/components/HomeInstallBanner";
-import { AffiliateOffersCard } from "@/components/AffiliateOffersCard";
 import { useSwipeNav } from "@/hooks/useSwipeNav";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
