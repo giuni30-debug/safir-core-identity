@@ -42,6 +42,7 @@ export const Route = createRootRoute({
       { name: "apple-mobile-web-app-title", content: "Safir" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "format-detection", content: "telephone=no" },
+      { name: "google-adsense-account", content: "ca-pub-9572973279989176" },
       // Open Graph
       { property: "og:title", content: "Safir Private Life" },
       { property: "og:description", content: "A premium private life companion. Connect, chat, and organize your world." },
