@@ -14,6 +14,8 @@ import { useSoundPrefs } from "@/hooks/useSoundPrefs";
 import { playSound, vibrate } from "@/lib/sound";
 import { useTrackScreen } from "@/hooks/useTrackScreen";
 import { fadeUp, stagger } from "@/lib/motion";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { Link2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -50,6 +52,7 @@ const ANIM_OPTIONS: { id: AnimKind; label: string; icon: React.ComponentType<{ c
 function SettingsPage() {
   const { t, signOut, theme, setTheme, bg, setBg, anim, setAnim } = useApp();
   const navigate = useNavigate();
+  const { isAdmin } = useIsAdmin();
   useTrackScreen("settings_opened");
 
   const onLogout = async () => {
@@ -204,6 +207,7 @@ function SettingsPage() {
         <Row to="/help"  icon={LifeBuoy} label="Help Center" />
         <Row to="/about" icon={Info}     label="About App" />
         <Row to="/admin" icon={Database} label="Analytics" />
+        {isAdmin && <Row to="/admin/affiliates" icon={Link2} label="Affiliate Manager" />}
       </div>
 
       <InstallRow />
@@ -297,7 +301,7 @@ function OptionGrid<T extends string>({
 function Row({
   to, icon: Icon, label,
 }: {
-  to: "/profile" | "/language" | "/notifications" | "/ai-memory" | "/privacy" | "/terms" | "/data-deletion" | "/help" | "/about" | "/premium" | "/admin";
+  to: "/profile" | "/language" | "/notifications" | "/ai-memory" | "/privacy" | "/terms" | "/data-deletion" | "/help" | "/about" | "/premium" | "/admin" | "/admin/affiliates";
   icon: React.ComponentType<{ className?: string }>;
   label: string;
 }) {
