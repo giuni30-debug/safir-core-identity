@@ -1,0 +1,1 @@
+UPDATE public.affiliate_settings SET enabled = false;
