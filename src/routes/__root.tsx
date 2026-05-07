@@ -60,6 +60,13 @@ export const Route = createRootRoute({
       { rel: "icon", type: "image/png", sizes: "512x512", href: "/icons/icon-512.png" },
       { rel: "apple-touch-icon", sizes: "180x180", href: "/icons/apple-touch-icon.png" },
     ],
+    scripts: [
+      {
+        async: true,
+        src: "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9572973279989176",
+        crossOrigin: "anonymous",
+      },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
